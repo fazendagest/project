@@ -63,6 +63,7 @@ export interface ReproductionRecord {
   farm_id: string
   female_id: string
   male_id?: string
+  external_male_name?: string
   coverage_date: string
   expected_birth_date?: string
   actual_birth_date?: string
@@ -82,6 +83,8 @@ export interface FeedStock {
   current_quantity: number
   min_quantity: number
   cost_per_unit: number
+  purchase_date?: string
+  total_cost?: number
   last_updated: string
   created_at: string
 }

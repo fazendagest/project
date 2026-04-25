@@ -11,6 +11,8 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Card, CardContent } from '@/components/ui/card'
+import { DataCard } from '@/components/ui/data-card'
+import { EmptyState } from '@/components/ui/empty-state'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { Eye, Pencil, Trash2, LayoutGrid, List } from 'lucide-react'
@@ -25,7 +27,7 @@ export function AnimalsClient({ initialAnimals, farmId }: { initialAnimals: Anim
   const [animals, setAnimals] = useState(initialAnimals)
   const [search, setSearch] = useState('')
   const [species, setSpecies] = useState('all')
-  const [status, setStatus] = useState('all')
+  const [showAll, setShowAll] = useState(false)
   const [view, setView] = useState<'grid' | 'table'>('table')
   const [page, setPage] = useState(1)
   const [deleting, setDeleting] = useState<string | null>(null)
@@ -35,7 +37,7 @@ export function AnimalsClient({ initialAnimals, farmId }: { initialAnimals: Anim
     const q = search.toLowerCase()
     const matchSearch = !q || a.code.toLowerCase().includes(q) || (a.name ?? '').toLowerCase().includes(q)
     const matchSpecies = species === 'all' || a.species === species
-    const matchStatus = status === 'all' || a.status === status
+    const matchStatus = showAll || a.status === 'ativo'
     return matchSearch && matchSpecies && matchStatus
   })
 
@@ -68,16 +70,26 @@ export function AnimalsClient({ initialAnimals, farmId }: { initialAnimals: Anim
             <SelectItem value="suino">Suíno</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={status} onValueChange={v => { if (v) { setStatus(v); setPage(1) } }}>
-          <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Status" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="ativo">Ativo</SelectItem>
-            <SelectItem value="vendido">Vendido</SelectItem>
-            <SelectItem value="abatido">Abatido</SelectItem>
-            <SelectItem value="morto">Morto</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-1 rounded-lg border p-1 h-9 self-start">
+          <Button
+            type="button"
+            variant={!showAll ? 'default' : 'ghost'}
+            size="sm"
+            className="h-7 px-3 text-xs"
+            onClick={() => { setShowAll(false); setPage(1) }}
+          >
+            Ativos
+          </Button>
+          <Button
+            type="button"
+            variant={showAll ? 'default' : 'ghost'}
+            size="sm"
+            className="h-7 px-3 text-xs"
+            onClick={() => { setShowAll(true); setPage(1) }}
+          >
+            Todos
+          </Button>
+        </div>
         <div className="flex gap-1">
           <Button variant={view === 'table' ? 'default' : 'outline'} size="icon" onClick={() => setView('table')}><List className="h-4 w-4" /></Button>
           <Button variant={view === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => setView('grid')}><LayoutGrid className="h-4 w-4" /></Button>
@@ -87,7 +99,7 @@ export function AnimalsClient({ initialAnimals, farmId }: { initialAnimals: Anim
       <p className="text-sm text-muted-foreground mb-3">{filtered.length} animal(is) encontrado(s)</p>
 
       {view === 'table' ? (
-        <div className="rounded-lg border overflow-x-auto">
+        <DataCard>
           <Table>
             <TableHeader>
               <TableRow>
@@ -102,15 +114,9 @@ export function AnimalsClient({ initialAnimals, farmId }: { initialAnimals: Anim
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paged.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                    Nenhum animal encontrado
-                  </TableCell>
-                </TableRow>
-              )}
+              {paged.length === 0 && <EmptyState colSpan={8} message="Nenhum animal encontrado" />}
               {paged.map(a => (
-                <TableRow key={a.id}>
+                <TableRow key={a.id} className={a.status !== 'ativo' ? 'opacity-50' : ''}>
                   <TableCell className="font-mono font-semibold">{a.code}</TableCell>
                   <TableCell>{a.name ?? '—'}</TableCell>
                   <TableCell>{speciesLabel(a.species)}</TableCell>
@@ -137,11 +143,11 @@ export function AnimalsClient({ initialAnimals, farmId }: { initialAnimals: Anim
               ))}
             </TableBody>
           </Table>
-        </div>
+        </DataCard>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {paged.map(a => (
-            <Card key={a.id} className="overflow-hidden hover:shadow-md transition-shadow">
+            <Card key={a.id} className={`overflow-hidden hover:shadow-md transition-shadow ${a.status !== 'ativo' ? 'opacity-60' : ''}`}>
               <div className="relative h-40 bg-muted">
                 {a.photo_url ? (
                   <Image src={a.photo_url} alt={a.code} fill className="object-cover" />

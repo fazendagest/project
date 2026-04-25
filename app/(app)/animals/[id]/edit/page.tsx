@@ -9,19 +9,17 @@ export default async function EditAnimalPage({ params }: { params: { id: string 
   const farmId = await getFarmId()
   if (!farmId) return null
 
-  const { data: animal } = await supabase
-    .from('animals')
-    .select('*')
-    .eq('id', params.id)
-    .eq('farm_id', farmId)
-    .single()
+  const [{ data: animal }, { data: purchase }] = await Promise.all([
+    supabase.from('animals').select('*').eq('id', params.id).eq('farm_id', farmId).single(),
+    supabase.from('animal_purchases').select('id, purchase_price, weight_kg, seller_name').eq('animal_id', params.id).maybeSingle(),
+  ])
 
   if (!animal) notFound()
 
   return (
     <div>
       <PageHeader title="Editar Animal" description={`${animal.code}${animal.name ? ' · ' + animal.name : ''}`} />
-      <AnimalForm farmId={farmId} animal={animal} mode="edit" />
+      <AnimalForm farmId={farmId} animal={animal} existingPurchase={purchase ?? undefined} mode="edit" />
     </div>
   )
 }

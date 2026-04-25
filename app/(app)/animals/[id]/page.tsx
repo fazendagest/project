@@ -28,7 +28,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
   ] = await Promise.all([
     supabase.from('animals').select('*').eq('id', params.id).eq('farm_id', farmId).single(),
     supabase.from('health_records').select('*').eq('animal_id', params.id).order('application_date', { ascending: false }),
-    supabase.from('reproduction_records').select('*, male:male_id(code,name)').eq('female_id', params.id).order('coverage_date', { ascending: false }),
+    supabase.from('reproduction_records').select('*, male:male_id(code,name), external_male_name').eq('female_id', params.id).order('coverage_date', { ascending: false }),
     supabase.from('animal_purchases').select('*').eq('animal_id', params.id).maybeSingle(),
     supabase.from('animal_sales').select('*').eq('animal_id', params.id).maybeSingle(),
   ])
@@ -158,8 +158,10 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
                           {r.actual_birth_date ? ` · Real: ${formatDate(r.actual_birth_date)}` : ''}
                           {r.offspring_count ? ` · ${r.offspring_count} filhote(s)` : ''}
                         </p>
-                        {(r.male as any)?.code && (
-                          <p className="text-xs text-muted-foreground">Reprodutor: {(r.male as any).code}</p>
+                        {((r.male as any)?.code || (r as any).external_male_name) && (
+                          <p className="text-xs text-muted-foreground">
+                            Reprodutor: {(r.male as any)?.code ?? (r as any).external_male_name}
+                          </p>
                         )}
                       </div>
                     ))}

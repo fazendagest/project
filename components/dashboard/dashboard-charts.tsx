@@ -33,7 +33,7 @@ export function DashboardCharts({ farmId }: { farmId: string }) {
           const [sales, purchases, feed, ops, health] = await Promise.all([
             supabase.from('animal_sales').select('sale_price').eq('farm_id', farmId).gte('sale_date', start).lte('sale_date', end),
             supabase.from('animal_purchases').select('purchase_price').eq('farm_id', farmId).gte('purchase_date', start).lte('purchase_date', end),
-            supabase.from('feed_records').select('cost_total').eq('farm_id', farmId).gte('date', start).lte('date', end),
+            supabase.from('feed_stock').select('total_cost').eq('farm_id', farmId).gte('purchase_date', start).lte('purchase_date', end),
             supabase.from('operational_expenses').select('amount').eq('farm_id', farmId).gte('date', start).lte('date', end),
             supabase.from('health_records').select('cost').eq('farm_id', farmId).gte('application_date', start).lte('application_date', end),
           ])
@@ -41,7 +41,7 @@ export function DashboardCharts({ farmId }: { farmId: string }) {
           const receita = sales.data?.reduce((s, r) => s + (r.sale_price || 0), 0) ?? 0
           const despesas =
             (purchases.data?.reduce((s, r) => s + (r.purchase_price || 0), 0) ?? 0) +
-            (feed.data?.reduce((s, r) => s + (r.cost_total || 0), 0) ?? 0) +
+            (feed.data?.reduce((s, r) => s + (r.total_cost || 0), 0) ?? 0) +
             (ops.data?.reduce((s, r) => s + (r.amount || 0), 0) ?? 0) +
             (health.data?.reduce((s, r) => s + (r.cost || 0), 0) ?? 0)
 

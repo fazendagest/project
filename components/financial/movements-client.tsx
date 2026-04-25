@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { OperationalExpense, AnimalPurchase, AnimalSale } from '@/types'
+import type { OperationalExpense, AnimalPurchase, AnimalSale, FeedStock, HealthRecord, Animal } from '@/types'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,19 +14,29 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Plus, Trash2, Loader2 } from 'lucide-react'
-import { formatDate, formatCurrency, expenseCategoryLabel } from '@/lib/helpers'
+import { Plus, Trash2, Loader2, Pencil } from 'lucide-react'
+import { DataCard } from '@/components/ui/data-card'
+import { EmptyState } from '@/components/ui/empty-state'
+import { formatDate, formatCurrency, formatNumber, expenseCategoryLabel, healthTypeLabel, parseBRL, formatBRL } from '@/lib/helpers'
 import Link from 'next/link'
+
+const today = new Date().toISOString().slice(0, 10)
 
 export function ExpensesClient({
   initialExpenses,
   initialPurchases,
   initialSales,
+  initialFeedStock,
+  initialHealthRecords,
+  initialAnimals,
   farmId,
 }: {
   initialExpenses: OperationalExpense[]
   initialPurchases: (AnimalPurchase & { animal?: any })[]
   initialSales: (AnimalSale & { animal?: any })[]
+  initialFeedStock: FeedStock[]
+  initialHealthRecords: (HealthRecord & { animal?: any })[]
+  initialAnimals: Pick<Animal, 'id' | 'code' | 'name'>[]
   farmId: string
 }) {
   const router = useRouter()
@@ -34,18 +44,41 @@ export function ExpensesClient({
   const [expenses, setExpenses] = useState(initialExpenses)
   const [purchases, setPurchases] = useState(initialPurchases)
   const [sales, setSales] = useState(initialSales)
+  const feedStock = initialFeedStock
+  const healthRecords = initialHealthRecords
+
   const [expDialog, setExpDialog] = useState(false)
   const [saleDialog, setSaleDialog] = useState(false)
-  const [purchaseDialog, setPurchaseDialog] = useState(false)
+  // null = closed | string (uuid) = editing that purchase id
+  const [purchaseDialog, setPurchaseDialog] = useState<string | null>(null)
   const [delConfirm, setDelConfirm] = useState<{ type: string; id: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [expLoading, setExpLoading] = useState(false)
   const [saleLoading, setSaleLoading] = useState(false)
   const [purchaseLoading, setPurchaseLoading] = useState(false)
 
-  const [expForm, setExpForm] = useState({ category: 'mao_de_obra', date: new Date().toISOString().slice(0,10), amount: '', description: '', notes: '' })
-  const [saleForm, setSaleForm] = useState({ animal_code: '', buyer_name: '', sale_date: new Date().toISOString().slice(0,10), sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', notes: '' })
-  const [purchaseForm, setPurchaseForm] = useState({ animal_code: '', seller_name: '', purchase_date: new Date().toISOString().slice(0,10), purchase_price: '', weight_kg: '', notes: '' })
+  const [expForm, setExpForm] = useState({ category: 'mao_de_obra', date: today, amount: '', description: '', notes: '' })
+  const [saleForm, setSaleForm] = useState({ animal_id: '', buyer_name: '', sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', notes: '' })
+  const [purchaseForm, setPurchaseForm] = useState({
+    seller_name: '',
+    purchase_date: today,
+    purchase_price: '',
+    weight_kg: '',
+    notes: '',
+  })
+
+  const editingPurchase = purchaseDialog ? purchases.find(p => p.id === purchaseDialog) : null
+
+  function openEditPurchase(p: AnimalPurchase & { animal?: any }) {
+    setPurchaseForm({
+      seller_name: p.seller_name ?? '',
+      purchase_date: p.purchase_date,
+      purchase_price: p.purchase_price > 0 ? formatBRL(p.purchase_price) : '',
+      weight_kg: p.weight_kg ? String(p.weight_kg) : '',
+      notes: p.notes ?? '',
+    })
+    setPurchaseDialog(p.id)
+  }
 
   async function saveExpense(e: React.FormEvent) {
     e.preventDefault()
@@ -55,7 +88,7 @@ export function ExpensesClient({
       farm_id: farmId,
       category: expForm.category,
       date: expForm.date,
-      amount: parseFloat(expForm.amount),
+      amount: parseBRL(expForm.amount) ?? 0,
       description: expForm.description,
       notes: expForm.notes || null,
     }).select().single()
@@ -66,24 +99,23 @@ export function ExpensesClient({
 
   async function saveSale(e: React.FormEvent) {
     e.preventDefault()
-    const { data: animal } = await supabase.from('animals').select('id, species').eq('code', saleForm.animal_code).eq('farm_id', farmId).single()
-    if (!animal) return toast.error('Animal não encontrado com este código')
+    if (!saleForm.animal_id) return toast.error('Selecione um animal')
     setSaleLoading(true)
     const { data, error } = await supabase.from('animal_sales').insert({
       farm_id: farmId,
-      animal_id: animal.id,
+      animal_id: saleForm.animal_id,
       buyer_name: saleForm.buyer_name || null,
       sale_date: saleForm.sale_date,
-      sale_price: parseFloat(saleForm.sale_price),
+      sale_price: parseBRL(saleForm.sale_price) ?? 0,
       weight_kg: saleForm.weight_kg ? parseFloat(saleForm.weight_kg) : null,
-      price_per_kg: saleForm.price_per_kg ? parseFloat(saleForm.price_per_kg) : null,
+      price_per_kg: parseBRL(saleForm.price_per_kg),
       sale_type: saleForm.sale_type,
       notes: saleForm.notes || null,
     }).select('*, animal:animal_id(code, name)').single()
 
     if (error) { toast.error('Erro: ' + error.message); setSaleLoading(false); return }
 
-    await supabase.from('animals').update({ status: saleForm.sale_type }).eq('id', animal.id)
+    await supabase.from('animals').update({ status: saleForm.sale_type }).eq('id', saleForm.animal_id)
     setSales(prev => [data, ...prev])
     setSaleDialog(false)
     toast.success('Venda registrada! Status do animal atualizado.')
@@ -91,22 +123,23 @@ export function ExpensesClient({
     setSaleLoading(false)
   }
 
-  async function savePurchase(e: React.FormEvent) {
+  async function updatePurchase(e: React.FormEvent) {
     e.preventDefault()
-    const { data: animal } = await supabase.from('animals').select('id').eq('code', purchaseForm.animal_code).eq('farm_id', farmId).single()
-    if (!animal) return toast.error('Animal não encontrado com este código')
+    if (!purchaseDialog) return
     setPurchaseLoading(true)
-    const { data, error } = await supabase.from('animal_purchases').insert({
-      farm_id: farmId,
-      animal_id: animal.id,
+    const { data, error } = await supabase.from('animal_purchases').update({
       seller_name: purchaseForm.seller_name || null,
       purchase_date: purchaseForm.purchase_date,
-      purchase_price: parseFloat(purchaseForm.purchase_price) || 0,
+      purchase_price: parseBRL(purchaseForm.purchase_price) ?? 0,
       weight_kg: purchaseForm.weight_kg ? parseFloat(purchaseForm.weight_kg) : null,
       notes: purchaseForm.notes || null,
-    }).select('*, animal:animal_id(code, name)').single()
+    }).eq('id', purchaseDialog).select('*, animal:animal_id(code, name)').single()
     if (error) toast.error('Erro: ' + error.message)
-    else { setPurchases(prev => [data, ...prev]); setPurchaseDialog(false); toast.success('Compra registrada!') }
+    else {
+      setPurchases(prev => prev.map(p => p.id === purchaseDialog ? data : p))
+      setPurchaseDialog(null)
+      toast.success('Compra atualizada!')
+    }
     setPurchaseLoading(false)
   }
 
@@ -133,10 +166,12 @@ export function ExpensesClient({
   return (
     <div>
       <Tabs defaultValue="expenses">
-        <TabsList className="mb-4">
+        <TabsList className="mb-4 flex-wrap h-auto">
           <TabsTrigger value="expenses">Despesas ({expenses.length})</TabsTrigger>
           <TabsTrigger value="sales">Vendas ({sales.length})</TabsTrigger>
           <TabsTrigger value="purchases">Compras ({purchases.length})</TabsTrigger>
+          <TabsTrigger value="feeding">Alimentação ({feedStock.length})</TabsTrigger>
+          <TabsTrigger value="health">Saúde ({healthRecords.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="expenses">
@@ -146,7 +181,7 @@ export function ExpensesClient({
             </p>
             <Button onClick={() => setExpDialog(true)} className="gap-2"><Plus className="h-4 w-4" /> Nova Despesa</Button>
           </div>
-          <div className="rounded-lg border overflow-x-auto">
+          <DataCard>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -158,7 +193,7 @@ export function ExpensesClient({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {expenses.length === 0 && <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhuma despesa</TableCell></TableRow>}
+                {expenses.length === 0 && <EmptyState colSpan={5} message="Nenhuma despesa" />}
                 {expenses.map(e => (
                   <TableRow key={e.id}>
                     <TableCell>{formatDate(e.date)}</TableCell>
@@ -170,15 +205,15 @@ export function ExpensesClient({
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </DataCard>
         </TabsContent>
 
         <TabsContent value="sales">
           <div className="flex justify-between items-center mb-4">
             <p className="text-sm text-muted-foreground">Total: {formatCurrency(sales.reduce((s, r) => s + r.sale_price, 0))}</p>
-            <Button onClick={() => setSaleDialog(true)} className="gap-2"><Plus className="h-4 w-4" /> Registrar Venda</Button>
+            <Button onClick={() => { setSaleForm({ animal_id: '', buyer_name: '', sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', notes: '' }); setSaleDialog(true) }} className="gap-2"><Plus className="h-4 w-4" /> Registrar Venda</Button>
           </div>
-          <div className="rounded-lg border overflow-x-auto">
+          <DataCard>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -192,7 +227,7 @@ export function ExpensesClient({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sales.length === 0 && <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhuma venda</TableCell></TableRow>}
+                {sales.length === 0 && <EmptyState colSpan={7} message="Nenhuma venda" />}
                 {sales.map(s => (
                   <TableRow key={s.id}>
                     <TableCell>{formatDate(s.sale_date)}</TableCell>
@@ -210,15 +245,14 @@ export function ExpensesClient({
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </DataCard>
         </TabsContent>
 
         <TabsContent value="purchases">
-          <div className="flex justify-between items-center mb-4">
+          <div className="mb-4">
             <p className="text-sm text-muted-foreground">Total: {formatCurrency(purchases.reduce((s, p) => s + p.purchase_price, 0))}</p>
-            <Button onClick={() => setPurchaseDialog(true)} className="gap-2"><Plus className="h-4 w-4" /> Registrar Compra</Button>
           </div>
-          <div className="rounded-lg border overflow-x-auto">
+          <DataCard>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -231,7 +265,7 @@ export function ExpensesClient({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {purchases.length === 0 && <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhuma compra</TableCell></TableRow>}
+                {purchases.length === 0 && <EmptyState colSpan={6} message="Nenhuma compra" />}
                 {purchases.map(p => (
                   <TableRow key={p.id}>
                     <TableCell>{formatDate(p.purchase_date)}</TableCell>
@@ -243,12 +277,89 @@ export function ExpensesClient({
                     <TableCell>{p.seller_name ?? '—'}</TableCell>
                     <TableCell>{p.weight_kg ?? '—'}</TableCell>
                     <TableCell className="font-semibold text-red-600">{formatCurrency(p.purchase_price)}</TableCell>
-                    <TableCell><div className="flex justify-end"><Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDelConfirm({ type: 'purchase', id: p.id })}><Trash2 className="h-4 w-4" /></Button></div></TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        <Button size="icon" variant="ghost" onClick={() => openEditPurchase(p)}><Pencil className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDelConfirm({ type: 'purchase', id: p.id })}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+          </DataCard>
+        </TabsContent>
+
+        <TabsContent value="feeding">
+          <div className="flex justify-between items-center mb-4">
+            <p className="text-sm text-muted-foreground">
+              Total: {formatCurrency(feedStock.reduce((s, r) => s + (r.total_cost ?? 0), 0))}
+              {' '}· Entradas de estoque lançadas em <Link href="/feeding" className="text-primary hover:underline">Alimentação</Link>
+            </p>
           </div>
+          <DataCard>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data da Compra</TableHead>
+                  <TableHead>Produto</TableHead>
+                  <TableHead>Quantidade</TableHead>
+                  <TableHead>Custo/Unid.</TableHead>
+                  <TableHead>Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {feedStock.length === 0 && <EmptyState colSpan={5} message="Nenhuma entrada de estoque registrada" />}
+                {feedStock.map(r => (
+                  <TableRow key={r.id}>
+                    <TableCell>{r.purchase_date ? formatDate(r.purchase_date) : '—'}</TableCell>
+                    <TableCell>{r.product_name}</TableCell>
+                    <TableCell>{formatNumber(r.current_quantity)} {r.unit}</TableCell>
+                    <TableCell>{formatCurrency(r.cost_per_unit)}/{r.unit}</TableCell>
+                    <TableCell className="font-semibold text-red-600">{formatCurrency(r.total_cost ?? 0)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </DataCard>
+        </TabsContent>
+
+        <TabsContent value="health">
+          <div className="flex justify-between items-center mb-4">
+            <p className="text-sm text-muted-foreground">
+              Total: {formatCurrency(healthRecords.reduce((s, r) => s + (r.cost ?? 0), 0))}
+              {' '}· Registros lançados em <Link href="/health" className="text-primary hover:underline">Saúde</Link>
+            </p>
+          </div>
+          <DataCard>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Animal</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Produto / Procedimento</TableHead>
+                  <TableHead>Custo</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {healthRecords.length === 0 && <EmptyState colSpan={5} message="Nenhum registro de saúde com custo" />}
+                {healthRecords.map(r => (
+                  <TableRow key={r.id}>
+                    <TableCell>{formatDate(r.application_date)}</TableCell>
+                    <TableCell>
+                      <Link href={`/animals/${r.animal_id}`} className="font-mono font-semibold text-primary hover:underline">
+                        {(r.animal as any)?.code ?? '—'}
+                      </Link>
+                    </TableCell>
+                    <TableCell><Badge variant="outline">{healthTypeLabel(r.type)}</Badge></TableCell>
+                    <TableCell>{r.product_name}</TableCell>
+                    <TableCell className="font-semibold text-red-600">{formatCurrency(r.cost)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </DataCard>
         </TabsContent>
       </Tabs>
 
@@ -275,7 +386,10 @@ export function ExpensesClient({
               </div>
               <div className="space-y-2">
                 <Label>Valor (R$) *</Label>
-                <Input type="number" step="0.01" min="0.01" value={expForm.amount} onChange={e => setExpForm(p => ({ ...p, amount: e.target.value }))} required />
+                <Input type="text" inputMode="decimal" value={expForm.amount}
+                  onChange={e => setExpForm(p => ({ ...p, amount: e.target.value }))}
+                  onBlur={() => { const n = parseBRL(expForm.amount); if (n !== null) setExpForm(p => ({ ...p, amount: formatBRL(n) })) }}
+                  placeholder="0,00" required />
               </div>
             </div>
             <div className="space-y-2">
@@ -295,11 +409,26 @@ export function ExpensesClient({
         <DialogContent>
           <DialogHeader><DialogTitle>Registrar Venda / Abate</DialogTitle></DialogHeader>
           <form onSubmit={saveSale} className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Animal *</Label>
+              {initialAnimals.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum animal ativo cadastrado.</p>
+              ) : (
+                <Select value={saleForm.animal_id} onValueChange={v => v && setSaleForm(p => ({ ...p, animal_id: v }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um animal..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {initialAnimals.map(a => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.code}{a.name ? ` · ${a.name}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Código do Animal *</Label>
-                <Input value={saleForm.animal_code} onChange={e => setSaleForm(p => ({ ...p, animal_code: e.target.value }))} placeholder="Ex: BOV-001" required />
-              </div>
               <div className="space-y-2">
                 <Label>Tipo</Label>
                 <Select value={saleForm.sale_type} onValueChange={v => v && setSaleForm(p => ({ ...p, sale_type: v }))}>
@@ -316,15 +445,21 @@ export function ExpensesClient({
               </div>
               <div className="space-y-2">
                 <Label>Valor (R$) *</Label>
-                <Input type="number" step="0.01" min="0" value={saleForm.sale_price} onChange={e => setSaleForm(p => ({ ...p, sale_price: e.target.value }))} required />
+                <Input type="text" inputMode="decimal" value={saleForm.sale_price}
+                  onChange={e => setSaleForm(p => ({ ...p, sale_price: e.target.value }))}
+                  onBlur={() => { const n = parseBRL(saleForm.sale_price); if (n !== null) setSaleForm(p => ({ ...p, sale_price: formatBRL(n) })) }}
+                  placeholder="0,00" required />
               </div>
               <div className="space-y-2">
                 <Label>Peso (kg)</Label>
                 <Input type="number" step="0.1" value={saleForm.weight_kg} onChange={e => setSaleForm(p => ({ ...p, weight_kg: e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <Label>Preço/kg</Label>
-                <Input type="number" step="0.01" value={saleForm.price_per_kg} onChange={e => setSaleForm(p => ({ ...p, price_per_kg: e.target.value }))} />
+                <Label>Preço/kg (R$)</Label>
+                <Input type="text" inputMode="decimal" value={saleForm.price_per_kg}
+                  onChange={e => setSaleForm(p => ({ ...p, price_per_kg: e.target.value }))}
+                  onBlur={() => { const n = parseBRL(saleForm.price_per_kg); if (n !== null) setSaleForm(p => ({ ...p, price_per_kg: formatBRL(n) })) }}
+                  placeholder="0,00" />
               </div>
             </div>
             <div className="space-y-2">
@@ -333,43 +468,53 @@ export function ExpensesClient({
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setSaleDialog(false)}>Cancelar</Button>
-              <Button type="submit" disabled={saleLoading}>{saleLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar</Button>
+              <Button type="submit" disabled={saleLoading || !saleForm.animal_id}>{saleLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar</Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Purchase Dialog */}
-      <Dialog open={purchaseDialog} onOpenChange={setPurchaseDialog}>
+      {/* Purchase Dialog — edit only */}
+      <Dialog open={purchaseDialog !== null} onOpenChange={o => !o && setPurchaseDialog(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Registrar Compra de Animal</DialogTitle></DialogHeader>
-          <form onSubmit={savePurchase} className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">O animal deve estar previamente cadastrado.</p>
+          <DialogHeader>
+            <DialogTitle>Editar Compra</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={updatePurchase} className="space-y-4 py-2">
+            <div className="space-y-1">
+              <Label>Animal</Label>
+              <p className="text-sm font-mono font-semibold">
+                {(editingPurchase?.animal as any)?.code ?? '—'}
+                {(editingPurchase?.animal as any)?.name ? ` · ${(editingPurchase?.animal as any)?.name}` : ''}
+              </p>
+            </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Código do Animal *</Label>
-                <Input value={purchaseForm.animal_code} onChange={e => setPurchaseForm(p => ({ ...p, animal_code: e.target.value }))} placeholder="Ex: BOV-001" required />
-              </div>
               <div className="space-y-2">
                 <Label>Data</Label>
                 <Input type="date" value={purchaseForm.purchase_date} onChange={e => setPurchaseForm(p => ({ ...p, purchase_date: e.target.value }))} required />
               </div>
               <div className="space-y-2">
                 <Label>Valor (R$)</Label>
-                <Input type="number" step="0.01" min="0" value={purchaseForm.purchase_price} onChange={e => setPurchaseForm(p => ({ ...p, purchase_price: e.target.value }))} />
+                <Input type="text" inputMode="decimal" value={purchaseForm.purchase_price}
+                  onChange={e => setPurchaseForm(p => ({ ...p, purchase_price: e.target.value }))}
+                  onBlur={() => { const n = parseBRL(purchaseForm.purchase_price); if (n !== null) setPurchaseForm(p => ({ ...p, purchase_price: formatBRL(n) })) }}
+                  placeholder="0,00" />
               </div>
               <div className="space-y-2">
                 <Label>Peso (kg)</Label>
                 <Input type="number" step="0.1" value={purchaseForm.weight_kg} onChange={e => setPurchaseForm(p => ({ ...p, weight_kg: e.target.value }))} />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Vendedor</Label>
-              <Input value={purchaseForm.seller_name} onChange={e => setPurchaseForm(p => ({ ...p, seller_name: e.target.value }))} />
+              <div className="space-y-2">
+                <Label>Vendedor</Label>
+                <Input value={purchaseForm.seller_name} onChange={e => setPurchaseForm(p => ({ ...p, seller_name: e.target.value }))} />
+              </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setPurchaseDialog(false)}>Cancelar</Button>
-              <Button type="submit" disabled={purchaseLoading}>{purchaseLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar</Button>
+              <Button type="button" variant="outline" onClick={() => setPurchaseDialog(null)}>Cancelar</Button>
+              <Button type="submit" disabled={purchaseLoading}>
+                {purchaseLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Salvar
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

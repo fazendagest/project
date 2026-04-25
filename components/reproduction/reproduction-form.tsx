@@ -25,9 +25,13 @@ export function ReproductionForm({ farmId, females, males, record, mode }: Repro
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
+  const [maleSource, setMaleSource] = useState<'plantel' | 'externo'>(
+    record?.external_male_name ? 'externo' : 'plantel'
+  )
   const [form, setForm] = useState({
     female_id: record?.female_id ?? '',
     male_id: record?.male_id ?? '',
+    external_male_name: record?.external_male_name ?? '',
     coverage_date: record?.coverage_date ?? new Date().toISOString().slice(0, 10),
     expected_birth_date: record?.expected_birth_date ?? '',
     status: record?.status ?? 'coberta',
@@ -57,7 +61,8 @@ export function ReproductionForm({ farmId, females, males, record, mode }: Repro
     const payload = {
       farm_id: farmId,
       female_id: form.female_id,
-      male_id: form.male_id || null,
+      male_id: maleSource === 'plantel' && form.male_id && form.male_id !== 'none' ? form.male_id : null,
+      external_male_name: maleSource === 'externo' && form.external_male_name ? form.external_male_name : null,
       coverage_date: form.coverage_date,
       expected_birth_date: form.expected_birth_date || null,
       status: form.status,
@@ -104,18 +109,53 @@ export function ReproductionForm({ farmId, females, males, record, mode }: Repro
             </div>
 
             <div className="space-y-2">
-              <Label>Reprodutor</Label>
-              <Select value={form.male_id} onValueChange={v => set('male_id', v)}>
-                <SelectTrigger><SelectValue placeholder="Inseminação / Selecione" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Inseminação Artificial</SelectItem>
-                  {availableMales.map(m => (
-                    <SelectItem key={m.id} value={m.id}>
-                      {m.code}{m.name ? ` · ${m.name}` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center justify-between">
+                <Label>Reprodutor</Label>
+                <div className="flex gap-0.5 rounded-md border p-0.5 bg-muted/40">
+                  <button
+                    type="button"
+                    className={`px-2 py-0.5 text-xs rounded transition-colors ${
+                      maleSource === 'plantel'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                    onClick={() => setMaleSource('plantel')}
+                  >
+                    Meu plantel
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-2 py-0.5 text-xs rounded transition-colors ${
+                      maleSource === 'externo'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                    onClick={() => setMaleSource('externo')}
+                  >
+                    Externo
+                  </button>
+                </div>
+              </div>
+
+              {maleSource === 'plantel' ? (
+                <Select value={form.male_id} onValueChange={v => set('male_id', v)}>
+                  <SelectTrigger><SelectValue placeholder="Inseminação / Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Inseminação Artificial</SelectItem>
+                    {availableMales.map(m => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.code}{m.name ? ` · ${m.name}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  value={form.external_male_name}
+                  onChange={e => set('external_male_name', e.target.value)}
+                  placeholder="Ex: Touro Nelore - Fazenda do João"
+                />
+              )}
             </div>
 
             <div className="space-y-2">

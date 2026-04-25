@@ -74,6 +74,7 @@ create table if not exists reproduction_records (
   farm_id uuid references farms(id) on delete cascade not null,
   female_id uuid references animals(id) on delete cascade not null,
   male_id uuid references animals(id) on delete set null,
+  external_male_name varchar,
   coverage_date date not null,
   expected_birth_date date,
   actual_birth_date date,
@@ -102,6 +103,7 @@ create table if not exists feed_stock (
 );
 
 create index if not exists idx_feed_stock_farm_id on feed_stock(farm_id);
+create index if not exists idx_feed_stock_purchase_date on feed_stock(purchase_date);
 
 -- ============================================================
 -- TABELA: feed_records (registros de consumo de ração)
@@ -181,6 +183,14 @@ create index if not exists idx_expenses_date on operational_expenses(date);
 create index if not exists idx_expenses_category on operational_expenses(category);
 
 -- ============================================================
+-- GRANTS (permissões de acesso para o role authenticated)
+-- ============================================================
+grant usage on schema public to anon, authenticated;
+grant all on all tables in schema public to anon, authenticated;
+grant all on all sequences in schema public to anon, authenticated;
+grant all on all functions in schema public to anon, authenticated;
+
+-- ============================================================
 -- ROW LEVEL SECURITY (RLS)
 -- ============================================================
 
@@ -200,34 +210,51 @@ create policy "farms_owner" on farms
 
 -- Helper function para obter farm_id do usuário autenticado
 create or replace function get_user_farm_id()
-returns uuid language sql security definer as $$
+returns uuid language sql stable security definer
+set search_path = public as $$
   select id from farms where owner_id = auth.uid() limit 1;
 $$;
 
--- Políticas para todas as tabelas filhas
+-- Políticas para todas as tabelas filhas (subquery direta, mais robusta)
 create policy "animals_farm" on animals
-  for all using (farm_id = get_user_farm_id());
+  for all
+  using  (farm_id in (select id from farms where owner_id = auth.uid()))
+  with check (farm_id in (select id from farms where owner_id = auth.uid()));
 
 create policy "health_farm" on health_records
-  for all using (farm_id = get_user_farm_id());
+  for all
+  using  (farm_id in (select id from farms where owner_id = auth.uid()))
+  with check (farm_id in (select id from farms where owner_id = auth.uid()));
 
 create policy "repro_farm" on reproduction_records
-  for all using (farm_id = get_user_farm_id());
+  for all
+  using  (farm_id in (select id from farms where owner_id = auth.uid()))
+  with check (farm_id in (select id from farms where owner_id = auth.uid()));
 
 create policy "feed_stock_farm" on feed_stock
-  for all using (farm_id = get_user_farm_id());
+  for all
+  using  (farm_id in (select id from farms where owner_id = auth.uid()))
+  with check (farm_id in (select id from farms where owner_id = auth.uid()));
 
 create policy "feed_records_farm" on feed_records
-  for all using (farm_id = get_user_farm_id());
+  for all
+  using  (farm_id in (select id from farms where owner_id = auth.uid()))
+  with check (farm_id in (select id from farms where owner_id = auth.uid()));
 
 create policy "purchases_farm" on animal_purchases
-  for all using (farm_id = get_user_farm_id());
+  for all
+  using  (farm_id in (select id from farms where owner_id = auth.uid()))
+  with check (farm_id in (select id from farms where owner_id = auth.uid()));
 
 create policy "sales_farm" on animal_sales
-  for all using (farm_id = get_user_farm_id());
+  for all
+  using  (farm_id in (select id from farms where owner_id = auth.uid()))
+  with check (farm_id in (select id from farms where owner_id = auth.uid()));
 
 create policy "expenses_farm" on operational_expenses
-  for all using (farm_id = get_user_farm_id());
+  for all
+  using  (farm_id in (select id from farms where owner_id = auth.uid()))
+  with check (farm_id in (select id from farms where owner_id = auth.uid()));
 
 -- ============================================================
 -- VIEW: animal_costs (custo acumulado por animal)
@@ -305,3 +332,18 @@ begin
   return prefix || '-' || lpad(next_num::text, 3, '0');
 end;
 $$;
+
+-- ============================================================
+-- MIGRAÇÃO: colunas de compra no feed_stock
+-- Execute no SQL Editor do Supabase após o schema principal
+-- ============================================================
+alter table feed_stock add column if not exists purchase_date date;
+alter table feed_stock add column if not exists total_cost numeric(12,2) default 0;
+
+-- Popular dados existentes: custo total a partir do estoque × custo unitário,
+-- data de compra a partir de last_updated
+update feed_stock
+set
+  total_cost = current_quantity * cost_per_unit,
+  purchase_date = last_updated::date
+where total_cost is null or total_cost = 0;

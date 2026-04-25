@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatCurrency, formatDate, speciesLabel, statusLabel, statusColor } from '@/lib/helpers'
+import { DataCard } from '@/components/ui/data-card'
+import { EmptyState } from '@/components/ui/empty-state'
 import Link from 'next/link'
 
 const PAGE_SIZE = 20
@@ -74,7 +76,7 @@ export function PerAnimalClient({ initialData }: { initialData: AnimalCost[] }) 
         </Select>
       </div>
 
-      <div className="rounded-lg border overflow-x-auto">
+      <DataCard>
         <Table>
           <TableHeader>
             <TableRow>
@@ -90,11 +92,7 @@ export function PerAnimalClient({ initialData }: { initialData: AnimalCost[] }) 
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paged.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Nenhum animal encontrado</TableCell>
-              </TableRow>
-            )}
+            {paged.length === 0 && <EmptyState colSpan={9} message="Nenhum animal encontrado" />}
             {paged.map(a => (
               <TableRow key={a.animal_id}>
                 <TableCell>
@@ -120,7 +118,7 @@ export function PerAnimalClient({ initialData }: { initialData: AnimalCost[] }) 
             ))}
           </TableBody>
         </Table>
-      </div>
+      </DataCard>
 
       {totalPages > 1 && (
         <div className="flex justify-center gap-2 mt-4">

@@ -11,10 +11,12 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { DataCard } from '@/components/ui/data-card'
+import { EmptyState } from '@/components/ui/empty-state'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { toast } from 'sonner'
 import { Plus, Pencil, Trash2, Package, AlertTriangle, Loader2 } from 'lucide-react'
-import { formatDate, formatCurrency, formatNumber, speciesLabel } from '@/lib/helpers'
+import { formatDate, formatCurrency, formatNumber, speciesLabel, parseBRL, formatBRL } from '@/lib/helpers'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
 } from '@/components/ui/dialog'
@@ -42,6 +44,7 @@ export function FeedingClient({
 
   const [stockForm, setStockForm] = useState({
     product_name: '', unit: 'kg', current_quantity: '', min_quantity: '', cost_per_unit: '',
+    purchase_date: new Date().toISOString().slice(0, 10),
   })
   const [consumeForm, setConsumeForm] = useState({
     species: 'bovino', feed_stock_id: '', date: new Date().toISOString().slice(0,10),
@@ -51,7 +54,7 @@ export function FeedingClient({
   const [consumeLoading, setConsumeLoading] = useState(false)
 
   function openStockNew() {
-    setStockForm({ product_name: '', unit: 'kg', current_quantity: '', min_quantity: '', cost_per_unit: '' })
+    setStockForm({ product_name: '', unit: 'kg', current_quantity: '', min_quantity: '', cost_per_unit: '', purchase_date: new Date().toISOString().slice(0, 10) })
     setStockDialog('new')
   }
 
@@ -61,7 +64,8 @@ export function FeedingClient({
       unit: s.unit,
       current_quantity: s.current_quantity.toString(),
       min_quantity: s.min_quantity.toString(),
-      cost_per_unit: s.cost_per_unit.toString(),
+      cost_per_unit: formatBRL(s.cost_per_unit),
+      purchase_date: s.purchase_date ?? new Date().toISOString().slice(0, 10),
     })
     setStockDialog(s)
   }
@@ -69,13 +73,17 @@ export function FeedingClient({
   async function saveStock() {
     if (!stockForm.product_name) return toast.error('Informe o produto')
     setStockLoading(true)
+    const qty = parseFloat(stockForm.current_quantity) || 0
+    const costPerUnit = parseBRL(stockForm.cost_per_unit) ?? 0
     const payload = {
       farm_id: farmId,
       product_name: stockForm.product_name,
       unit: stockForm.unit,
-      current_quantity: parseFloat(stockForm.current_quantity) || 0,
+      current_quantity: qty,
       min_quantity: parseFloat(stockForm.min_quantity) || 0,
-      cost_per_unit: parseFloat(stockForm.cost_per_unit) || 0,
+      cost_per_unit: costPerUnit,
+      purchase_date: stockForm.purchase_date || null,
+      total_cost: qty * costPerUnit,
       last_updated: new Date().toISOString(),
     }
     if (stockDialog === 'new') {
@@ -223,7 +231,7 @@ export function FeedingClient({
             </Button>
           </div>
 
-          <div className="rounded-lg border overflow-x-auto">
+          <DataCard>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -236,13 +244,7 @@ export function FeedingClient({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {records.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      Nenhum registro de consumo
-                    </TableCell>
-                  </TableRow>
-                )}
+                {records.length === 0 && <EmptyState colSpan={6} message="Nenhum registro de consumo" />}
                 {records.map(r => (
                   <TableRow key={r.id}>
                     <TableCell>{formatDate(r.date)}</TableCell>
@@ -262,7 +264,7 @@ export function FeedingClient({
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </DataCard>
         </TabsContent>
       </Tabs>
 
@@ -276,6 +278,10 @@ export function FeedingClient({
             <div className="space-y-2">
               <Label>Nome do Produto *</Label>
               <Input value={stockForm.product_name} onChange={e => setStockForm(p => ({ ...p, product_name: e.target.value }))} placeholder="Ex: Ração bovino adulto" />
+            </div>
+            <div className="space-y-2">
+              <Label>Data da Compra</Label>
+              <Input type="date" value={stockForm.purchase_date} onChange={e => setStockForm(p => ({ ...p, purchase_date: e.target.value }))} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -293,8 +299,10 @@ export function FeedingClient({
               </div>
               <div className="space-y-2">
                 <Label>Custo por Unidade (R$)</Label>
-                <Input type="number" step="0.01" min="0" value={stockForm.cost_per_unit}
-                  onChange={e => setStockForm(p => ({ ...p, cost_per_unit: e.target.value }))} placeholder="0,00" />
+                <Input type="text" inputMode="decimal" value={stockForm.cost_per_unit}
+                  onChange={e => setStockForm(p => ({ ...p, cost_per_unit: e.target.value }))}
+                  onBlur={() => { const n = parseBRL(stockForm.cost_per_unit); if (n !== null) setStockForm(p => ({ ...p, cost_per_unit: formatBRL(n) })) }}
+                  placeholder="0,00" />
               </div>
               <div className="space-y-2">
                 <Label>Quantidade Atual</Label>

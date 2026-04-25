@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+import { parseBRL, formatBRL } from '@/lib/helpers'
 
 interface HealthFormProps {
   farmId: string
@@ -35,7 +36,7 @@ export function HealthForm({ farmId, animals, record, mode }: HealthFormProps) {
     application_date: record?.application_date ?? new Date().toISOString().slice(0, 10),
     next_due_date: record?.next_due_date ?? '',
     applied_by: record?.applied_by ?? '',
-    cost: record?.cost?.toString() ?? '0',
+    cost: record?.cost != null ? formatBRL(record.cost) : '',
     notes: record?.notes ?? '',
   })
 
@@ -80,7 +81,7 @@ export function HealthForm({ farmId, animals, record, mode }: HealthFormProps) {
       application_date: form.application_date,
       next_due_date: form.next_due_date || null,
       applied_by: form.applied_by || null,
-      cost: parseFloat(form.cost) || 0,
+      cost: parseBRL(form.cost) ?? 0,
       notes: form.notes || null,
     }
 
@@ -203,8 +204,10 @@ export function HealthForm({ farmId, animals, record, mode }: HealthFormProps) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="cost">Custo (R$)</Label>
-                <Input id="cost" type="number" step="0.01" min="0" value={form.cost}
-                  onChange={e => set('cost', e.target.value)} placeholder="0,00" />
+                <Input id="cost" type="text" inputMode="decimal" value={form.cost}
+                  onChange={e => set('cost', e.target.value)}
+                  onBlur={() => { const n = parseBRL(form.cost); if (n !== null) set('cost', formatBRL(n)) }}
+                  placeholder="0,00" />
               </div>
             </div>
 

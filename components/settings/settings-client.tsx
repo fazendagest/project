@@ -6,18 +6,73 @@ import type { Farm } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { Loader2, Leaf } from 'lucide-react'
+import { Loader2, Leaf, Download } from 'lucide-react'
 
 export function SettingsClient({ farm, userEmail }: { farm: Farm | null; userEmail: string }) {
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [form, setForm] = useState({
     name: farm?.name ?? 'Minha Fazenda',
     location: farm?.location ?? '',
     area_hectares: farm?.area_hectares?.toString() ?? '',
   })
+
+  async function handleExport() {
+    if (!farm) return
+    setExporting(true)
+    try {
+      const farmId = farm.id
+      const [
+        { data: animals },
+        { data: health_records },
+        { data: reproduction_records },
+        { data: feed_stock },
+        { data: feed_records },
+        { data: animal_purchases },
+        { data: animal_sales },
+        { data: operational_expenses },
+      ] = await Promise.all([
+        supabase.from('animals').select('*').eq('farm_id', farmId),
+        supabase.from('health_records').select('*').eq('farm_id', farmId),
+        supabase.from('reproduction_records').select('*').eq('farm_id', farmId),
+        supabase.from('feed_stock').select('*').eq('farm_id', farmId),
+        supabase.from('feed_records').select('*').eq('farm_id', farmId),
+        supabase.from('animal_purchases').select('*').eq('farm_id', farmId),
+        supabase.from('animal_sales').select('*').eq('farm_id', farmId),
+        supabase.from('operational_expenses').select('*').eq('farm_id', farmId),
+      ])
+
+      const backup = {
+        exported_at: new Date().toISOString(),
+        farm: { id: farm.id, name: farm.name, location: farm.location, area_hectares: farm.area_hectares },
+        animals: animals ?? [],
+        health_records: health_records ?? [],
+        reproduction_records: reproduction_records ?? [],
+        feed_stock: feed_stock ?? [],
+        feed_records: feed_records ?? [],
+        animal_purchases: animal_purchases ?? [],
+        animal_sales: animal_sales ?? [],
+        operational_expenses: operational_expenses ?? [],
+      }
+
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const date = new Date().toISOString().slice(0, 10)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `fazendagest-backup-${date}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('Backup exportado com sucesso!')
+    } catch {
+      toast.error('Erro ao exportar dados')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -87,6 +142,28 @@ export function SettingsClient({ farm, userEmail }: { farm: Farm | null; userEma
             <code className="bg-muted px-1 rounded">animal-photos</code>.
             Certifique-se de criar este bucket com acesso público no painel do Supabase.
           </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Backup de Dados</CardTitle>
+          <CardDescription>
+            Exporta todos os dados da fazenda em formato JSON para guardar como cópia de segurança.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            onClick={handleExport}
+            disabled={exporting || !farm}
+            variant="outline"
+            className="w-full h-12"
+          >
+            {exporting
+              ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Exportando...</>
+              : <><Download className="mr-2 h-5 w-5" />Exportar todos os dados</>
+            }
+          </Button>
         </CardContent>
       </Card>
     </div>

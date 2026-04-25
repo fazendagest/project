@@ -9,6 +9,8 @@ import { SearchInput } from '@/components/ui/search-input'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { DataCard } from '@/components/ui/data-card'
+import { EmptyState } from '@/components/ui/empty-state'
 import { BirthDialog } from '@/components/reproduction/birth-dialog'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -50,7 +52,8 @@ export function ReproductionClient({
     const q = search.toLowerCase()
     const matchSearch = !q ||
       (r.female as any)?.code?.toLowerCase().includes(q) ||
-      (r.female as any)?.name?.toLowerCase().includes(q)
+      (r.female as any)?.name?.toLowerCase().includes(q) ||
+      r.external_male_name?.toLowerCase().includes(q)
     const matchStatus = statusFilter === 'all' || r.status === statusFilter
     return matchSearch && matchStatus
   })
@@ -93,7 +96,7 @@ export function ReproductionClient({
 
       <p className="text-sm text-muted-foreground mb-3">{filtered.length} registro(s)</p>
 
-      <div className="rounded-lg border overflow-x-auto">
+      <DataCard>
         <Table>
           <TableHeader>
             <TableRow>
@@ -108,13 +111,7 @@ export function ReproductionClient({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paged.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                  Nenhum registro encontrado
-                </TableCell>
-              </TableRow>
-            )}
+            {paged.length === 0 && <EmptyState colSpan={8} />}
             {paged.map(r => (
               <TableRow key={r.id}>
                 <TableCell>
@@ -123,7 +120,14 @@ export function ReproductionClient({
                   </Link>
                   <p className="text-xs text-muted-foreground">{(r.female as any)?.name ?? ''}</p>
                 </TableCell>
-                <TableCell className="font-mono">{(r.male as any)?.code ?? 'Inseminação'}</TableCell>
+                <TableCell>
+                  {(r.male as any)?.code
+                    ? <span className="font-mono">{(r.male as any).code}{(r.male as any).name ? ` · ${(r.male as any).name}` : ''}</span>
+                    : r.external_male_name
+                      ? <span className="text-sm">{r.external_male_name}</span>
+                      : <span className="text-muted-foreground text-sm">Inseminação</span>
+                  }
+                </TableCell>
                 <TableCell>{formatDate(r.coverage_date)}</TableCell>
                 <TableCell>{formatDate(r.expected_birth_date)}</TableCell>
                 <TableCell>{formatDate(r.actual_birth_date)}</TableCell>
@@ -150,7 +154,7 @@ export function ReproductionClient({
             ))}
           </TableBody>
         </Table>
-      </div>
+      </DataCard>
 
       {totalPages > 1 && (
         <div className="flex justify-center gap-2 mt-4">

@@ -115,6 +115,17 @@ export function statusColor(status: string): string {
   return map[status] ?? 'bg-gray-100 text-gray-800'
 }
 
+export function parseBRL(value: string): number | null {
+  if (!value) return null
+  const cleaned = value.replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, '')
+  const n = parseFloat(cleaned)
+  return isNaN(n) ? null : n
+}
+
+export function formatBRL(value: number): string {
+  return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)
+}
+
 export function monthLabel(monthStr: string): string {
   const [year, month] = monthStr.split('-')
   const date = new Date(parseInt(year), parseInt(month) - 1)

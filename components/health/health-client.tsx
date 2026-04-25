@@ -9,6 +9,8 @@ import { SearchInput } from '@/components/ui/search-input'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { DataCard } from '@/components/ui/data-card'
+import { EmptyState } from '@/components/ui/empty-state'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { Pencil, Trash2, AlertTriangle } from 'lucide-react'
@@ -83,7 +85,7 @@ export function HealthClient({
 
       <p className="text-sm text-muted-foreground mb-3">{filtered.length} registro(s)</p>
 
-      <div className="rounded-lg border overflow-x-auto">
+      <DataCard>
         <Table>
           <TableHeader>
             <TableRow>
@@ -98,13 +100,7 @@ export function HealthClient({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paged.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                  Nenhum registro encontrado
-                </TableCell>
-              </TableRow>
-            )}
+            {paged.length === 0 && <EmptyState colSpan={8} />}
             {paged.map(r => (
               <TableRow key={r.id}>
                 <TableCell>
@@ -142,7 +138,7 @@ export function HealthClient({
             ))}
           </TableBody>
         </Table>
-      </div>
+      </DataCard>
 
       {totalPages > 1 && (
         <div className="flex justify-center gap-2 mt-4">

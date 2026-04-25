@@ -33,7 +33,7 @@ const navItems = [
     label: 'Financeiro',
     icon: DollarSign,
     children: [
-      { href: '/financial/expenses', label: 'Despesas' },
+      { href: '/financial/movements', label: 'Movimentações' },
       { href: '/financial/dre', label: 'DRE' },
       { href: '/financial/cashflow', label: 'Fluxo de Caixa' },
       { href: '/financial/per-animal', label: 'Por Animal' },

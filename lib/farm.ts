@@ -8,12 +8,13 @@ export async function getOrCreateFarm(): Promise<Farm | null> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: farm } = await supabase
+  const { data: farms } = await supabase
     .from('farms')
     .select('*')
     .eq('owner_id', user.id)
-    .single()
+    .limit(1)
 
+  const farm = farms?.[0] ?? null
   if (farm) return farm
 
   const { data: newFarm } = await supabase

@@ -6,7 +6,9 @@ import { DashboardCharts } from '@/components/dashboard/dashboard-charts'
 import { UpcomingBirths } from '@/components/dashboard/upcoming-births'
 import { LowStock } from '@/components/dashboard/low-stock'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
+import { PlantelSummaryTable } from '@/components/financial/plantel-summary-table'
 import { formatCurrency } from '@/lib/helpers'
+import { buildPlantelRows } from '@/lib/plantel-utils'
 import { PawPrint, TrendingUp, DollarSign, Package } from 'lucide-react'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 
@@ -29,16 +31,19 @@ export default async function DashboardPage() {
     { data: feedExpenses },
     { data: opExpenses },
     { data: healthExpenses },
+    { data: animalCosts },
   ] = await Promise.all([
-    supabase.from('animals').select('species, status').eq('farm_id', farmId),
+    supabase.from('animals').select('id, species, status, market_value').eq('farm_id', farmId),
     supabase.from('animal_sales').select('sale_price, sale_date').eq('farm_id', farmId).gte('sale_date', monthStart).lte('sale_date', monthEnd),
     supabase.from('animal_purchases').select('purchase_price, purchase_date').eq('farm_id', farmId).gte('purchase_date', monthStart).lte('purchase_date', monthEnd),
-    supabase.from('feed_records').select('cost_total, date').eq('farm_id', farmId).gte('date', monthStart).lte('date', monthEnd),
+    supabase.from('feed_stock').select('total_cost, purchase_date').eq('farm_id', farmId).gte('purchase_date', monthStart).lte('purchase_date', monthEnd),
     supabase.from('operational_expenses').select('amount, date').eq('farm_id', farmId).gte('date', monthStart).lte('date', monthEnd),
     supabase.from('health_records').select('cost, application_date').eq('farm_id', farmId).gte('application_date', monthStart).lte('application_date', monthEnd),
+    supabase.from('animal_costs').select('animal_id, species, total_cost').eq('farm_id', farmId).eq('status', 'ativo'),
   ])
 
   const activeAnimals = animals?.filter(a => a.status === 'ativo') ?? []
+  const plantelRows = buildPlantelRows(animalCosts ?? [], activeAnimals)
   const totalAtivos = activeAnimals.length
   const bovinos = activeAnimals.filter(a => a.species === 'bovino').length
   const equinos = activeAnimals.filter(a => a.species === 'equino').length
@@ -47,7 +52,7 @@ export default async function DashboardPage() {
   const revenue = sales?.reduce((s, r) => s + (r.sale_price || 0), 0) ?? 0
   const totalCosts =
     (purchases?.reduce((s, r) => s + (r.purchase_price || 0), 0) ?? 0) +
-    (feedExpenses?.reduce((s, r) => s + (r.cost_total || 0), 0) ?? 0) +
+    (feedExpenses?.reduce((s, r) => s + (r.total_cost || 0), 0) ?? 0) +
     (opExpenses?.reduce((s, r) => s + (r.amount || 0), 0) ?? 0) +
     (healthExpenses?.reduce((s, r) => s + (r.cost || 0), 0) ?? 0)
   const netProfit = revenue - totalCosts
@@ -92,6 +97,12 @@ export default async function DashboardPage() {
           iconBg="bg-orange-100"
         />
       </div>
+
+      {plantelRows.length > 0 && (
+        <div className="mb-6">
+          <PlantelSummaryTable rows={plantelRows} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
         <div className="xl:col-span-2">

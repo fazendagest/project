@@ -15,7 +15,7 @@ export default async function AnimalsPage() {
     .from('animals')
     .select('*')
     .eq('farm_id', farmId)
-    .order('created_at', { ascending: false })
+    .order('code', { ascending: true })
 
   return (
     <div>

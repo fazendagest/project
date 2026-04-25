@@ -83,7 +83,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
     setForm(prev => ({ ...prev, [k]: v }))
   }
 
-  function handleSpeciesChange(species: string) {
+  function handleSpeciesChange(species: Species) {
     setForm(prev => ({ ...prev, species, breed: '' }))
     if (mode === 'create') fetchCode(species)
   }

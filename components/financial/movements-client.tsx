@@ -302,9 +302,12 @@ export function ExpensesClient({
                   <TableRow key={s.id}>
                     <TableCell>{formatDate(s.sale_date)}</TableCell>
                     <TableCell>
-                      <Link href={`/animals/${s.animal_id}`} className="font-mono font-semibold text-primary hover:underline">
-                        {(s.animal as any)?.code ?? '—'}
-                      </Link>
+                      <div>
+                        <Link href={`/animals/${s.animal_id}`} className="font-mono font-semibold text-sm text-primary hover:underline">
+                          {(s.animal as any)?.code ?? '—'}
+                        </Link>
+                        {(s.animal as any)?.name && <span className="text-xs text-gray-500 block">{(s.animal as any)?.name}</span>}
+                      </div>
                     </TableCell>
                     <TableCell>{s.buyer_name ?? '—'}</TableCell>
                     <TableCell><Badge variant="outline" className="capitalize">{s.sale_type}</Badge></TableCell>
@@ -340,9 +343,12 @@ export function ExpensesClient({
                   <TableRow key={p.id}>
                     <TableCell>{formatDate(p.purchase_date)}</TableCell>
                     <TableCell>
-                      <Link href={`/animals/${p.animal_id}`} className="font-mono font-semibold text-primary hover:underline">
-                        {(p.animal as any)?.code ?? '—'}
-                      </Link>
+                      <div>
+                        <Link href={`/animals/${p.animal_id}`} className="font-mono font-semibold text-sm text-primary hover:underline">
+                          {(p.animal as any)?.code ?? '—'}
+                        </Link>
+                        {(p.animal as any)?.name && <span className="text-xs text-gray-500 block">{(p.animal as any)?.name}</span>}
+                      </div>
                     </TableCell>
                     <TableCell>{p.seller_name ?? '—'}</TableCell>
                     <TableCell>{p.weight_kg != null ? `${p.weight_kg} @` : '—'}</TableCell>
@@ -418,9 +424,12 @@ export function ExpensesClient({
                   <TableRow key={r.id}>
                     <TableCell>{formatDate(r.application_date)}</TableCell>
                     <TableCell>
-                      <Link href={`/animals/${r.animal_id}`} className="font-mono font-semibold text-primary hover:underline">
-                        {(r.animal as any)?.code ?? '—'}
-                      </Link>
+                      <div>
+                        <Link href={`/animals/${r.animal_id}`} className="font-mono font-semibold text-sm text-primary hover:underline">
+                          {(r.animal as any)?.code ?? '—'}
+                        </Link>
+                        {(r.animal as any)?.name && <span className="text-xs text-gray-500 block">{(r.animal as any)?.name}</span>}
+                      </div>
                     </TableCell>
                     <TableCell><Badge variant="outline">{healthTypeLabel(r.type)}</Badge></TableCell>
                     <TableCell>{r.product_name}</TableCell>

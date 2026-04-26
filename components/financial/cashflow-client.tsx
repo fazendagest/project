@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { formatCurrency, last12Months, monthLabel } from '@/lib/helpers'
+import { formatCurrency, formatCurrencyCard, last12Months, monthLabel } from '@/lib/helpers'
 
 interface MonthData {
   month: string
@@ -73,20 +73,20 @@ export function CashflowClient({ farmId }: { farmId: string }) {
         <Card className="overflow-hidden">
           <CardContent className="pt-4">
             <p className="text-sm text-muted-foreground">Total Entradas</p>
-            <p className="text-sm lg:text-2xl font-bold text-green-700 break-words leading-tight">{formatCurrency(totalInflow)}</p>
+            <p className="text-sm lg:text-2xl font-bold text-green-700 break-words leading-tight">{formatCurrencyCard(totalInflow)}</p>
           </CardContent>
         </Card>
         <Card className="overflow-hidden">
           <CardContent className="pt-4">
             <p className="text-sm text-muted-foreground">Total Saídas</p>
-            <p className="text-sm lg:text-2xl font-bold text-red-700 break-words leading-tight">{formatCurrency(totalOutflow)}</p>
+            <p className="text-sm lg:text-2xl font-bold text-red-700 break-words leading-tight">{formatCurrencyCard(totalOutflow)}</p>
           </CardContent>
         </Card>
         <Card className="overflow-hidden">
           <CardContent className="pt-4">
             <p className="text-sm text-muted-foreground">Saldo Acumulado</p>
             <p className={`text-sm lg:text-2xl font-bold break-words leading-tight ${totalBalance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-              {formatCurrency(totalBalance)}
+              {formatCurrencyCard(totalBalance)}
             </p>
           </CardContent>
         </Card>

@@ -40,6 +40,18 @@ export function formatCurrency(value: number | null | undefined): string {
   }).format(value)
 }
 
+export function formatCurrencyCard(value: number | null | undefined): string {
+  if (value == null) return '—'
+  const abs = Math.abs(value)
+  const digits = abs >= 1000 ? 0 : 2
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value)
+}
+
 export function formatNumber(value: number | null | undefined, decimals = 2): string {
   if (value == null) return '—'
   return new Intl.NumberFormat('pt-BR', {

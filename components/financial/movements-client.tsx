@@ -49,13 +49,17 @@ export function ExpensesClient({
 
   const [expDialog, setExpDialog] = useState(false)
   const [saleDialog, setSaleDialog] = useState(false)
-  // null = closed | string (uuid) = editing that purchase id
+  // null = closed | string (uuid) = editing that id
   const [purchaseDialog, setPurchaseDialog] = useState<string | null>(null)
+  const [saleEditDialog, setSaleEditDialog] = useState<string | null>(null)
+  const [expEditDialog, setExpEditDialog] = useState<string | null>(null)
   const [delConfirm, setDelConfirm] = useState<{ type: string; id: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [expLoading, setExpLoading] = useState(false)
   const [saleLoading, setSaleLoading] = useState(false)
   const [purchaseLoading, setPurchaseLoading] = useState(false)
+  const [saleEditLoading, setSaleEditLoading] = useState(false)
+  const [expEditLoading, setExpEditLoading] = useState(false)
 
   const [expForm, setExpForm] = useState({ category: 'mao_de_obra', date: today, amount: '', description: '', notes: '' })
   const [saleForm, setSaleForm] = useState({ animal_id: '', buyer_name: '', sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', notes: '' })
@@ -66,8 +70,12 @@ export function ExpensesClient({
     weight_kg: '',
     notes: '',
   })
+  const [saleEditForm, setSaleEditForm] = useState({ sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', buyer_name: '', sale_type: 'venda' })
+  const [expEditForm, setExpEditForm] = useState({ category: 'mao_de_obra', date: today, amount: '', description: '' })
 
   const editingPurchase = purchaseDialog ? purchases.find(p => p.id === purchaseDialog) : null
+  const editingSale = saleEditDialog ? sales.find(s => s.id === saleEditDialog) : null
+  const editingExpense = expEditDialog ? expenses.find(e => e.id === expEditDialog) : null
 
   function openEditPurchase(p: AnimalPurchase & { animal?: any }) {
     setPurchaseForm({
@@ -78,6 +86,28 @@ export function ExpensesClient({
       notes: p.notes ?? '',
     })
     setPurchaseDialog(p.id)
+  }
+
+  function openEditSale(s: AnimalSale & { animal?: any }) {
+    setSaleEditForm({
+      sale_date: s.sale_date,
+      sale_price: s.sale_price > 0 ? formatBRL(s.sale_price) : '',
+      weight_kg: s.weight_kg ? String(s.weight_kg) : '',
+      price_per_kg: s.price_per_kg ? formatBRL(s.price_per_kg) : '',
+      buyer_name: s.buyer_name ?? '',
+      sale_type: s.sale_type,
+    })
+    setSaleEditDialog(s.id)
+  }
+
+  function openEditExpense(exp: OperationalExpense) {
+    setExpEditForm({
+      category: exp.category,
+      date: exp.date,
+      amount: exp.amount > 0 ? formatBRL(exp.amount) : '',
+      description: exp.description,
+    })
+    setExpEditDialog(exp.id)
   }
 
   async function saveExpense(e: React.FormEvent) {
@@ -143,6 +173,46 @@ export function ExpensesClient({
     setPurchaseLoading(false)
   }
 
+  async function updateSale(e: React.FormEvent) {
+    e.preventDefault()
+    if (!saleEditDialog) return
+    setSaleEditLoading(true)
+    const { data, error } = await supabase.from('animal_sales').update({
+      sale_date: saleEditForm.sale_date,
+      sale_price: parseBRL(saleEditForm.sale_price) ?? 0,
+      weight_kg: saleEditForm.weight_kg ? parseInt(saleEditForm.weight_kg, 10) : null,
+      price_per_kg: parseBRL(saleEditForm.price_per_kg),
+      buyer_name: saleEditForm.buyer_name || null,
+      sale_type: saleEditForm.sale_type,
+    }).eq('id', saleEditDialog).eq('farm_id', farmId).select('*, animal:animal_id(code, name)').single()
+    if (error) toast.error('Erro: ' + error.message)
+    else {
+      setSales(prev => prev.map(s => s.id === saleEditDialog ? data : s))
+      setSaleEditDialog(null)
+      toast.success('Venda atualizada!')
+    }
+    setSaleEditLoading(false)
+  }
+
+  async function updateExpense(e: React.FormEvent) {
+    e.preventDefault()
+    if (!expEditDialog) return
+    setExpEditLoading(true)
+    const { data, error } = await supabase.from('operational_expenses').update({
+      category: expEditForm.category,
+      date: expEditForm.date,
+      amount: parseBRL(expEditForm.amount) ?? 0,
+      description: expEditForm.description,
+    }).eq('id', expEditDialog).eq('farm_id', farmId).select().single()
+    if (error) toast.error('Erro: ' + error.message)
+    else {
+      setExpenses(prev => prev.map(ex => ex.id === expEditDialog ? data : ex))
+      setExpEditDialog(null)
+      toast.success('Despesa atualizada!')
+    }
+    setExpEditLoading(false)
+  }
+
   async function handleDelete() {
     if (!delConfirm) return
     setDeleting(true)
@@ -200,7 +270,7 @@ export function ExpensesClient({
                     <TableCell><Badge variant="outline">{expenseCategoryLabel(e.category)}</Badge></TableCell>
                     <TableCell>{e.description}</TableCell>
                     <TableCell className="font-semibold text-red-600">{formatCurrency(e.amount)}</TableCell>
-                    <TableCell><div className="flex justify-end"><Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDelConfirm({ type: 'expense', id: e.id })}><Trash2 className="h-4 w-4" /></Button></div></TableCell>
+                    <TableCell><div className="flex justify-end gap-1"><Button size="icon" variant="ghost" onClick={() => openEditExpense(e)}><Pencil className="h-4 w-4" /></Button><Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDelConfirm({ type: 'expense', id: e.id })}><Trash2 className="h-4 w-4" /></Button></div></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -240,7 +310,7 @@ export function ExpensesClient({
                     <TableCell><Badge variant="outline" className="capitalize">{s.sale_type}</Badge></TableCell>
                     <TableCell>{s.weight_kg != null ? `${s.weight_kg} @` : '—'}</TableCell>
                     <TableCell className="font-semibold text-green-600">{formatCurrency(s.sale_price)}</TableCell>
-                    <TableCell><div className="flex justify-end"><Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDelConfirm({ type: 'sale', id: s.id })}><Trash2 className="h-4 w-4" /></Button></div></TableCell>
+                    <TableCell><div className="flex justify-end gap-1"><Button size="icon" variant="ghost" onClick={() => openEditSale(s)}><Pencil className="h-4 w-4" /></Button><Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDelConfirm({ type: 'sale', id: s.id })}><Trash2 className="h-4 w-4" /></Button></div></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -469,6 +539,105 @@ export function ExpensesClient({
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setSaleDialog(false)}>Cancelar</Button>
               <Button type="submit" disabled={saleLoading || !saleForm.animal_id}>{saleLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sale Edit Dialog */}
+      <Dialog open={saleEditDialog !== null} onOpenChange={o => !o && setSaleEditDialog(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar Venda</DialogTitle></DialogHeader>
+          <form onSubmit={updateSale} className="space-y-4 py-2">
+            <div className="space-y-1">
+              <Label>Animal</Label>
+              <p className="text-sm font-mono font-semibold">
+                {(editingSale?.animal as any)?.code ?? '—'}
+                {(editingSale?.animal as any)?.name ? ` · ${(editingSale?.animal as any)?.name}` : ''}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <Select value={saleEditForm.sale_type} onValueChange={v => v && setSaleEditForm(p => ({ ...p, sale_type: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="venda">Venda</SelectItem>
+                    <SelectItem value="abate">Abate</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Data</Label>
+                <Input type="date" value={saleEditForm.sale_date} onChange={e => setSaleEditForm(p => ({ ...p, sale_date: e.target.value }))} required />
+              </div>
+              <div className="space-y-2">
+                <Label>Valor (R$) *</Label>
+                <Input type="text" inputMode="decimal" value={saleEditForm.sale_price}
+                  onChange={e => setSaleEditForm(p => ({ ...p, sale_price: e.target.value }))}
+                  onBlur={() => { const n = parseBRL(saleEditForm.sale_price); if (n !== null) setSaleEditForm(p => ({ ...p, sale_price: formatBRL(n) })) }}
+                  placeholder="0,00" required />
+              </div>
+              <div className="space-y-2">
+                <Label>Peso (@)</Label>
+                <Input type="number" step="1" min="0" value={saleEditForm.weight_kg} onChange={e => setSaleEditForm(p => ({ ...p, weight_kg: e.target.value }))} />
+              </div>
+              <div className="space-y-2 col-span-2">
+                <Label>Preço/@ (R$)</Label>
+                <Input type="text" inputMode="decimal" value={saleEditForm.price_per_kg}
+                  onChange={e => setSaleEditForm(p => ({ ...p, price_per_kg: e.target.value }))}
+                  onBlur={() => { const n = parseBRL(saleEditForm.price_per_kg); if (n !== null) setSaleEditForm(p => ({ ...p, price_per_kg: formatBRL(n) })) }}
+                  placeholder="0,00" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Comprador</Label>
+              <Input value={saleEditForm.buyer_name} onChange={e => setSaleEditForm(p => ({ ...p, buyer_name: e.target.value }))} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setSaleEditDialog(null)}>Cancelar</Button>
+              <Button type="submit" disabled={saleEditLoading}>{saleEditLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Expense Edit Dialog */}
+      <Dialog open={expEditDialog !== null} onOpenChange={o => !o && setExpEditDialog(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar Despesa</DialogTitle></DialogHeader>
+          <form onSubmit={updateExpense} className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Categoria</Label>
+              <Select value={expEditForm.category} onValueChange={v => v && setExpEditForm(p => ({ ...p, category: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {['mao_de_obra','energia','manutencao','transporte','equipamento','veterinario','outro'].map(c => (
+                    <SelectItem key={c} value={c}>{expenseCategoryLabel(c)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Data</Label>
+                <Input type="date" value={expEditForm.date} onChange={e => setExpEditForm(p => ({ ...p, date: e.target.value }))} required />
+              </div>
+              <div className="space-y-2">
+                <Label>Valor (R$) *</Label>
+                <Input type="text" inputMode="decimal" value={expEditForm.amount}
+                  onChange={e => setExpEditForm(p => ({ ...p, amount: e.target.value }))}
+                  onBlur={() => { const n = parseBRL(expEditForm.amount); if (n !== null) setExpEditForm(p => ({ ...p, amount: formatBRL(n) })) }}
+                  placeholder="0,00" required />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Descrição *</Label>
+              <Input value={expEditForm.description} onChange={e => setExpEditForm(p => ({ ...p, description: e.target.value }))} required />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setExpEditDialog(null)}>Cancelar</Button>
+              <Button type="submit" disabled={expEditLoading}>{expEditLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar</Button>
             </DialogFooter>
           </form>
         </DialogContent>

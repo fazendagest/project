@@ -107,7 +107,7 @@ export function ExpensesClient({
       buyer_name: saleForm.buyer_name || null,
       sale_date: saleForm.sale_date,
       sale_price: parseBRL(saleForm.sale_price) ?? 0,
-      weight_kg: saleForm.weight_kg ? parseFloat(saleForm.weight_kg) : null,
+      weight_kg: saleForm.weight_kg ? parseInt(saleForm.weight_kg, 10) : null,
       price_per_kg: parseBRL(saleForm.price_per_kg),
       sale_type: saleForm.sale_type,
       notes: saleForm.notes || null,
@@ -131,7 +131,7 @@ export function ExpensesClient({
       seller_name: purchaseForm.seller_name || null,
       purchase_date: purchaseForm.purchase_date,
       purchase_price: parseBRL(purchaseForm.purchase_price) ?? 0,
-      weight_kg: purchaseForm.weight_kg ? parseFloat(purchaseForm.weight_kg) : null,
+      weight_kg: purchaseForm.weight_kg ? parseInt(purchaseForm.weight_kg, 10) : null,
       notes: purchaseForm.notes || null,
     }).eq('id', purchaseDialog).eq('farm_id', farmId).select('*, animal:animal_id(code, name)').single()
     if (error) toast.error('Erro: ' + error.message)
@@ -221,7 +221,7 @@ export function ExpensesClient({
                   <TableHead>Animal</TableHead>
                   <TableHead>Comprador</TableHead>
                   <TableHead>Tipo</TableHead>
-                  <TableHead>Peso (kg)</TableHead>
+                  <TableHead>Peso (@)</TableHead>
                   <TableHead>Valor</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -238,7 +238,7 @@ export function ExpensesClient({
                     </TableCell>
                     <TableCell>{s.buyer_name ?? '—'}</TableCell>
                     <TableCell><Badge variant="outline" className="capitalize">{s.sale_type}</Badge></TableCell>
-                    <TableCell>{s.weight_kg ?? '—'}</TableCell>
+                    <TableCell>{s.weight_kg != null ? `${s.weight_kg} @` : '—'}</TableCell>
                     <TableCell className="font-semibold text-green-600">{formatCurrency(s.sale_price)}</TableCell>
                     <TableCell><div className="flex justify-end"><Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDelConfirm({ type: 'sale', id: s.id })}><Trash2 className="h-4 w-4" /></Button></div></TableCell>
                   </TableRow>
@@ -259,7 +259,7 @@ export function ExpensesClient({
                   <TableHead>Data</TableHead>
                   <TableHead>Animal</TableHead>
                   <TableHead>Vendedor</TableHead>
-                  <TableHead>Peso (kg)</TableHead>
+                  <TableHead>Peso (@)</TableHead>
                   <TableHead>Valor</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -275,7 +275,7 @@ export function ExpensesClient({
                       </Link>
                     </TableCell>
                     <TableCell>{p.seller_name ?? '—'}</TableCell>
-                    <TableCell>{p.weight_kg ?? '—'}</TableCell>
+                    <TableCell>{p.weight_kg != null ? `${p.weight_kg} @` : '—'}</TableCell>
                     <TableCell className="font-semibold text-red-600">{formatCurrency(p.purchase_price)}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
@@ -451,11 +451,11 @@ export function ExpensesClient({
                   placeholder="0,00" required />
               </div>
               <div className="space-y-2">
-                <Label>Peso (kg)</Label>
-                <Input type="number" step="0.1" value={saleForm.weight_kg} onChange={e => setSaleForm(p => ({ ...p, weight_kg: e.target.value }))} />
+                <Label>Peso (@)</Label>
+                <Input type="number" step="1" min="0" value={saleForm.weight_kg} onChange={e => setSaleForm(p => ({ ...p, weight_kg: e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <Label>Preço/kg (R$)</Label>
+                <Label>Preço/@ (R$)</Label>
                 <Input type="text" inputMode="decimal" value={saleForm.price_per_kg}
                   onChange={e => setSaleForm(p => ({ ...p, price_per_kg: e.target.value }))}
                   onBlur={() => { const n = parseBRL(saleForm.price_per_kg); if (n !== null) setSaleForm(p => ({ ...p, price_per_kg: formatBRL(n) })) }}
@@ -501,8 +501,8 @@ export function ExpensesClient({
                   placeholder="0,00" />
               </div>
               <div className="space-y-2">
-                <Label>Peso (kg)</Label>
-                <Input type="number" step="0.1" value={purchaseForm.weight_kg} onChange={e => setPurchaseForm(p => ({ ...p, weight_kg: e.target.value }))} />
+                <Label>Peso (@)</Label>
+                <Input type="number" step="1" min="0" value={purchaseForm.weight_kg} onChange={e => setPurchaseForm(p => ({ ...p, weight_kg: e.target.value }))} />
               </div>
               <div className="space-y-2">
                 <Label>Vendedor</Label>

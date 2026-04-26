@@ -39,6 +39,7 @@ export interface Animal {
   notes?: string
   photo_url?: string
   market_value?: number
+  weight_arrobas?: number
   created_at: string
 }
 

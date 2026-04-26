@@ -73,6 +73,9 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
             <Row label="Nascimento" value={formatDate(animal.birth_date)} />
             <Row label="Idade" value={animal.birth_date ? calcAge(animal.birth_date) : '—'} />
             <Row label="Entrada" value={`${formatDate(animal.entry_date)} (${animal.entry_type})`} />
+            {(animal as any).weight_arrobas != null && (
+              <Row label="Peso" value={`${(animal as any).weight_arrobas} @`} />
+            )}
             <div className="flex justify-between py-1 border-b last:border-0">
               <span className="text-muted-foreground">Status</span>
               <Badge className={statusColor(animal.status)}>{statusLabel(animal.status)}</Badge>

@@ -115,7 +115,7 @@ export function ReportsClient({
           ))}
         </div>
 
-        <div id="inv-table" className="rounded-lg border overflow-x-auto">
+        <div id="inv-table" className="rounded-lg border border-gray-100 overflow-x-auto bg-white shadow-sm">
           <Table>
             <TableHeader>
               <TableRow>
@@ -158,7 +158,7 @@ export function ReportsClient({
           </Button>
         </div>
 
-        <div id="health-table" className="rounded-lg border overflow-x-auto">
+        <div id="health-table" className="rounded-lg border border-gray-100 overflow-x-auto bg-white shadow-sm">
           <Table>
             <TableHeader>
               <TableRow>
@@ -204,7 +204,7 @@ export function ReportsClient({
           </Button>
         </div>
 
-        <div id="rent-table" className="rounded-lg border overflow-x-auto">
+        <div id="rent-table" className="rounded-lg border border-gray-100 overflow-x-auto bg-white shadow-sm">
           <Table>
             <TableHeader>
               <TableRow>

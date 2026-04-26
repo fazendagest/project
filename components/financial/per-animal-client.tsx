@@ -40,15 +40,15 @@ export function PerAnimalClient({ initialData }: { initialData: AnimalCost[] }) 
   return (
     <div>
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-card border rounded-lg p-4">
+        <div className="bg-white border border-gray-100 shadow-sm rounded-lg p-4">
           <p className="text-sm text-muted-foreground">Receita Total (Vendidos)</p>
           <p className="text-xl font-bold text-green-700">{formatCurrency(totalRevenue)}</p>
         </div>
-        <div className="bg-card border rounded-lg p-4">
+        <div className="bg-white border border-gray-100 shadow-sm rounded-lg p-4">
           <p className="text-sm text-muted-foreground">Custo Total (Vendidos)</p>
           <p className="text-xl font-bold text-red-700">{formatCurrency(totalCost)}</p>
         </div>
-        <div className="bg-card border rounded-lg p-4">
+        <div className="bg-white border border-gray-100 shadow-sm rounded-lg p-4">
           <p className="text-sm text-muted-foreground">Lucro Total</p>
           <p className={`text-xl font-bold ${totalProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatCurrency(totalProfit)}</p>
         </div>

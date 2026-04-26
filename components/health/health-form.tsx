@@ -87,7 +87,7 @@ export function HealthForm({ farmId, animals, record, mode }: HealthFormProps) {
 
     let error
     if (mode === 'edit') {
-      ;({ error } = await supabase.from('health_records').update(base).eq('id', record!.id))
+      ;({ error } = await supabase.from('health_records').update(base).eq('id', record!.id).eq('farm_id', farmId))
     } else if (multipleAnimals) {
       const inserts = selectedAnimals.map(animal_id => ({ ...base, animal_id }))
       ;({ error } = await supabase.from('health_records').insert(inserts))
@@ -101,8 +101,8 @@ export function HealthForm({ farmId, animals, record, mode }: HealthFormProps) {
         ? `Registro(s) criado(s) para ${multipleAnimals ? selectedAnimals.length : 1} animal(is)`
         : 'Registro atualizado!'
       )
-      router.push('/health')
       router.refresh()
+      router.push('/health')
     }
     setLoading(false)
   }

@@ -133,7 +133,7 @@ export function ExpensesClient({
       purchase_price: parseBRL(purchaseForm.purchase_price) ?? 0,
       weight_kg: purchaseForm.weight_kg ? parseFloat(purchaseForm.weight_kg) : null,
       notes: purchaseForm.notes || null,
-    }).eq('id', purchaseDialog).select('*, animal:animal_id(code, name)').single()
+    }).eq('id', purchaseDialog).eq('farm_id', farmId).select('*, animal:animal_id(code, name)').single()
     if (error) toast.error('Erro: ' + error.message)
     else {
       setPurchases(prev => prev.map(p => p.id === purchaseDialog ? data : p))

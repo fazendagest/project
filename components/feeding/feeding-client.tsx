@@ -92,7 +92,7 @@ export function FeedingClient({
       else { setStock(prev => [...prev, { ...data, low: data.current_quantity <= data.min_quantity }]); toast.success('Produto criado!') }
     } else {
       const s = stockDialog as FeedStock
-      const { data, error } = await supabase.from('feed_stock').update(payload).eq('id', s.id).select().single()
+      const { data, error } = await supabase.from('feed_stock').update(payload).eq('id', s.id).eq('farm_id', farmId).select().single()
       if (error) toast.error('Erro: ' + error.message)
       else { setStock(prev => prev.map(x => x.id === s.id ? { ...data, low: data.current_quantity <= data.min_quantity } : x)); toast.success('Atualizado!') }
     }
@@ -140,6 +140,7 @@ export function FeedingClient({
         .from('feed_stock')
         .update({ current_quantity: selectedStock.current_quantity - qty, last_updated: new Date().toISOString() })
         .eq('id', selectedStock.id)
+        .eq('farm_id', farmId)
 
       setStock(prev => prev.map(s =>
         s.id === selectedStock.id

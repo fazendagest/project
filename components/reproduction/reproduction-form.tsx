@@ -73,14 +73,14 @@ export function ReproductionForm({ farmId, females, males, record, mode }: Repro
     if (mode === 'create') {
       ;({ error } = await supabase.from('reproduction_records').insert(payload))
     } else {
-      ;({ error } = await supabase.from('reproduction_records').update(payload).eq('id', record!.id))
+      ;({ error } = await supabase.from('reproduction_records').update(payload).eq('id', record!.id).eq('farm_id', farmId))
     }
 
     if (error) toast.error('Erro ao salvar: ' + error.message)
     else {
       toast.success(mode === 'create' ? 'Cobertura registrada!' : 'Registro atualizado!')
-      router.push('/reproduction')
       router.refresh()
+      router.push('/reproduction')
     }
     setLoading(false)
   }

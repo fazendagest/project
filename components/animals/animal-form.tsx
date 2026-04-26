@@ -146,10 +146,10 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
         await supabase.from('animal_purchases').insert({ ...purchasePayload, animal_id: created.id })
       }
     } else {
-      ;({ error } = await supabase.from('animals').update(payload).eq('id', animal!.id))
+      ;({ error } = await supabase.from('animals').update(payload).eq('id', animal!.id).eq('farm_id', farmId))
       if (!error && form.entry_type === 'compra') {
         if (existingPurchase) {
-          await supabase.from('animal_purchases').update(purchasePayload).eq('id', existingPurchase.id)
+          await supabase.from('animal_purchases').update(purchasePayload).eq('id', existingPurchase.id).eq('farm_id', farmId)
         } else {
           await supabase.from('animal_purchases').insert({ ...purchasePayload, animal_id: animal!.id })
         }
@@ -161,8 +161,8 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
       else toast.error('Erro ao salvar: ' + error.message)
     } else {
       toast.success(mode === 'create' ? 'Animal cadastrado!' : 'Animal atualizado!')
-      router.push('/animals')
       router.refresh()
+      router.push('/animals')
     }
     setLoading(false)
   }

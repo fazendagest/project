@@ -8,7 +8,6 @@ import { LowStock } from '@/components/dashboard/low-stock'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { PlantelSummaryTable } from '@/components/financial/plantel-summary-table'
 import { formatCurrency } from '@/lib/helpers'
-import { formatCurrencyShort } from '@/lib/utils'
 import { buildPlantelRows } from '@/lib/plantel-utils'
 import { PawPrint, TrendingUp, DollarSign, Package } from 'lucide-react'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
@@ -24,6 +23,7 @@ export default async function DashboardPage() {
   const now = new Date()
   const monthStart = format(startOfMonth(now), 'yyyy-MM-dd')
   const monthEnd = format(endOfMonth(now), 'yyyy-MM-dd')
+  const yearStart = format(new Date(now.getFullYear(), 0, 1), 'yyyy-MM-dd')
 
   const [
     { data: animals },
@@ -33,6 +33,7 @@ export default async function DashboardPage() {
     { data: opExpenses },
     { data: healthExpenses },
     { data: animalCosts },
+    { data: yearSales },
   ] = await Promise.all([
     supabase.from('animals').select('id, species, status, market_value').eq('farm_id', farmId),
     supabase.from('animal_sales').select('sale_price, sale_date').eq('farm_id', farmId).gte('sale_date', monthStart).lte('sale_date', monthEnd),
@@ -41,6 +42,7 @@ export default async function DashboardPage() {
     supabase.from('operational_expenses').select('amount, date').eq('farm_id', farmId).gte('date', monthStart).lte('date', monthEnd),
     supabase.from('health_records').select('cost, application_date').eq('farm_id', farmId).gte('application_date', monthStart).lte('application_date', monthEnd),
     supabase.from('animal_costs').select('animal_id, species, total_cost').eq('farm_id', farmId).eq('status', 'ativo'),
+    supabase.from('animal_sales').select('sale_price').eq('farm_id', farmId).gte('sale_date', yearStart),
   ])
 
   const activeAnimals = animals?.filter(a => a.status === 'ativo') ?? []
@@ -51,6 +53,7 @@ export default async function DashboardPage() {
   const suinos = activeAnimals.filter(a => a.species === 'suino').length
 
   const revenue = sales?.reduce((s, r) => s + (r.sale_price || 0), 0) ?? 0
+  const yearRevenue = yearSales?.reduce((s, r) => s + (r.sale_price || 0), 0) ?? 0
   const totalCosts =
     (purchases?.reduce((s, r) => s + (r.purchase_price || 0), 0) ?? 0) +
     (feedExpenses?.reduce((s, r) => s + (r.total_cost || 0), 0) ?? 0) +
@@ -77,16 +80,15 @@ export default async function DashboardPage() {
         />
         <StatCard
           title="Faturamento Mês"
-          value={formatCurrencyShort(revenue)}
-          tooltip={formatCurrency(revenue)}
+          value={formatCurrency(revenue)}
+          subtitle={`Acumulado ${now.getFullYear()}: ${formatCurrency(yearRevenue)}`}
           icon={DollarSign}
           iconColor="text-blue-700"
           iconBg="bg-blue-100"
         />
         <StatCard
           title="Lucro Líquido"
-          value={formatCurrencyShort(netProfit)}
-          tooltip={formatCurrency(netProfit)}
+          value={formatCurrency(netProfit)}
           subtitle={`Margem: ${margin.toFixed(1)}%`}
           icon={TrendingUp}
           iconColor={netProfit >= 0 ? 'text-green-700' : 'text-red-700'}
@@ -94,8 +96,7 @@ export default async function DashboardPage() {
         />
         <StatCard
           title="Total Gastos"
-          value={formatCurrencyShort(totalCosts)}
-          tooltip={formatCurrency(totalCosts)}
+          value={formatCurrency(totalCosts)}
           icon={Package}
           iconColor="text-orange-700"
           iconBg="bg-orange-100"

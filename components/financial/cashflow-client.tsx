@@ -7,7 +7,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatCurrency, last12Months, monthLabel } from '@/lib/helpers'
-import { formatCurrencyShort } from '@/lib/utils'
 
 interface MonthData {
   month: string
@@ -71,23 +70,23 @@ export function CashflowClient({ farmId }: { farmId: string }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
+        <Card className="overflow-hidden">
           <CardContent className="pt-4">
             <p className="text-sm text-muted-foreground">Total Entradas</p>
-            <p className="text-xl sm:text-lg md:text-xl lg:text-2xl font-bold text-green-700 truncate cursor-help" title={formatCurrency(totalInflow)}>{formatCurrencyShort(totalInflow)}</p>
+            <p className="text-sm lg:text-2xl font-bold text-green-700 break-words leading-tight">{formatCurrency(totalInflow)}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="overflow-hidden">
           <CardContent className="pt-4">
             <p className="text-sm text-muted-foreground">Total Saídas</p>
-            <p className="text-xl sm:text-lg md:text-xl lg:text-2xl font-bold text-red-700 truncate cursor-help" title={formatCurrency(totalOutflow)}>{formatCurrencyShort(totalOutflow)}</p>
+            <p className="text-sm lg:text-2xl font-bold text-red-700 break-words leading-tight">{formatCurrency(totalOutflow)}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="overflow-hidden">
           <CardContent className="pt-4">
             <p className="text-sm text-muted-foreground">Saldo Acumulado</p>
-            <p className={`text-xl sm:text-lg md:text-xl lg:text-2xl font-bold truncate cursor-help ${totalBalance >= 0 ? 'text-green-700' : 'text-red-700'}`} title={formatCurrency(totalBalance)}>
-              {formatCurrencyShort(totalBalance)}
+            <p className={`text-sm lg:text-2xl font-bold break-words leading-tight ${totalBalance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+              {formatCurrency(totalBalance)}
             </p>
           </CardContent>
         </Card>

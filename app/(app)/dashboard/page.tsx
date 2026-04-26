@@ -8,6 +8,7 @@ import { LowStock } from '@/components/dashboard/low-stock'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { PlantelSummaryTable } from '@/components/financial/plantel-summary-table'
 import { formatCurrency } from '@/lib/helpers'
+import { formatCurrencyShort } from '@/lib/utils'
 import { buildPlantelRows } from '@/lib/plantel-utils'
 import { PawPrint, TrendingUp, DollarSign, Package } from 'lucide-react'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
@@ -76,14 +77,16 @@ export default async function DashboardPage() {
         />
         <StatCard
           title="Faturamento Mês"
-          value={formatCurrency(revenue)}
+          value={formatCurrencyShort(revenue)}
+          tooltip={formatCurrency(revenue)}
           icon={DollarSign}
           iconColor="text-blue-700"
           iconBg="bg-blue-100"
         />
         <StatCard
           title="Lucro Líquido"
-          value={formatCurrency(netProfit)}
+          value={formatCurrencyShort(netProfit)}
+          tooltip={formatCurrency(netProfit)}
           subtitle={`Margem: ${margin.toFixed(1)}%`}
           icon={TrendingUp}
           iconColor={netProfit >= 0 ? 'text-green-700' : 'text-red-700'}
@@ -91,7 +94,8 @@ export default async function DashboardPage() {
         />
         <StatCard
           title="Total Gastos"
-          value={formatCurrency(totalCosts)}
+          value={formatCurrencyShort(totalCosts)}
+          tooltip={formatCurrency(totalCosts)}
           icon={Package}
           iconColor="text-orange-700"
           iconBg="bg-orange-100"

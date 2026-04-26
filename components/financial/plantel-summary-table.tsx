@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatCurrency, speciesLabel } from '@/lib/helpers'
+import { formatCurrencyShort } from '@/lib/utils'
 import type { PlantelRow } from '@/lib/plantel-utils'
 
 export function PlantelSummaryTable({ rows, title = 'Valor do Plantel' }: { rows: PlantelRow[]; title?: string }) {
@@ -32,12 +33,18 @@ export function PlantelSummaryTable({ rows, title = 'Valor do Plantel' }: { rows
               <TableRow key={r.species}>
                 <TableCell className="font-medium">{speciesLabel(r.species)}</TableCell>
                 <TableCell className="text-right">{r.qty}</TableCell>
-                <TableCell className="text-right">{formatCurrency(r.custo_investido)}</TableCell>
                 <TableCell className="text-right">
-                  {r.valor_mercado != null ? formatCurrency(r.valor_mercado) : '—'}
+                  <span title={formatCurrency(r.custo_investido)} className="cursor-help">{formatCurrencyShort(r.custo_investido)}</span>
+                </TableCell>
+                <TableCell className="text-right">
+                  {r.valor_mercado != null
+                    ? <span title={formatCurrency(r.valor_mercado)} className="cursor-help">{formatCurrencyShort(r.valor_mercado)}</span>
+                    : '—'}
                 </TableCell>
                 <TableCell className={`text-right font-semibold ${r.lucro_estimado != null ? (r.lucro_estimado >= 0 ? 'text-green-700' : 'text-red-700') : ''}`}>
-                  {r.lucro_estimado != null ? formatCurrency(r.lucro_estimado) : '—'}
+                  {r.lucro_estimado != null
+                    ? <span title={formatCurrency(r.lucro_estimado)} className="cursor-help">{formatCurrencyShort(r.lucro_estimado)}</span>
+                    : '—'}
                 </TableCell>
               </TableRow>
             ))}
@@ -46,12 +53,18 @@ export function PlantelSummaryTable({ rows, title = 'Valor do Plantel' }: { rows
             <TableRow>
               <TableCell className="font-bold">Total</TableCell>
               <TableCell className="text-right font-bold">{totalQty}</TableCell>
-              <TableCell className="text-right font-bold">{formatCurrency(totalCusto)}</TableCell>
               <TableCell className="text-right font-bold">
-                {totalMercado != null ? formatCurrency(totalMercado) : '—'}
+                <span title={formatCurrency(totalCusto)} className="cursor-help">{formatCurrencyShort(totalCusto)}</span>
+              </TableCell>
+              <TableCell className="text-right font-bold">
+                {totalMercado != null
+                  ? <span title={formatCurrency(totalMercado)} className="cursor-help">{formatCurrencyShort(totalMercado)}</span>
+                  : '—'}
               </TableCell>
               <TableCell className={`text-right font-bold ${totalLucro != null ? (totalLucro >= 0 ? 'text-green-700' : 'text-red-700') : ''}`}>
-                {totalLucro != null ? formatCurrency(totalLucro) : '—'}
+                {totalLucro != null
+                  ? <span title={formatCurrency(totalLucro)} className="cursor-help">{formatCurrencyShort(totalLucro)}</span>
+                  : '—'}
               </TableCell>
             </TableRow>
           </TableFooter>

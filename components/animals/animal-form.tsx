@@ -231,12 +231,14 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                 </datalist>
               </div>
 
-              {/* 5. Peso */}
-              <div className="space-y-2">
-                <Label htmlFor="weight_arrobas">Peso (@)</Label>
-                <Input id="weight_arrobas" type="number" step="1" min="0" value={form.weight_arrobas}
-                  onChange={e => set('weight_arrobas', e.target.value)} placeholder="Ex: 15" />
-              </div>
+              {/* 5. Peso — só nascimento; compra aparece na seção Dados da Compra */}
+              {form.entry_type !== 'compra' && (
+                <div className="space-y-2">
+                  <Label htmlFor="weight_arrobas">Peso (@)</Label>
+                  <Input id="weight_arrobas" type="number" step="1" min="0" value={form.weight_arrobas}
+                    onChange={e => set('weight_arrobas', e.target.value)} placeholder="Ex: 15" />
+                </div>
+              )}
 
               {/* 6. Sexo */}
               <div className="space-y-2">
@@ -304,10 +306,10 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                     placeholder="0,00" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="weight_kg">Peso (@)</Label>
-                  <Input id="weight_kg" type="number" step="1" min="0"
-                    value={purchaseForm.weight_kg}
-                    onChange={e => setPurchaseForm(p => ({ ...p, weight_kg: e.target.value }))} />
+                  <Label htmlFor="weight_arrobas">Peso (@)</Label>
+                  <Input id="weight_arrobas" type="number" step="1" min="0"
+                    value={form.weight_arrobas}
+                    onChange={e => set('weight_arrobas', e.target.value)} placeholder="Ex: 15" />
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="seller_name">Vendedor</Label>

@@ -16,11 +16,11 @@ import {
   FileText,
   Settings,
   LogOut,
-  Leaf,
   Menu,
   X,
   ChevronRight,
 } from 'lucide-react'
+import { CowIcon } from '@/components/icons/cow-icon'
 import { Button } from '@/components/ui/button'
 
 const navItems = [
@@ -60,7 +60,7 @@ export function Sidebar() {
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-3 px-4 py-5 border-b border-sidebar-border">
         <div className="bg-[oklch(0.55_0.15_145)] rounded-xl p-2">
-          <Leaf className="h-6 w-6 text-white" />
+          <CowIcon className="h-6 w-6" />
         </div>
         <div>
           <p className="font-bold text-lg text-sidebar-foreground">FazendaGest</p>

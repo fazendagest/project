@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { Loader2, Leaf } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import { CowIcon } from '@/components/icons/cow-icon'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -36,7 +37,7 @@ export default function LoginPage() {
         <CardHeader className="text-center pb-2">
           <div className="flex justify-center mb-4">
             <div className="bg-primary rounded-2xl p-4">
-              <Leaf className="h-10 w-10 text-primary-foreground" />
+              <CowIcon className="h-10 w-10" />
             </div>
           </div>
           <CardTitle className="text-3xl font-bold text-primary">FazendaGest</CardTitle>

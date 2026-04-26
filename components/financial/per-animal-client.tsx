@@ -32,7 +32,7 @@ export function PerAnimalClient({ initialData }: { initialData: AnimalCost[] }) 
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
 
-  const soldAnimals = filtered.filter(a => a.sale_price != null)
+  const soldAnimals = filtered.filter(a => a.status === 'vendido' || a.status === 'abatido')
   const totalRevenue = soldAnimals.reduce((s, a) => s + (a.sale_price ?? 0), 0)
   const totalCost = soldAnimals.reduce((s, a) => s + a.total_cost, 0)
   const totalProfit = totalRevenue - totalCost

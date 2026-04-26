@@ -145,7 +145,8 @@ export function ExpensesClient({
 
     if (error) { toast.error('Erro: ' + error.message); setSaleLoading(false); return }
 
-    await supabase.from('animals').update({ status: saleForm.sale_type }).eq('id', saleForm.animal_id)
+    const newStatus = saleForm.sale_type === 'abate' ? 'abatido' : 'vendido'
+    await supabase.from('animals').update({ status: newStatus }).eq('id', saleForm.animal_id)
     setSales(prev => [data, ...prev])
     setSaleDialog(false)
     toast.success('Venda registrada! Status do animal atualizado.')

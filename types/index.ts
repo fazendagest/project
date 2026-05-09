@@ -19,8 +19,15 @@ export interface Farm {
   id: string
   owner_id: string
   name: string
+  owner_name?: string
+  phone?: string
+  city?: string
+  state?: string
   location?: string
   area_hectares?: number
+  is_active: boolean
+  plan: string
+  trial_ends_at?: string
   created_at: string
 }
 

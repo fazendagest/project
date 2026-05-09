@@ -19,6 +19,7 @@ import {
   Menu,
   X,
   ChevronRight,
+  Shield,
 } from 'lucide-react'
 import { CowIcon } from '@/components/icons/cow-icon'
 import { Button } from '@/components/ui/button'
@@ -43,7 +44,11 @@ const navItems = [
   { href: '/settings', label: 'Configurações', icon: Settings },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  isAdmin?: boolean
+}
+
+export function Sidebar({ isAdmin = false }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
@@ -130,7 +135,17 @@ export function Sidebar() {
         </ul>
       </nav>
 
-      <div className="p-3 border-t border-sidebar-border">
+      <div className="p-3 border-t border-sidebar-border space-y-1">
+        {isAdmin && (
+          <Link
+            href="/admin"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+          >
+            <Shield className="h-5 w-5" />
+            Admin
+          </Link>
+        )}
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"

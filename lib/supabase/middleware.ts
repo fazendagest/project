@@ -34,15 +34,44 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   if (!user && !pathname.startsWith('/login')) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/login'
+    return NextResponse.redirect(redirectUrl)
   }
 
   if (user && pathname === '/login') {
-    const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
-    return NextResponse.redirect(url)
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/dashboard'
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  if (user) {
+    const isAdmin = user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL
+    const skipFarmCheck =
+      pathname.startsWith('/onboarding') ||
+      pathname.startsWith('/suspended') ||
+      pathname.startsWith('/api/') ||
+      pathname.startsWith('/admin')
+
+    if (!skipFarmCheck) {
+      const { data: farm } = await supabase
+        .from('farms')
+        .select('is_active')
+        .eq('owner_id', user.id)
+        .maybeSingle()
+
+      if (!farm && !isAdmin) {
+        const redirectUrl = request.nextUrl.clone()
+        redirectUrl.pathname = '/onboarding'
+        return NextResponse.redirect(redirectUrl)
+      }
+
+      if (farm && !farm.is_active) {
+        const redirectUrl = request.nextUrl.clone()
+        redirectUrl.pathname = '/suspended'
+        return NextResponse.redirect(redirectUrl)
+      }
+    }
   }
 
   return supabaseResponse

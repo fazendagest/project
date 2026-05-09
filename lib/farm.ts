@@ -14,16 +14,7 @@ export async function getOrCreateFarm(): Promise<Farm | null> {
     .eq('owner_id', user.id)
     .limit(1)
 
-  const farm = farms?.[0] ?? null
-  if (farm) return farm
-
-  const { data: newFarm } = await supabase
-    .from('farms')
-    .insert({ owner_id: user.id, name: 'Minha Fazenda' })
-    .select()
-    .single()
-
-  return newFarm
+  return farms?.[0] ?? null
 }
 
 export async function getFarmId(): Promise<string | null> {

@@ -12,6 +12,7 @@ import {
   Heart,
   Baby,
   Wheat,
+  Milk,
   DollarSign,
   FileText,
   Settings,
@@ -46,14 +47,23 @@ const navItems = [
 
 interface SidebarProps {
   isAdmin?: boolean
+  milkActive?: boolean
 }
 
-export function Sidebar({ isAdmin = false }: SidebarProps) {
+export function Sidebar({ isAdmin = false, milkActive = false }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
   const [open, setOpen] = useState(false)
   const [finOpen, setFinOpen] = useState(pathname.startsWith('/financial'))
+
+  const effectiveNavItems = milkActive
+    ? [
+        ...navItems.slice(0, 5),
+        { href: '/milk', label: 'Leite', icon: Milk },
+        ...navItems.slice(5),
+      ]
+    : navItems
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -96,7 +106,7 @@ export function Sidebar({ isAdmin = false }: SidebarProps) {
       ) : (
         <nav className="flex-1 py-4 overflow-y-auto">
           <ul className="space-y-1 px-2">
-            {navItems.map((item) => {
+            {effectiveNavItems.map((item) => {
               if ('children' in item && item.children) {
                 return (
                   <li key={item.label}>

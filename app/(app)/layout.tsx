@@ -12,9 +12,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const isAdmin = user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL
 
+  let milkActive = false
+  if (!isAdmin) {
+    const { data: farm } = await supabase
+      .from('farms')
+      .select('milk_active')
+      .eq('owner_id', user.id)
+      .maybeSingle()
+    milkActive = farm?.milk_active ?? false
+  }
+
   return (
     <div className="flex min-h-screen">
-      <Sidebar isAdmin={isAdmin} />
+      <Sidebar isAdmin={isAdmin} milkActive={milkActive} />
       <main className="flex-1 flex flex-col min-w-0 ml-0 md:ml-64">
         <div className="flex-1 pt-16 px-4 pb-4 md:p-6 lg:p-8">
           {children}

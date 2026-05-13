@@ -133,7 +133,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <Link href="/register">
+          <Link href="/register" className="block mt-3">
             <Button
               type="button"
               variant="outline"

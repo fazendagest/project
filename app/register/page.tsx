@@ -89,8 +89,6 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
-  const [emailConfirmRequired, setEmailConfirmRequired] = useState(false)
-
   const [form, setForm] = useState<FormData>({
     owner_name: '',
     email: '',
@@ -138,13 +136,6 @@ export default function RegisterPage() {
       return
     }
 
-    if (!authData.session) {
-      setEmailConfirmRequired(true)
-      setStep('done')
-      setLoading(false)
-      return
-    }
-
     const trialEndsAt = format(addDays(new Date(), 90), 'yyyy-MM-dd')
 
     const { error: farmError } = await supabase.from('farms').insert({
@@ -181,59 +172,40 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {emailConfirmRequired ? (
-              <>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-800">Verifique seu email</h2>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Enviamos um link de confirmação para <strong>{form.email}</strong>.
-                    Confirme o email e faça login para continuar.
-                  </p>
-                </div>
-                <Link href="/login">
-                  <Button className="w-full h-11 bg-[oklch(0.55_0.15_145)] hover:bg-[oklch(0.48_0.15_145)]">
-                    Ir para o login
-                  </Button>
-                </Link>
-              </>
-            ) : (
-              <>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-800">Conta criada!</h2>
-                  <p className="text-sm text-gray-500 mt-1">Revise seus dados abaixo.</p>
-                </div>
+            <div>
+                <h2 className="text-xl font-bold text-gray-800">Conta criada!</h2>
+                <p className="text-sm text-gray-500 mt-1">Revise seus dados abaixo.</p>
+              </div>
 
-                <div className="bg-gray-50 rounded-xl p-4 text-left space-y-2.5 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Nome</span>
-                    <span className="font-medium text-gray-800">{toTitleCase(form.owner_name)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Função</span>
-                    <span className="font-medium text-gray-800">{ROLE_LABELS[form.farm_role] ?? '—'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Animais</span>
-                    <span className="font-medium text-gray-800">{ANIMAL_COUNT_LABELS[form.animal_count] ?? '—'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Módulo leite</span>
-                    <span className="font-medium text-gray-800">{form.milk_active ? 'Sim' : 'Não'}</span>
-                  </div>
-                  <div className="flex justify-between border-t pt-2.5">
-                    <span className="text-gray-500">Plano</span>
-                    <span className="font-medium text-green-600">Trial 90 dias</span>
-                  </div>
+              <div className="bg-gray-50 rounded-xl p-4 text-left space-y-2.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Nome</span>
+                  <span className="font-medium text-gray-800">{toTitleCase(form.owner_name)}</span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Função</span>
+                  <span className="font-medium text-gray-800">{ROLE_LABELS[form.farm_role] ?? '—'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Animais</span>
+                  <span className="font-medium text-gray-800">{ANIMAL_COUNT_LABELS[form.animal_count] ?? '—'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Módulo leite</span>
+                  <span className="font-medium text-gray-800">{form.milk_active ? 'Sim' : 'Não'}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2.5">
+                  <span className="text-gray-500">Plano</span>
+                  <span className="font-medium text-green-600">Trial 90 dias</span>
+                </div>
+              </div>
 
-                <Button
-                  onClick={() => router.push('/onboarding')}
-                  className="w-full h-11 font-semibold bg-[oklch(0.55_0.15_145)] hover:bg-[oklch(0.48_0.15_145)]"
-                >
-                  Configurar minha fazenda
-                </Button>
-              </>
-            )}
+              <Button
+                onClick={() => router.push('/onboarding')}
+                className="w-full h-11 font-semibold bg-[oklch(0.55_0.15_145)] hover:bg-[oklch(0.48_0.15_145)]"
+              >
+                Configurar minha fazenda
+              </Button>
           </div>
         </div>
       </div>

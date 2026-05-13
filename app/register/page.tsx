@@ -158,12 +158,15 @@ export default function RegisterPage() {
 
     const trialEndsAt = format(addDays(new Date(), 90), 'yyyy-MM-dd')
 
+    const milkActive = form.milk_active === true
+    console.log('[register] inserting farm with milk_active:', milkActive, '(form value:', form.milk_active, ')')
+
     const { error: farmError } = await supabase.from('farms').insert({
       owner_id: authData.user.id,
       name: 'Minha Fazenda',
       owner_name: toTitleCase(form.owner_name),
       phone: form.phone || null,
-      milk_active: form.milk_active === true,
+      milk_active: milkActive,
       milkings_per_day: 1,
       plan: 'trial',
       trial_ends_at: trialEndsAt,

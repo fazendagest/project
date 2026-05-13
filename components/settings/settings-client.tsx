@@ -1,25 +1,45 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Farm } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
-import { Loader2, Leaf, Download } from 'lucide-react'
+import { Loader2, Leaf, Download, Milk } from 'lucide-react'
 import { toTitleCase } from '@/lib/utils'
 
 export function SettingsClient({ farm, userEmail }: { farm: Farm | null; userEmail: string }) {
   const supabase = createClient()
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [milkActive, setMilkActive] = useState(farm?.milk_active ?? false)
+  const [milkLoading, setMilkLoading] = useState(false)
   const [form, setForm] = useState({
     name: farm?.name ?? 'Minha Fazenda',
     location: farm?.location ?? '',
     area_hectares: farm?.area_hectares?.toString() ?? '',
   })
+
+  async function handleMilkToggle(checked: boolean) {
+    if (!farm) return
+    setMilkLoading(true)
+    const { error } = await supabase.from('farms').update({ milk_active: checked }).eq('id', farm.id)
+    if (error) {
+      toast.error('Erro ao atualizar módulo de leite')
+      setMilkActive(!checked)
+    } else {
+      setMilkActive(checked)
+      toast.success(checked ? 'Módulo de leite ativado!' : 'Módulo de leite desativado.')
+      router.refresh()
+    }
+    setMilkLoading(false)
+  }
 
   async function handleExport() {
     if (!farm) return
@@ -122,6 +142,28 @@ export function SettingsClient({ farm, userEmail }: { farm: Farm | null; userEma
               Salvar Alterações
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Milk className="h-5 w-5 text-primary" />
+            Módulos
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Produção de Leite</p>
+              <p className="text-xs text-muted-foreground">Ativa o item "Leite" no menu lateral</p>
+            </div>
+            <Switch
+              checked={milkActive}
+              onCheckedChange={handleMilkToggle}
+              disabled={milkLoading || !farm}
+            />
+          </div>
         </CardContent>
       </Card>
 

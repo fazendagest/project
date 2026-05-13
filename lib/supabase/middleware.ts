@@ -42,7 +42,7 @@ export async function updateSession(request: NextRequest) {
   if (user && pathname === '/login') {
     const redirectUrl = request.nextUrl.clone()
     const isAdmin = user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL
-    redirectUrl.pathname = isAdmin ? '/admin' : '/dashboard'
+    redirectUrl.pathname = isAdmin ? '/admin/dashboard' : '/dashboard'
     return NextResponse.redirect(redirectUrl)
   }
 
@@ -52,7 +52,7 @@ export async function updateSession(request: NextRequest) {
     // Admin nunca acessa rotas de fazenda — redireciona sempre para /admin
     if (isAdmin && !pathname.startsWith('/admin') && !pathname.startsWith('/api/')) {
       const redirectUrl = request.nextUrl.clone()
-      redirectUrl.pathname = '/admin'
+      redirectUrl.pathname = '/admin/dashboard'
       return NextResponse.redirect(redirectUrl)
     }
 

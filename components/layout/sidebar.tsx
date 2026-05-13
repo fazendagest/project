@@ -73,79 +73,91 @@ export function Sidebar({ isAdmin = false }: SidebarProps) {
         </div>
       </div>
 
-      <nav className="flex-1 py-4 overflow-y-auto">
-        <ul className="space-y-1 px-2">
-          {navItems.map((item) => {
-            if ('children' in item && item.children) {
+      {isAdmin ? (
+        <nav className="flex-1 py-4">
+          <ul className="space-y-1 px-2">
+            <li>
+              <Link
+                href="/admin"
+                onClick={() => setOpen(false)}
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                  pathname.startsWith('/admin')
+                    ? 'bg-[oklch(0.55_0.15_145)] text-white'
+                    : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                )}
+              >
+                <Shield className="h-5 w-5 shrink-0" />
+                Painel Admin
+              </Link>
+            </li>
+          </ul>
+        </nav>
+      ) : (
+        <nav className="flex-1 py-4 overflow-y-auto">
+          <ul className="space-y-1 px-2">
+            {navItems.map((item) => {
+              if ('children' in item && item.children) {
+                return (
+                  <li key={item.label}>
+                    <button
+                      onClick={() => setFinOpen(v => !v)}
+                      className={cn(
+                        'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                        'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                        pathname.startsWith('/financial') && 'bg-sidebar-accent text-sidebar-accent-foreground'
+                      )}
+                    >
+                      <item.icon className="h-5 w-5 shrink-0" />
+                      <span className="flex-1 text-left">{item.label}</span>
+                      <ChevronRight className={cn('h-4 w-4 transition-transform', finOpen && 'rotate-90')} />
+                    </button>
+                    {finOpen && (
+                      <ul className="mt-1 ml-4 space-y-1 border-l border-sidebar-border pl-3">
+                        {item.children.map((child) => (
+                          <li key={child.href}>
+                            <Link
+                              href={child.href}
+                              onClick={() => setOpen(false)}
+                              className={cn(
+                                'flex items-center px-3 py-2 rounded-lg text-sm transition-colors',
+                                pathname === child.href
+                                  ? 'bg-[oklch(0.55_0.15_145)] text-white font-medium'
+                                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                              )}
+                            >
+                              {child.label}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                )
+              }
               return (
-                <li key={item.label}>
-                  <button
-                    onClick={() => setFinOpen(v => !v)}
+                <li key={item.href}>
+                  <Link
+                    href={item.href!}
+                    onClick={() => setOpen(false)}
                     className={cn(
-                      'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                      'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                      pathname.startsWith('/financial') && 'bg-sidebar-accent text-sidebar-accent-foreground'
+                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                      pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href!))
+                        ? 'bg-[oklch(0.55_0.15_145)] text-white'
+                        : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                     )}
                   >
                     <item.icon className="h-5 w-5 shrink-0" />
-                    <span className="flex-1 text-left">{item.label}</span>
-                    <ChevronRight className={cn('h-4 w-4 transition-transform', finOpen && 'rotate-90')} />
-                  </button>
-                  {finOpen && (
-                    <ul className="mt-1 ml-4 space-y-1 border-l border-sidebar-border pl-3">
-                      {item.children.map((child) => (
-                        <li key={child.href}>
-                          <Link
-                            href={child.href}
-                            onClick={() => setOpen(false)}
-                            className={cn(
-                              'flex items-center px-3 py-2 rounded-lg text-sm transition-colors',
-                              pathname === child.href
-                                ? 'bg-[oklch(0.55_0.15_145)] text-white font-medium'
-                                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                            )}
-                          >
-                            {child.label}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                    {item.label}
+                  </Link>
                 </li>
               )
-            }
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href!}
-                  onClick={() => setOpen(false)}
-                  className={cn(
-                    'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                    pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href!))
-                      ? 'bg-[oklch(0.55_0.15_145)] text-white'
-                      : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                  )}
-                >
-                  <item.icon className="h-5 w-5 shrink-0" />
-                  {item.label}
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
-      </nav>
+            })}
+          </ul>
+        </nav>
+      )}
 
       <div className="p-3 border-t border-sidebar-border space-y-1">
-        {isAdmin && (
-          <Link
-            href="/admin"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
-          >
-            <Shield className="h-5 w-5" />
-            Admin
-          </Link>
-        )}
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"

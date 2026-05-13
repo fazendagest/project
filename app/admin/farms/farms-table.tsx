@@ -16,6 +16,8 @@ type Farm = {
   id: string
   name: string
   owner_name: string | null
+  owner_id: string
+  ownerEmail: string
   city: string | null
   state: string | null
   plan: string
@@ -26,7 +28,7 @@ type Farm = {
 
 const PLANS = ['trial', 'básico', 'profissional', 'fazenda']
 
-export function FarmsTable({ farms: initialFarms }: { farms: Farm[] }) {
+export function FarmsTable({ farms: initialFarms, adminEmail }: { farms: Farm[]; adminEmail: string }) {
   const router = useRouter()
   const [farms, setFarms] = useState(initialFarms)
   const [editingFarm, setEditingFarm] = useState<Farm | null>(null)
@@ -108,6 +110,7 @@ export function FarmsTable({ farms: initialFarms }: { farms: Farm[] }) {
               <tr className="border-b bg-gray-50">
                 <th className="text-left font-semibold px-4 py-3 text-gray-600">Nome da Fazenda</th>
                 <th className="text-left font-semibold px-4 py-3 text-gray-600">Proprietário</th>
+                <th className="text-left font-semibold px-4 py-3 text-gray-600">Perfil</th>
                 <th className="text-left font-semibold px-4 py-3 text-gray-600">Cidade/Estado</th>
                 <th className="text-left font-semibold px-4 py-3 text-gray-600">Plano</th>
                 <th className="text-left font-semibold px-4 py-3 text-gray-600">Trial até</th>
@@ -121,6 +124,16 @@ export function FarmsTable({ farms: initialFarms }: { farms: Farm[] }) {
                 <tr key={farm.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3 font-medium">{farm.name}</td>
                   <td className="px-4 py-3 text-gray-600">{farm.owner_name ?? '—'}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-600 truncate max-w-[180px]">{farm.ownerEmail || '—'}</span>
+                      {adminEmail && farm.ownerEmail === adminEmail && (
+                        <span className="shrink-0 text-xs px-1.5 py-0.5 rounded font-semibold bg-purple-100 text-purple-700">
+                          Master
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-gray-600">
                     {farm.city && farm.state
                       ? `${farm.city}/${farm.state}`
@@ -159,7 +172,7 @@ export function FarmsTable({ farms: initialFarms }: { farms: Farm[] }) {
               ))}
               {farms.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
                     Nenhuma fazenda cadastrada.
                   </td>
                 </tr>

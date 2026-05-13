@@ -186,3 +186,25 @@ export interface CashflowMonth {
   outflow: number
   balance: number
 }
+
+export interface MilkProduction {
+  id: string
+  farm_id: string
+  date: string
+  total_liters: number
+  notes?: string
+  created_at: string
+}
+
+export interface MilkPayment {
+  id: string
+  farm_id: string
+  reference_month: string
+  payment_date?: string
+  buyer_name?: string
+  total_liters?: number
+  price_per_liter?: number
+  total_amount?: number
+  notes?: string
+  created_at: string
+}

@@ -30,15 +30,17 @@ export function CashflowClient({ farmId }: { farmId: string }) {
           const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate()
           const end = `${m}-${lastDay}`
 
-          const [sales, purchases, feed, ops, health] = await Promise.all([
+          const [sales, purchases, feed, ops, health, milk] = await Promise.all([
             supabase.from('animal_sales').select('sale_price').eq('farm_id', farmId).gte('sale_date', start).lte('sale_date', end),
             supabase.from('animal_purchases').select('purchase_price').eq('farm_id', farmId).gte('purchase_date', start).lte('purchase_date', end),
             supabase.from('feed_stock').select('total_cost').eq('farm_id', farmId).gte('purchase_date', start).lte('purchase_date', end),
             supabase.from('operational_expenses').select('amount').eq('farm_id', farmId).gte('date', start).lte('date', end),
             supabase.from('health_records').select('cost').eq('farm_id', farmId).gte('application_date', start).lte('application_date', end),
+            supabase.from('milk_payments').select('total_amount').eq('farm_id', farmId).gte('payment_date', start).lte('payment_date', end),
           ])
 
-          const entradas = sales.data?.reduce((s, r) => s + (r.sale_price || 0), 0) ?? 0
+          const milkInflow = milk.data?.reduce((s, r) => s + (Number(r.total_amount) || 0), 0) ?? 0
+          const entradas = (sales.data?.reduce((s, r) => s + (r.sale_price || 0), 0) ?? 0) + milkInflow
           const saidas =
             (purchases.data?.reduce((s, r) => s + (r.purchase_price || 0), 0) ?? 0) +
             (feed.data?.reduce((s, r) => s + (r.total_cost || 0), 0) ?? 0) +

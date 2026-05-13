@@ -10,8 +10,16 @@ export default async function AdminFarmsPage() {
 
   const { data: farms } = await admin
     .from('farms')
-    .select('id, name, owner_name, city, state, plan, trial_ends_at, is_active, created_at')
+    .select('id, name, owner_name, owner_id, city, state, plan, trial_ends_at, is_active, created_at')
     .order('created_at', { ascending: false })
+
+  const { data: { users } } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+  const emailByUserId = Object.fromEntries(users.map(u => [u.id, u.email ?? '']))
+
+  const farmsWithEmail = (farms ?? []).map(f => ({
+    ...f,
+    ownerEmail: emailByUserId[f.owner_id] ?? '',
+  }))
 
   return (
     <div className="p-8 space-y-6">
@@ -19,7 +27,7 @@ export default async function AdminFarmsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Fazendas</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {farms?.length ?? 0} fazenda{(farms?.length ?? 0) !== 1 ? 's' : ''} cadastrada{(farms?.length ?? 0) !== 1 ? 's' : ''}
+            {farmsWithEmail.length} fazenda{farmsWithEmail.length !== 1 ? 's' : ''} cadastrada{farmsWithEmail.length !== 1 ? 's' : ''}
           </p>
         </div>
         <Link
@@ -31,7 +39,7 @@ export default async function AdminFarmsPage() {
         </Link>
       </div>
 
-      <FarmsTable farms={farms ?? []} />
+      <FarmsTable farms={farmsWithEmail} adminEmail={process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? ''} />
     </div>
   )
 }

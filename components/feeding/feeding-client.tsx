@@ -179,50 +179,55 @@ export function FeedingClient({
             <Button onClick={openStockNew} className="gap-2"><Plus className="h-4 w-4" /> Novo Produto</Button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {stock.map(s => (
-              <Card key={s.id} className={s.low ? 'border-red-200' : ''}>
-                <CardContent className="pt-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2">
-                      <Package className="h-5 w-5 text-primary" />
-                      <h3 className="font-semibold">{s.product_name}</h3>
+          {stock.length === 0 ? (
+            <DataCard>
+              <Table>
+                <TableBody>
+                  <EmptyState colSpan={1} message="Nenhum produto cadastrado no estoque" />
+                </TableBody>
+              </Table>
+            </DataCard>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {stock.map(s => (
+                <Card key={s.id} className={s.low ? 'border-red-200' : ''}>
+                  <CardContent className="pt-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-2">
+                        <Package className="h-5 w-5 text-primary" />
+                        <h3 className="font-semibold">{s.product_name}</h3>
+                      </div>
+                      {s.low && <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />}
                     </div>
-                    {s.low && <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />}
-                  </div>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Estoque atual</span>
-                      <span className={`font-semibold ${s.low ? 'text-red-600' : ''}`}>
-                        {formatNumber(s.current_quantity)} {s.unit}
-                      </span>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Estoque atual</span>
+                        <span className={`font-semibold ${s.low ? 'text-red-600' : ''}`}>
+                          {formatNumber(s.current_quantity)} {s.unit}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Estoque mínimo</span>
+                        <span>{formatNumber(s.min_quantity)} {s.unit}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Custo unitário</span>
+                        <span>{formatCurrency(s.cost_per_unit)}/{s.unit}</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Estoque mínimo</span>
-                      <span>{formatNumber(s.min_quantity)} {s.unit}</span>
+                    <div className="flex gap-2 mt-3">
+                      <Button size="sm" variant="outline" className="flex-1" onClick={() => openStockEdit(s)}>
+                        <Pencil className="h-3 w-3 mr-1" /> Editar
+                      </Button>
+                      <Button size="sm" variant="outline" className="text-destructive" onClick={() => setDelConfirm({ type: 'stock', id: s.id })}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Custo unitário</span>
-                      <span>{formatCurrency(s.cost_per_unit)}/{s.unit}</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mt-3">
-                    <Button size="sm" variant="outline" className="flex-1" onClick={() => openStockEdit(s)}>
-                      <Pencil className="h-3 w-3 mr-1" /> Editar
-                    </Button>
-                    <Button size="sm" variant="outline" className="text-destructive" onClick={() => setDelConfirm({ type: 'stock', id: s.id })}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-            {stock.length === 0 && (
-              <div className="col-span-full text-center py-12 text-muted-foreground">
-                Nenhum produto cadastrado no estoque
-              </div>
-            )}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="consume">

@@ -86,6 +86,7 @@ export default function RegisterPage() {
   const supabase = createClient()
   const [step, setStep] = useState<Step>(1)
   const [loading, setLoading] = useState(false)
+  const [emailChecking, setEmailChecking] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({})
@@ -116,8 +117,26 @@ export default function RegisterPage() {
     return Object.keys(errs).length === 0
   }
 
-  function goToStep2() {
-    if (validateStep1()) setStep(2)
+  async function goToStep2() {
+    if (!validateStep1()) return
+    setEmailChecking(true)
+    try {
+      const res = await fetch('/api/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email }),
+      })
+      const { exists } = await res.json()
+      if (exists) {
+        setErrors(prev => ({ ...prev, email: 'email_exists' }))
+        setEmailChecking(false)
+        return
+      }
+    } catch {
+      // ignore network errors — let the server validate on submit
+    }
+    setEmailChecking(false)
+    setStep(2)
   }
 
   async function handleSubmit() {
@@ -294,7 +313,15 @@ export default function RegisterPage() {
                     className={cn('h-10', errors.email && 'border-red-500')}
                     autoComplete="email"
                   />
-                  {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
+                  {errors.email && errors.email !== 'email_exists' && (
+                    <p className="text-xs text-red-500">{errors.email}</p>
+                  )}
+                  {errors.email === 'email_exists' && (
+                    <p className="text-xs text-red-500">
+                      Este e-mail já está cadastrado.{' '}
+                      <Link href="/login" className="underline font-medium">Faça login.</Link>
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
@@ -377,9 +404,10 @@ export default function RegisterPage() {
 
                 <Button
                   onClick={goToStep2}
+                  disabled={emailChecking}
                   className="w-full h-11 font-semibold bg-[oklch(0.55_0.15_145)] hover:bg-[oklch(0.48_0.15_145)]"
                 >
-                  Continuar
+                  {emailChecking ? 'Verificando...' : 'Continuar'}
                 </Button>
               </div>
             )}

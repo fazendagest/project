@@ -31,13 +31,15 @@ export function DREClient({ farmId }: { farmId: string }) {
       const end = `${selectedMonth}-${lastDay}`
 
       // First pass: sales + all period costs in parallel
-      const [salesRes, feedStockRes, opExpRes, healthRes] = await Promise.all([
+      const [salesRes, feedStockRes, opExpRes, healthRes, milkRes] = await Promise.all([
         supabase.from('animal_sales').select('sale_price, animal_id').eq('farm_id', farmId).gte('sale_date', start).lte('sale_date', end),
         supabase.from('feed_stock').select('total_cost').eq('farm_id', farmId).gte('purchase_date', start).lte('purchase_date', end),
         supabase.from('operational_expenses').select('amount').eq('farm_id', farmId).gte('date', start).lte('date', end),
         supabase.from('health_records').select('cost, animal_id').eq('farm_id', farmId).gte('application_date', start).lte('application_date', end),
+        supabase.from('milk_payments').select('total_amount').eq('farm_id', farmId).gte('reference_month', start).lte('reference_month', end),
       ])
 
+      const milkRevenue = milkRes.data?.reduce((s, r) => s + (Number(r.total_amount) || 0), 0) ?? 0
       const revenue = salesRes.data?.reduce((s, r) => s + (r.sale_price || 0), 0) ?? 0
       const soldAnimalIds = [...new Set(salesRes.data?.map(r => r.animal_id).filter(Boolean) ?? [])] as string[]
       const allHealthRecords = healthRes.data ?? []
@@ -61,8 +63,9 @@ export function DREClient({ farmId }: { farmId: string }) {
       }
 
       const cmv = cmvPurchase + cmvFeed + cmvHealth
-      const grossProfit = revenue - cmv
-      const grossMargin = revenue > 0 ? (grossProfit / revenue) * 100 : 0
+      const totalRevenue = revenue + milkRevenue
+      const grossProfit = totalRevenue - cmv
+      const grossMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0
 
       // OpEx: feed stock + health for non-sold animals + operational
       const feedStockCost = feedStockRes.data?.reduce((s, r) => s + (r.total_cost || 0), 0) ?? 0
@@ -70,10 +73,12 @@ export function DREClient({ farmId }: { farmId: string }) {
       const generalHealthCost = allHealthRecords.filter(r => !soldAnimalIds.includes(r.animal_id)).reduce((s, r) => s + (r.cost || 0), 0)
       const totalOpEx = feedStockCost + generalHealthCost + opExpenses
       const netProfit = grossProfit - totalOpEx
-      const netMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0
+      const netMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
 
       setData([
-        { label: 'Receita Bruta (Vendas)', value: revenue, isTotal: true },
+        { label: 'Receita Bruta Total', value: totalRevenue, isTotal: true },
+        { label: '  · Vendas de Animais', value: revenue },
+        { label: '  · Receita de Leite', value: milkRevenue },
         { label: 'CMV — Custo dos Animais Vendidos', value: -cmv },
         { label: '  · Custo de Compra', value: -cmvPurchase },
         { label: '  · Custo de Ração (animais vendidos)', value: -cmvFeed },

@@ -15,6 +15,7 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { Plus, Trash2, Loader2, Pencil } from 'lucide-react'
+import { toTitleCase } from '@/lib/utils'
 import { DataCard } from '@/components/ui/data-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { formatDate, formatCurrency, formatNumber, expenseCategoryLabel, healthTypeLabel, parseBRL, formatBRL } from '@/lib/helpers'
@@ -544,7 +545,9 @@ export function ExpensesClient({
             </div>
             <div className="space-y-2">
               <Label>Comprador</Label>
-              <Input value={saleForm.buyer_name} onChange={e => setSaleForm(p => ({ ...p, buyer_name: e.target.value }))} />
+              <Input value={saleForm.buyer_name}
+                onChange={e => setSaleForm(p => ({ ...p, buyer_name: e.target.value }))}
+                onBlur={e => setSaleForm(p => ({ ...p, buyer_name: toTitleCase(e.target.value) }))} />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setSaleDialog(false)}>Cancelar</Button>
@@ -602,7 +605,9 @@ export function ExpensesClient({
             </div>
             <div className="space-y-2">
               <Label>Comprador</Label>
-              <Input value={saleEditForm.buyer_name} onChange={e => setSaleEditForm(p => ({ ...p, buyer_name: e.target.value }))} />
+              <Input value={saleEditForm.buyer_name}
+                onChange={e => setSaleEditForm(p => ({ ...p, buyer_name: e.target.value }))}
+                onBlur={e => setSaleEditForm(p => ({ ...p, buyer_name: toTitleCase(e.target.value) }))} />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setSaleEditDialog(null)}>Cancelar</Button>
@@ -685,7 +690,9 @@ export function ExpensesClient({
               </div>
               <div className="space-y-2">
                 <Label>Vendedor</Label>
-                <Input value={purchaseForm.seller_name} onChange={e => setPurchaseForm(p => ({ ...p, seller_name: e.target.value }))} />
+                <Input value={purchaseForm.seller_name}
+                  onChange={e => setPurchaseForm(p => ({ ...p, seller_name: e.target.value }))}
+                  onBlur={e => setPurchaseForm(p => ({ ...p, seller_name: toTitleCase(e.target.value) }))} />
               </div>
             </div>
             <DialogFooter>

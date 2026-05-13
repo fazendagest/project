@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { cn, toTitleCase } from '@/lib/utils'
 import { toast } from 'sonner'
 import { CowIcon } from '@/components/icons/cow-icon'
 import { Button } from '@/components/ui/button'
@@ -20,13 +21,35 @@ export default function OnboardingPage() {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
+  const [existingFarmId, setExistingFarmId] = useState<string | null>(null)
   const [form, setForm] = useState({
     name: '',
-    owner_name: '',
-    phone: '',
     city: '',
     state: '',
+    area_hectares: '',
   })
+
+  useEffect(() => {
+    async function loadFarm() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: farm } = await supabase
+        .from('farms')
+        .select('id, name, city, state, area_hectares')
+        .eq('owner_id', user.id)
+        .maybeSingle()
+      if (farm) {
+        setExistingFarmId(farm.id)
+        setForm({
+          name: farm.name ?? '',
+          city: farm.city ?? '',
+          state: farm.state ?? '',
+          area_hectares: farm.area_hectares ? String(farm.area_hectares) : '',
+        })
+      }
+    }
+    loadFarm()
+  }, [])
 
   function set(field: string, value: string) {
     setForm(prev => ({ ...prev, [field]: value }))
@@ -35,8 +58,8 @@ export default function OnboardingPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
-    if (!form.name.trim() || !form.owner_name.trim()) {
-      toast.error('Preencha os campos obrigatórios')
+    if (!form.name.trim()) {
+      toast.error('Informe o nome da fazenda')
       return
     }
 
@@ -48,32 +71,45 @@ export default function OnboardingPage() {
       return
     }
 
-    const { data: farm, error } = await supabase
-      .from('farms')
-      .insert({
-        owner_id: user.id,
-        name: form.name.trim(),
-        owner_name: form.owner_name.trim(),
-        phone: form.phone.trim() || null,
-        city: form.city.trim() || null,
-        state: form.state || null,
-      })
-      .select()
-      .single()
-
-    if (error || !farm) {
-      toast.error('Erro ao criar fazenda: ' + (error?.message ?? 'tente novamente'))
-      setLoading(false)
-      return
+    const payload = {
+      name: toTitleCase(form.name.trim()),
+      city: form.city.trim() || null,
+      state: form.state || null,
+      area_hectares: form.area_hectares ? parseFloat(form.area_hectares) : null,
     }
 
-    await supabase.from('user_farms').insert({
-      user_id: user.id,
-      farm_id: farm.id,
-      role: 'owner',
-    })
+    if (existingFarmId) {
+      const { error } = await supabase
+        .from('farms')
+        .update(payload)
+        .eq('id', existingFarmId)
 
-    toast.success('Fazenda criada com sucesso!')
+      if (error) {
+        toast.error('Erro ao salvar: ' + error.message)
+        setLoading(false)
+        return
+      }
+    } else {
+      const { data: farm, error } = await supabase
+        .from('farms')
+        .insert({ owner_id: user.id, ...payload })
+        .select()
+        .single()
+
+      if (error || !farm) {
+        toast.error('Erro ao criar fazenda: ' + (error?.message ?? 'tente novamente'))
+        setLoading(false)
+        return
+      }
+
+      await supabase.from('user_farms').insert({
+        user_id: user.id,
+        farm_id: farm.id,
+        role: 'owner',
+      })
+    }
+
+    toast.success('Fazenda configurada com sucesso!')
     router.push('/dashboard')
   }
 
@@ -92,9 +128,9 @@ export default function OnboardingPage() {
 
         <Card className="shadow-lg">
           <CardHeader className="text-center pb-4">
-            <CardTitle className="text-xl">Bem-vindo!</CardTitle>
+            <CardTitle className="text-xl">Configure sua fazenda</CardTitle>
             <CardDescription>
-              Configure sua fazenda para começar a usar o sistema.
+              Informe os dados básicos da sua propriedade.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -108,30 +144,8 @@ export default function OnboardingPage() {
                   placeholder="Ex: Fazenda Santa Maria"
                   value={form.name}
                   onChange={e => set('name', e.target.value)}
+                  onBlur={e => set('name', toTitleCase(e.target.value))}
                   required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="owner_name">
-                  Seu Nome <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="owner_name"
-                  placeholder="Nome completo"
-                  value={form.owner_name}
-                  onChange={e => set('owner_name', e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="phone">Telefone</Label>
-                <Input
-                  id="phone"
-                  placeholder="(11) 99999-9999"
-                  value={form.phone}
-                  onChange={e => set('phone', e.target.value)}
                 />
               </div>
 
@@ -143,6 +157,7 @@ export default function OnboardingPage() {
                     placeholder="Sua cidade"
                     value={form.city}
                     onChange={e => set('city', e.target.value)}
+                    onBlur={e => set('city', toTitleCase(e.target.value))}
                   />
                 </div>
 
@@ -162,12 +177,25 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
+              <div className="space-y-1.5">
+                <Label htmlFor="area_hectares">Área (hectares)</Label>
+                <Input
+                  id="area_hectares"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="Ex: 120"
+                  value={form.area_hectares}
+                  onChange={e => set('area_hectares', e.target.value)}
+                />
+              </div>
+
               <Button
                 type="submit"
                 className="w-full bg-[oklch(0.55_0.15_145)] hover:bg-[oklch(0.48_0.15_145)]"
                 disabled={loading}
               >
-                {loading ? 'Criando fazenda...' : 'Começar a usar'}
+                {loading ? 'Salvando...' : 'Configurar fazenda'}
               </Button>
             </form>
           </CardContent>

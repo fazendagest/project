@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { Loader2, Leaf, Download } from 'lucide-react'
+import { toTitleCase } from '@/lib/utils'
 
 export function SettingsClient({ farm, userEmail }: { farm: Farm | null; userEmail: string }) {
   const supabase = createClient()
@@ -101,7 +102,10 @@ export function SettingsClient({ farm, userEmail }: { farm: Farm | null; userEma
           <form onSubmit={handleSave} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nome da Fazenda *</Label>
-              <Input id="name" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} required />
+              <Input id="name" value={form.name}
+                onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+                onBlur={e => setForm(p => ({ ...p, name: toTitleCase(e.target.value) }))}
+                required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="location">Localização</Label>

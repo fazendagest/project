@@ -33,13 +33,13 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  if (!user && !pathname.startsWith('/login')) {
+  if (!user && !pathname.startsWith('/login') && !pathname.startsWith('/register')) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/login'
     return NextResponse.redirect(redirectUrl)
   }
 
-  if (user && pathname === '/login') {
+  if (user && (pathname === '/login' || pathname.startsWith('/register'))) {
     const redirectUrl = request.nextUrl.clone()
     const isAdmin = user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL
     redirectUrl.pathname = isAdmin ? '/admin/dashboard' : '/dashboard'

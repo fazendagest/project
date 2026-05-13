@@ -28,6 +28,8 @@ export interface Farm {
   is_active: boolean
   plan: string
   trial_ends_at?: string
+  milk_active?: boolean
+  milkings_per_day?: number
   created_at: string
 }
 

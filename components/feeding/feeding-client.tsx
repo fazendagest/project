@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { toast } from 'sonner'
 import { Plus, Pencil, Trash2, Package, AlertTriangle, Loader2 } from 'lucide-react'
+import { toTitleCase } from '@/lib/utils'
 import { formatDate, formatCurrency, formatNumber, speciesLabel, parseBRL, formatBRL } from '@/lib/helpers'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
@@ -278,7 +279,10 @@ export function FeedingClient({
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>Nome do Produto *</Label>
-              <Input value={stockForm.product_name} onChange={e => setStockForm(p => ({ ...p, product_name: e.target.value }))} placeholder="Ex: Ração bovino adulto" />
+              <Input value={stockForm.product_name}
+                onChange={e => setStockForm(p => ({ ...p, product_name: e.target.value }))}
+                onBlur={e => setStockForm(p => ({ ...p, product_name: toTitleCase(e.target.value) }))}
+                placeholder="Ex: Ração bovino adulto" />
             </div>
             <div className="space-y-2">
               <Label>Data da Compra</Label>

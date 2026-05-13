@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { calcExpectedBirth } from '@/lib/helpers'
+import { toTitleCase } from '@/lib/utils'
 
 interface ReproFormProps {
   farmId: string
@@ -153,6 +154,7 @@ export function ReproductionForm({ farmId, females, males, record, mode }: Repro
                 <Input
                   value={form.external_male_name}
                   onChange={e => set('external_male_name', e.target.value)}
+                  onBlur={e => set('external_male_name', toTitleCase(e.target.value))}
                   placeholder="Ex: Touro Nelore - Fazenda do João"
                 />
               )}

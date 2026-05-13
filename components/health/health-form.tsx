@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 import { parseBRL, formatBRL } from '@/lib/helpers'
+import { toTitleCase } from '@/lib/utils'
 
 interface HealthFormProps {
   farmId: string
@@ -193,7 +194,9 @@ export function HealthForm({ farmId, animals, record, mode }: HealthFormProps) {
 
             <div className="space-y-2">
               <Label htmlFor="product_name">Produto / Procedimento *</Label>
-              <Input id="product_name" value={form.product_name} onChange={e => set('product_name', e.target.value)}
+              <Input id="product_name" value={form.product_name}
+                onChange={e => set('product_name', e.target.value)}
+                onBlur={e => set('product_name', toTitleCase(e.target.value))}
                 placeholder="Ex: Vacina Aftosa, Ivermectina..." required />
             </div>
 

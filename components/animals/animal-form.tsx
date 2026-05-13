@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { Loader2, Upload } from 'lucide-react'
 import { generateAnimalCode } from '@/lib/animal-utils'
 import { parseBRL, formatBRL } from '@/lib/helpers'
+import { toTitleCase } from '@/lib/utils'
 
 const BREED_OPTIONS: Record<string, string[]> = {
   bovino: [
@@ -216,6 +217,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
               <div className="space-y-2">
                 <Label htmlFor="name">Nome</Label>
                 <Input id="name" value={form.name} onChange={e => set('name', e.target.value)}
+                  onBlur={e => set('name', toTitleCase(e.target.value))}
                   placeholder="Nome do animal" />
               </div>
 
@@ -223,6 +225,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
               <div className="space-y-2">
                 <Label htmlFor="breed">Raça</Label>
                 <Input id="breed" value={form.breed} onChange={e => set('breed', e.target.value)}
+                  onBlur={e => set('breed', toTitleCase(e.target.value))}
                   placeholder="Ex: Nelore, Angus..." list="breed-options" autoComplete="off" />
                 <datalist id="breed-options">
                   {(BREED_OPTIONS[form.species] ?? []).map(b => (
@@ -316,6 +319,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                   <Input id="seller_name"
                     value={purchaseForm.seller_name}
                     onChange={e => setPurchaseForm(p => ({ ...p, seller_name: e.target.value }))}
+                    onBlur={e => setPurchaseForm(p => ({ ...p, seller_name: toTitleCase(e.target.value) }))}
                     placeholder="Nome do vendedor" />
                 </div>
               </CardContent>

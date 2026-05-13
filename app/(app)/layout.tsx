@@ -19,6 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       .select('milk_active')
       .eq('owner_id', user.id)
       .maybeSingle()
+    console.log('milk_active from farm:', farm?.milk_active)
     milkActive = farm?.milk_active ?? false
   }
 

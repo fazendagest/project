@@ -126,14 +126,17 @@ export default function RegisterPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: form.email }),
       })
-      const { exists } = await res.json()
-      if (exists) {
-        setErrors(prev => ({ ...prev, email: 'email_exists' }))
-        setEmailChecking(false)
-        return
+      if (res.ok) {
+        const { exists } = await res.json()
+        if (exists) {
+          setErrors(prev => ({ ...prev, email: 'email_exists' }))
+          setEmailChecking(false)
+          return
+        }
       }
+      // non-OK (admin not configured or error) — advance and let Supabase validate on submit
     } catch {
-      // ignore network errors — let the server validate on submit
+      // network error — advance and let Supabase validate on submit
     }
     setEmailChecking(false)
     setStep(2)
@@ -148,9 +151,7 @@ export default function RegisterPage() {
     })
 
     if (authError || !authData.user) {
-      toast.error(authError?.message === 'User already registered'
-        ? 'Este email já está cadastrado'
-        : authError?.message ?? 'Erro ao criar conta')
+      toast.error(authError?.message ?? 'Erro ao criar conta')
       setLoading(false)
       return
     }

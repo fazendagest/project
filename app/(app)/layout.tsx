@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { Sidebar } from '@/components/layout/sidebar'
 import { ImpersonationBanner } from '@/components/admin/impersonation-banner'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
@@ -21,7 +22,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   let impersonatedFarmName: string | undefined
 
   if (impersonatedFarmId) {
-    const { data: farm } = await supabase
+    const adminClient = createAdminClient()
+    const { data: farm } = await adminClient
       .from('farms')
       .select('name, milk_active')
       .eq('id', impersonatedFarmId)
@@ -39,7 +41,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen">
-      <Sidebar isAdmin={isAdmin} milkActive={milkActive} />
+      <Sidebar isAdmin={isAdmin && !impersonatedFarmId} milkActive={milkActive} />
       <main className="flex-1 flex flex-col min-w-0 ml-0 md:ml-64">
         {impersonatedFarmName && (
           <ImpersonationBanner farmName={impersonatedFarmName} />

@@ -2,6 +2,7 @@
 
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { Farm } from '@/types'
 
 export async function getOrCreateFarm(): Promise<Farm | null> {
@@ -14,7 +15,8 @@ export async function getOrCreateFarm(): Promise<Farm | null> {
     const cookieStore = cookies()
     const impersonatedFarmId = cookieStore.get('admin_viewing_farm_id')?.value
     if (impersonatedFarmId) {
-      const { data: farm } = await supabase
+      const admin = createAdminClient()
+      const { data: farm } = await admin
         .from('farms')
         .select('*')
         .eq('id', impersonatedFarmId)

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { FeedStock, FeedRecord } from '@/types'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -34,6 +35,7 @@ export function FeedingClient({
   farmId: string
 }) {
   const supabase = createClient()
+  const router = useRouter()
   const [stock, setStock] = useState<StockWithStatus[]>(
     initialStock.map(s => ({ ...s, low: s.current_quantity <= s.min_quantity }))
   )
@@ -89,13 +91,13 @@ export function FeedingClient({
     }
     if (stockDialog === 'new') {
       const { data, error } = await supabase.from('feed_stock').insert(payload).select().single()
-      if (error) toast.error('Erro: ' + error.message)
-      else { setStock(prev => [...prev, { ...data, low: data.current_quantity <= data.min_quantity }]); toast.success('Produto criado!') }
+      if (error) { toast.error('Erro: ' + error.message) }
+      else { setStock(prev => [...prev, { ...data, low: data.current_quantity <= data.min_quantity }]); toast.success('Produto criado!'); router.refresh() }
     } else {
       const s = stockDialog as FeedStock
       const { data, error } = await supabase.from('feed_stock').update(payload).eq('id', s.id).eq('farm_id', farmId).select().single()
-      if (error) toast.error('Erro: ' + error.message)
-      else { setStock(prev => prev.map(x => x.id === s.id ? { ...data, low: data.current_quantity <= data.min_quantity } : x)); toast.success('Atualizado!') }
+      if (error) { toast.error('Erro: ' + error.message) }
+      else { setStock(prev => prev.map(x => x.id === s.id ? { ...data, low: data.current_quantity <= data.min_quantity } : x)); toast.success('Atualizado!'); router.refresh() }
     }
     setStockDialog(null)
     setStockLoading(false)
@@ -105,7 +107,7 @@ export function FeedingClient({
     setDeleting(true)
     const { error } = await supabase.from('feed_stock').delete().eq('id', id)
     if (error) toast.error('Erro ao excluir')
-    else { setStock(prev => prev.filter(s => s.id !== id)); toast.success('Produto excluído') }
+    else { setStock(prev => prev.filter(s => s.id !== id)); toast.success('Produto excluído'); router.refresh() }
     setDeleting(false)
     setDelConfirm(null)
   }
@@ -150,6 +152,7 @@ export function FeedingClient({
       ))
       setRecords(prev => [newRecord, ...prev])
       toast.success('Consumo registrado!')
+      router.refresh()
       setConsumeDialog(false)
       setConsumeForm({ species: 'bovino', feed_stock_id: '', date: new Date().toISOString().slice(0,10), quantity_used: '', notes: '' })
     }
@@ -160,7 +163,7 @@ export function FeedingClient({
     setDeleting(true)
     const { error } = await supabase.from('feed_records').delete().eq('id', id)
     if (error) toast.error('Erro ao excluir')
-    else { setRecords(prev => prev.filter(r => r.id !== id)); toast.success('Registro excluído') }
+    else { setRecords(prev => prev.filter(r => r.id !== id)); toast.success('Registro excluído'); router.refresh() }
     setDeleting(false)
     setDelConfirm(null)
   }

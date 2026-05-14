@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { MilkProduction, MilkPayment } from '@/types'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -54,6 +55,7 @@ export function MilkClient({
   todayStr, monthStart, monthEnd, yearStart, currentMonth,
 }: Props) {
   const supabase = createClient()
+  const router = useRouter()
   const [production, setProduction] = useState<MilkProduction[]>(initialProduction)
   const [payments, setPayments] = useState<MilkPayment[]>(initialPayments)
 
@@ -107,13 +109,13 @@ export function MilkClient({
 
     if (prodDialog === 'new') {
       const { data, error } = await supabase.from('milk_production').insert(payload).select().single()
-      if (error) toast.error('Erro: ' + error.message)
-      else { setProduction(prev => [data, ...prev].sort((a, b) => b.date.localeCompare(a.date))); toast.success('Produção registrada!') }
+      if (error) { toast.error('Erro: ' + error.message) }
+      else { setProduction(prev => [data, ...prev].sort((a, b) => b.date.localeCompare(a.date))); toast.success('Produção registrada!'); router.refresh() }
     } else {
       const r = prodDialog as MilkProduction
       const { data, error } = await supabase.from('milk_production').update(payload).eq('id', r.id).eq('farm_id', farmId).select().single()
-      if (error) toast.error('Erro: ' + error.message)
-      else { setProduction(prev => prev.map(x => x.id === r.id ? data : x)); toast.success('Atualizado!') }
+      if (error) { toast.error('Erro: ' + error.message) }
+      else { setProduction(prev => prev.map(x => x.id === r.id ? data : x)); toast.success('Atualizado!'); router.refresh() }
     }
 
     setProdDialog(null)
@@ -158,13 +160,13 @@ export function MilkClient({
 
     if (payDialog === 'new') {
       const { data, error } = await supabase.from('milk_payments').insert(payload).select().single()
-      if (error) toast.error('Erro: ' + error.message)
-      else { setPayments(prev => [data, ...prev].sort((a, b) => (b.reference_month ?? '').localeCompare(a.reference_month ?? ''))); toast.success('Pagamento registrado!') }
+      if (error) { toast.error('Erro: ' + error.message) }
+      else { setPayments(prev => [data, ...prev].sort((a, b) => (b.reference_month ?? '').localeCompare(a.reference_month ?? ''))); toast.success('Pagamento registrado!'); router.refresh() }
     } else {
       const p = payDialog as MilkPayment
       const { data, error } = await supabase.from('milk_payments').update(payload).eq('id', p.id).eq('farm_id', farmId).select().single()
-      if (error) toast.error('Erro: ' + error.message)
-      else { setPayments(prev => prev.map(x => x.id === p.id ? data : x)); toast.success('Atualizado!') }
+      if (error) { toast.error('Erro: ' + error.message) }
+      else { setPayments(prev => prev.map(x => x.id === p.id ? data : x)); toast.success('Atualizado!'); router.refresh() }
     }
 
     setPayDialog(null)
@@ -175,7 +177,7 @@ export function MilkClient({
     setDeleting(true)
     const { error } = await supabase.from('milk_production').delete().eq('id', id)
     if (error) toast.error('Erro ao excluir')
-    else { setProduction(prev => prev.filter(r => r.id !== id)); toast.success('Excluído!') }
+    else { setProduction(prev => prev.filter(r => r.id !== id)); toast.success('Excluído!'); router.refresh() }
     setDeleting(false)
     setDelConfirm(null)
   }
@@ -184,7 +186,7 @@ export function MilkClient({
     setDeleting(true)
     const { error } = await supabase.from('milk_payments').delete().eq('id', id)
     if (error) toast.error('Erro ao excluir')
-    else { setPayments(prev => prev.filter(p => p.id !== id)); toast.success('Excluído!') }
+    else { setPayments(prev => prev.filter(p => p.id !== id)); toast.success('Excluído!'); router.refresh() }
     setDeleting(false)
     setDelConfirm(null)
   }

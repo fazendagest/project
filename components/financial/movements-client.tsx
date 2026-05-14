@@ -124,7 +124,7 @@ export function ExpensesClient({
       notes: expForm.notes || null,
     }).select().single()
     if (error) toast.error('Erro: ' + error.message)
-    else { setExpenses(prev => [data, ...prev]); setExpDialog(false); toast.success('Despesa registrada!') }
+    else { setExpenses(prev => [data, ...prev]); setExpDialog(false); toast.success('Despesa registrada!'); router.refresh() }
     setExpLoading(false)
   }
 
@@ -171,6 +171,7 @@ export function ExpensesClient({
       setPurchases(prev => prev.map(p => p.id === purchaseDialog ? data : p))
       setPurchaseDialog(null)
       toast.success('Compra atualizada!')
+      router.refresh()
     }
     setPurchaseLoading(false)
   }
@@ -192,6 +193,7 @@ export function ExpensesClient({
       setSales(prev => prev.map(s => s.id === saleEditDialog ? data : s))
       setSaleEditDialog(null)
       toast.success('Venda atualizada!')
+      router.refresh()
     }
     setSaleEditLoading(false)
   }
@@ -211,6 +213,7 @@ export function ExpensesClient({
       setExpenses(prev => prev.map(ex => ex.id === expEditDialog ? data : ex))
       setExpEditDialog(null)
       toast.success('Despesa atualizada!')
+      router.refresh()
     }
     setExpEditLoading(false)
   }
@@ -230,7 +233,7 @@ export function ExpensesClient({
       if (!error) setPurchases(prev => prev.filter(p => p.id !== delConfirm.id))
     }
     if (error) toast.error('Erro ao excluir')
-    else toast.success('Excluído com sucesso')
+    else { toast.success('Excluído com sucesso'); router.refresh() }
     setDeleting(false)
     setDelConfirm(null)
   }

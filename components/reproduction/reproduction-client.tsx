@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { ReproductionRecord } from '@/types'
 import { Button } from '@/components/ui/button'
@@ -40,6 +41,7 @@ export function ReproductionClient({
   farmId: string
 }) {
   const supabase = createClient()
+  const router = useRouter()
   const [records, setRecords] = useState(initialRecords)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -68,6 +70,7 @@ export function ReproductionClient({
     else {
       setRecords(prev => prev.filter(r => r.id !== id))
       toast.success('Registro excluído')
+      router.refresh()
     }
     setDeleting(null)
     setConfirmId(null)
@@ -76,6 +79,7 @@ export function ReproductionClient({
   function onBirthRegistered(updated: ReproductionRecord) {
     setRecords(prev => prev.map(r => r.id === updated.id ? { ...r, ...updated } : r))
     setBirthRecord(null)
+    router.refresh()
   }
 
   return (

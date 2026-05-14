@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { HealthRecord } from '@/types'
 import { Button } from '@/components/ui/button'
@@ -29,6 +30,7 @@ export function HealthClient({
   farmId: string
 }) {
   const supabase = createClient()
+  const router = useRouter()
   const [records, setRecords] = useState(initialRecords)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
@@ -62,6 +64,7 @@ export function HealthClient({
     else {
       setRecords(prev => prev.filter(r => r.id !== id))
       toast.success('Registro excluído')
+      router.refresh()
     }
     setDeleting(null)
     setConfirmId(null)

@@ -52,6 +52,7 @@ export function AnimalsClient({ initialAnimals, farmId }: { initialAnimals: Anim
     } else {
       setAnimals(prev => prev.filter(a => a.id !== id))
       toast.success('Animal excluído')
+      router.refresh()
     }
     setDeleting(null)
     setConfirmId(null)

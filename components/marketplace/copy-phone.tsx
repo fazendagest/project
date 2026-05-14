@@ -20,7 +20,7 @@ export function CopyPhone({ phone }: { phone: string }) {
         background: '#FAFAF8',
         border: '1.5px dashed #D9CDB8',
       }}
-      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F5EFE2' }}
+      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F3EDD8' }}
       onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#FAFAF8' }}
     >
       <div className="flex flex-col items-start gap-0.5">
@@ -28,7 +28,7 @@ export function CopyPhone({ phone }: { phone: string }) {
         <span className="text-sm font-semibold text-gray-900 tabular-nums">{phone}</span>
       </div>
       {copied ? (
-        <div className="flex items-center gap-1 text-[#166534] text-xs font-semibold">
+        <div className="flex items-center gap-1 text-[#0F4A2D] text-xs font-semibold">
           <Check className="h-3.5 w-3.5 shrink-0" /> Copiado
         </div>
       ) : (

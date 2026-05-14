@@ -15,7 +15,7 @@ const CAT_LABEL: Record<string, string> = {
 
 const CAT_BADGE: Record<string, string> = {
   animais:      'bg-[#FBEDD8] text-[#7A4A12] border-[#F0DBB4]',
-  terras:       'bg-[#E6EFD9] text-[#3F5A20] border-[#D2DFBE]',
+  terras:       'bg-[#E6EFD9] text-[#0F4A2D] border-[#EAE4D0]',
   servicos:     'bg-[#EFE4F0] text-[#5A3262] border-[#DECCDF]',
   maquinas:     'bg-[#E2E8EF] text-[#2C4663] border-[#C8D2DE]',
   veterinarios: 'bg-[#FAE0E0] text-[#7A2A2A] border-[#EFCACA]',
@@ -61,8 +61,8 @@ export default async function ListingPage({ params }: { params: { id: string } }
     : null
 
   return (
-    <div className="min-h-screen" style={{ background: '#FAF8F3' }}>
-      <header className="bg-[#166534] text-white border-b border-green-800">
+    <div className="min-h-screen" style={{ background: '#F8F5EB' }}>
+      <header className="bg-[#0F4A2D] text-white border-b border-[#0C3B24]">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="bg-white/15 rounded-xl p-1.5 border border-white/20">
@@ -77,7 +77,7 @@ export default async function ListingPage({ params }: { params: { id: string } }
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        <Link href="/" className="inline-flex items-center gap-1 text-sm text-[#166534] font-medium hover:underline mb-6">
+        <Link href="/" className="inline-flex items-center gap-1 text-sm text-[#0F4A2D] font-medium hover:underline mb-6">
           <ChevronLeft className="h-4 w-4" /> Marketplace
         </Link>
 
@@ -85,7 +85,7 @@ export default async function ListingPage({ params }: { params: { id: string } }
           {/* Main content */}
           <div className="lg:col-span-2 space-y-4">
             {/* Photo */}
-            <div className="aspect-[16/9] rounded-xl overflow-hidden border border-[#E8DFC9] relative">
+            <div className="aspect-[16/9] rounded-xl overflow-hidden border border-[#EAE4D0] relative">
               {listing.photo_url ? (
                 <img src={listing.photo_url} alt={listing.title} className="w-full h-full object-cover" />
               ) : (
@@ -97,9 +97,9 @@ export default async function ListingPage({ params }: { params: { id: string } }
             </div>
 
             {/* Title block */}
-            <div className="bg-white rounded-xl border border-[#E8DFC9] p-5">
+            <div className="bg-white rounded-xl border border-[#EAE4D0] p-5">
               <h1 className="text-2xl font-semibold text-gray-900 font-serif leading-tight">{listing.title}</h1>
-              <p className="text-3xl font-semibold text-[#166534] mt-2 font-serif">
+              <p className="text-3xl font-semibold text-[#8C3F1F] mt-2 font-serif">
                 {formatPrice(listing.price, listing.price_type)}
               </p>
               <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-500">
@@ -117,7 +117,7 @@ export default async function ListingPage({ params }: { params: { id: string } }
 
             {/* Info */}
             {(listing.seller_name || listing.quantity > 1) && (
-              <div className="bg-white rounded-xl border border-[#E8DFC9] p-5 space-y-3">
+              <div className="bg-white rounded-xl border border-[#EAE4D0] p-5 space-y-3">
                 <h2 className="font-semibold text-gray-900">Informações</h2>
                 <dl className="grid grid-cols-2 gap-3 text-sm">
                   {listing.seller_name && (
@@ -138,7 +138,7 @@ export default async function ListingPage({ params }: { params: { id: string } }
 
             {/* Description */}
             {listing.description && (
-              <div className="bg-white rounded-xl border border-[#E8DFC9] p-5">
+              <div className="bg-white rounded-xl border border-[#EAE4D0] p-5">
                 <h2 className="font-semibold text-gray-900 mb-3 font-serif">Descrição</h2>
                 <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">{listing.description}</p>
               </div>
@@ -146,7 +146,7 @@ export default async function ListingPage({ params }: { params: { id: string } }
 
             {/* YouTube */}
             {youtubeId && (
-              <div className="bg-white rounded-xl border border-[#E8DFC9] p-5">
+              <div className="bg-white rounded-xl border border-[#EAE4D0] p-5">
                 <h2 className="font-semibold text-gray-900 mb-3">Vídeo</h2>
                 <div className="aspect-video rounded-lg overflow-hidden">
                   <iframe
@@ -162,8 +162,8 @@ export default async function ListingPage({ params }: { params: { id: string } }
 
           {/* Sidebar contact */}
           <div>
-            <div className="bg-white rounded-xl border border-[#E8DFC9] p-5 space-y-4 sticky top-20">
-              <div className="text-2xl font-semibold text-[#166534] font-serif">
+            <div className="bg-white rounded-xl border border-[#EAE4D0] p-5 space-y-4 sticky top-20">
+              <div className="text-2xl font-semibold text-[#8C3F1F] font-serif">
                 {formatPrice(listing.price, listing.price_type)}
               </div>
 
@@ -185,7 +185,7 @@ export default async function ListingPage({ params }: { params: { id: string } }
               )}
 
               {listing.seller_name && (
-                <div className="pt-3 border-t border-[#E8DFC9] text-sm text-gray-600">
+                <div className="pt-3 border-t border-[#EAE4D0] text-sm text-gray-600">
                   <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Anunciante</p>
                   <p className="font-medium text-gray-900">{listing.seller_name}</p>
                 </div>
@@ -201,7 +201,7 @@ export default async function ListingPage({ params }: { params: { id: string } }
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {related.map(item => (
                 <Link key={item.id} href={`/anuncio/${item.id}`}>
-                  <div className="bg-white rounded-xl border border-[#E8DFC9] hover:shadow-md transition-shadow overflow-hidden">
+                  <div className="bg-white rounded-xl border border-[#EAE4D0] hover:shadow-md transition-shadow overflow-hidden">
                     <div className="aspect-[4/3] relative overflow-hidden">
                       {item.photo_url ? (
                         <img src={item.photo_url} alt={item.title} className="w-full h-full object-cover" />
@@ -211,7 +211,7 @@ export default async function ListingPage({ params }: { params: { id: string } }
                     </div>
                     <div className="p-3">
                       <p className="text-sm font-semibold text-gray-900 line-clamp-2">{item.title}</p>
-                      <p className="text-sm font-semibold text-[#166534] mt-1 font-serif">
+                      <p className="text-sm font-semibold text-[#8C3F1F] mt-1 font-serif">
                         {formatPrice(item.price, item.price_type)}
                       </p>
                     </div>

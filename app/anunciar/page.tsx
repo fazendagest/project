@@ -95,19 +95,19 @@ export default function AnunciarPage() {
 
   if (step === 'done') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4" style={{ background: '#FAF8F3' }}>
-        <div className="bg-white rounded-2xl border border-[#E8DFC9] p-8 max-w-sm w-full text-center space-y-4 shadow-sm">
-          <div className="w-16 h-16 rounded-full bg-green-50 border border-green-100 flex items-center justify-center mx-auto">
-            <CheckCircle2 className="h-9 w-9 text-[#166534]" />
+      <div className="min-h-screen flex flex-col items-center justify-center p-4" style={{ background: '#F8F5EB' }}>
+        <div className="bg-white rounded-2xl border border-[#EAE4D0] p-8 max-w-sm w-full text-center space-y-4 shadow-sm">
+          <div className="w-16 h-16 rounded-full bg-[#F0EBD8] border border-[#EAE4D0] flex items-center justify-center mx-auto">
+            <CheckCircle2 className="h-9 w-9 text-[#0F4A2D]" />
           </div>
           <h1 className="text-xl font-semibold text-gray-900 font-serif">Anúncio enviado!</h1>
           <p className="text-gray-500 text-sm">Seu anúncio será publicado após aprovação em até 24h.</p>
           {wantTrial && (
-            <div className="rounded-xl p-4 text-sm text-green-800" style={{ background: '#F0FDF4', border: '1px solid #D1FAE5' }}>
+            <div className="rounded-xl p-4 text-sm text-[#0F4A2D]" style={{ background: '#F3EDD8', border: '1px solid #EAE4D0' }}>
               Recebemos seu interesse! Em breve entraremos em contato para configurar seu acesso.
             </div>
           )}
-          <Link href="/" className="flex items-center justify-center gap-2 w-full bg-[#166534] text-white font-semibold py-2.5 rounded-xl hover:bg-green-800 transition-colors text-sm">
+          <Link href="/" className="flex items-center justify-center gap-2 w-full bg-[#0F4A2D] text-white font-semibold py-2.5 rounded-xl hover:bg-[#0C3B24] transition-colors text-sm">
             Voltar ao marketplace
           </Link>
         </div>
@@ -116,9 +116,9 @@ export default function AnunciarPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: '#FAF8F3' }}>
+    <div className="min-h-screen" style={{ background: '#F8F5EB' }}>
       {/* Header */}
-      <header className="bg-[#166534] text-white border-b border-green-800">
+      <header className="bg-[#0F4A2D] text-white border-b border-[#0C3B24]">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="bg-white/15 rounded-xl p-1.5 border border-white/20">
@@ -141,13 +141,13 @@ export default function AnunciarPage() {
             </button>
           )}
           <div className="flex gap-1 items-center flex-1">
-            <div className="flex-1 h-1 rounded-full bg-[#166534]" />
-            <div className={`flex-1 h-1 rounded-full ${step !== 1 ? 'bg-[#166534]' : 'bg-gray-200'}`} />
+            <div className="flex-1 h-1 rounded-full bg-[#0F4A2D]" />
+            <div className={`flex-1 h-1 rounded-full ${step !== 1 ? 'bg-[#0F4A2D]' : 'bg-gray-200'}`} />
           </div>
           <span className="text-xs text-gray-400">Passo {typeof step === 'number' ? step : 2} de 2</span>
         </div>
 
-        <div className="bg-white rounded-2xl border border-[#E8DFC9] p-6 shadow-sm">
+        <div className="bg-white rounded-2xl border border-[#EAE4D0] p-6 shadow-sm">
           {step === 1 && (
             <>
               <h1 className="text-xl font-semibold text-gray-900 mb-1 font-serif">O que você quer anunciar?</h1>
@@ -159,10 +159,10 @@ export default function AnunciarPage() {
                     <button
                       key={cat.key}
                       onClick={() => { setCategory(cat.key); setStep(2) }}
-                      className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-[#E8DFC9] hover:border-[#166534] hover:bg-green-50 transition-colors group"
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-[#EAE4D0] hover:border-[#0F4A2D] hover:bg-[#F0EBD8] transition-colors group"
                     >
-                      <Icon className="h-7 w-7 text-gray-400 group-hover:text-[#166534]" />
-                      <span className="text-sm font-medium text-gray-700 group-hover:text-[#166534]">{cat.label}</span>
+                      <Icon className="h-7 w-7 text-gray-400 group-hover:text-[#0F4A2D]" />
+                      <span className="text-sm font-medium text-gray-700 group-hover:text-[#0F4A2D]">{cat.label}</span>
                     </button>
                   )
                 })}
@@ -244,7 +244,7 @@ export default function AnunciarPage() {
                 <Input placeholder="https://youtube.com/watch?v=..." value={form.youtube_url} onChange={e => set('youtube_url', e.target.value)} />
               </div>
 
-              <hr className="border-[#E8DFC9]" />
+              <hr className="border-[#EAE4D0]" />
 
               <div className="space-y-1.5">
                 <Label>Nome / Fazenda *</Label>
@@ -261,24 +261,24 @@ export default function AnunciarPage() {
                 <Input type="email" placeholder="seu@email.com" value={form.seller_email} onChange={e => set('seller_email', e.target.value)} />
               </div>
 
-              <label className="flex items-start gap-3 p-4 rounded-xl cursor-pointer" style={{ background: '#F5EFE2', border: '1px solid #E8DFC9' }}>
+              <label className="flex items-start gap-3 p-4 rounded-xl cursor-pointer" style={{ background: '#F3EDD8', border: '1px solid #EAE4D0' }}>
                 <input
                   type="checkbox"
                   checked={wantTrial}
                   onChange={e => setWantTrial(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 accent-[#166534]"
+                  className="mt-0.5 h-4 w-4 accent-[#0F4A2D]"
                 />
-                <span className="text-sm text-green-900">
+                <span className="text-sm text-[#0F4A2D]">
                   <span className="font-semibold">Quero experimentar o sistema de gestão grátis</span>
                   <br />
-                  <span className="text-green-800 opacity-80">90 dias grátis para gestão de animais, finanças e muito mais.</span>
+                  <span className="text-[#0F4A2D] opacity-80">90 dias grátis para gestão de animais, finanças e muito mais.</span>
                 </span>
               </label>
 
               <Button
                 type="submit"
                 disabled={submitting}
-                className="w-full h-11 bg-[#166534] hover:bg-green-800 text-white font-semibold flex items-center justify-center gap-2"
+                className="w-full h-11 bg-[#0F4A2D] hover:bg-[#0C3B24] text-white font-semibold flex items-center justify-center gap-2"
               >
                 {submitting ? 'Enviando...' : (<>Enviar anúncio <ArrowRight className="h-4 w-4" /></>)}
               </Button>

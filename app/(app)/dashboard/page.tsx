@@ -114,6 +114,7 @@ export default async function DashboardPage() {
           title="Lucro Líquido"
           value={formatCurrencyCard(netProfit)}
           subtitle={`Margem: ${margin.toFixed(1)}%`}
+          valueColor={netProfit >= 0 ? 'text-green-600' : 'text-red-600'}
           icon={TrendingUp}
           iconColor={netProfit >= 0 ? 'text-green-700' : 'text-red-700'}
           iconBg={netProfit >= 0 ? 'bg-green-100' : 'bg-red-100'}
@@ -121,6 +122,7 @@ export default async function DashboardPage() {
         <StatCard
           title="Total Gastos"
           value={formatCurrencyCard(totalCosts)}
+          valueColor="text-red-600"
           icon={Package}
           iconColor="text-orange-700"
           iconBg="bg-orange-100"

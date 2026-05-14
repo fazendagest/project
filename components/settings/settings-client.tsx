@@ -28,13 +28,13 @@ export function SettingsClient({ farm, userEmail }: { farm: Farm | null; userEma
 
   async function handleMilkToggle(checked: boolean) {
     if (!farm) return
+    setMilkActive(checked)
     setMilkLoading(true)
     const { error } = await supabase.from('farms').update({ milk_active: checked }).eq('id', farm.id)
     if (error) {
       toast.error('Erro ao atualizar módulo de leite')
       setMilkActive(!checked)
     } else {
-      setMilkActive(checked)
       toast.success(checked ? 'Módulo de leite ativado!' : 'Módulo de leite desativado.')
       router.refresh()
     }

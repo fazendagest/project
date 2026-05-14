@@ -118,7 +118,7 @@ export default async function ListingPage({ params }: { params: { id: string } }
             {/* Info */}
             {(listing.seller_name || listing.quantity > 1) && (
               <div className="bg-white rounded-xl border border-[#EAE4D0] p-5 space-y-3">
-                <h2 className="font-semibold text-gray-900">Informações</h2>
+                <h2 className="font-semibold text-gray-900 font-serif">Informações</h2>
                 <dl className="grid grid-cols-2 gap-3 text-sm">
                   {listing.seller_name && (
                     <>
@@ -147,7 +147,7 @@ export default async function ListingPage({ params }: { params: { id: string } }
             {/* YouTube */}
             {youtubeId && (
               <div className="bg-white rounded-xl border border-[#EAE4D0] p-5">
-                <h2 className="font-semibold text-gray-900 mb-3">Vídeo</h2>
+                <h2 className="font-semibold text-gray-900 mb-3 font-serif">Vídeo</h2>
                 <div className="aspect-video rounded-lg overflow-hidden">
                   <iframe
                     src={`https://www.youtube.com/embed/${youtubeId}`}

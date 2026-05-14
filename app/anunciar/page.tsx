@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { CowIcon } from '@/components/icons/cow-icon'
@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import {
   PawPrint, Landmark, Wrench, Tractor, Stethoscope,
-  FileText, CalendarDays, ChevronLeft, CheckCircle2, ArrowRight,
+  FileText, CalendarDays, ChevronLeft, CheckCircle2, ArrowRight, Camera, X,
 } from 'lucide-react'
 
 const CATEGORIES = [
@@ -38,10 +38,14 @@ const ESTADOS = [
 
 export default function AnunciarPage() {
   const supabase = createClient()
+  const fileRef = useRef<HTMLInputElement>(null)
   const [step, setStep] = useState<1 | 2 | 'done'>(1)
   const [category, setCategory] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [wantTrial, setWantTrial] = useState(false)
+  const [autoFilled, setAutoFilled] = useState(false)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState('')
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -56,8 +60,35 @@ export default function AnunciarPage() {
     seller_email: '',
   })
 
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('fg_seller')
+      if (saved) {
+        const { name, phone, email } = JSON.parse(saved)
+        setForm(prev => ({
+          ...prev,
+          seller_name: name || '',
+          seller_phone: phone || '',
+          seller_email: email || '',
+        }))
+        setAutoFilled(true)
+      }
+    } catch {}
+  }, [])
+
   function set(field: string, value: string) {
     setForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  function handlePhoto(file: File) {
+    setPhotoFile(file)
+    setPhotoPreview(URL.createObjectURL(file))
+  }
+
+  function clearPhoto() {
+    setPhotoFile(null)
+    setPhotoPreview('')
+    if (fileRef.current) fileRef.current.value = ''
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -67,6 +98,21 @@ export default function AnunciarPage() {
     if (!form.seller_phone.trim()) { toast.error('Informe o WhatsApp'); return }
 
     setSubmitting(true)
+
+    // Upload photo if selected
+    let photo_url: string | null = null
+    if (photoFile) {
+      const ext = photoFile.name.split('.').pop() ?? 'jpg'
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+      const { data: up, error: upErr } = await supabase.storage
+        .from('listing-photos')
+        .upload(path, photoFile, { cacheControl: '3600', upsert: false })
+      if (!upErr && up) {
+        const { data: urlData } = supabase.storage.from('listing-photos').getPublicUrl(up.path)
+        photo_url = urlData.publicUrl
+      }
+    }
+
     const { error } = await supabase.from('listings').insert({
       category,
       title: form.title.trim(),
@@ -80,6 +126,7 @@ export default function AnunciarPage() {
       seller_name: form.seller_name.trim(),
       seller_phone: form.seller_phone.trim(),
       seller_email: form.seller_email.trim() || null,
+      photo_url,
       status: 'pending',
     })
 
@@ -88,6 +135,14 @@ export default function AnunciarPage() {
       setSubmitting(false)
       return
     }
+
+    try {
+      localStorage.setItem('fg_seller', JSON.stringify({
+        name: form.seller_name.trim(),
+        phone: form.seller_phone.trim(),
+        email: form.seller_email.trim(),
+      }))
+    } catch {}
 
     setStep('done')
     setSubmitting(false)
@@ -174,6 +229,47 @@ export default function AnunciarPage() {
             <form onSubmit={handleSubmit} className="space-y-5">
               <h1 className="text-xl font-semibold text-gray-900 font-serif">Detalhes do anúncio</h1>
 
+              {/* Photo upload */}
+              <div className="space-y-1.5">
+                <Label>Foto do anúncio (opcional)</Label>
+                <div className="relative">
+                  <div
+                    onClick={() => fileRef.current?.click()}
+                    className="cursor-pointer rounded-xl border-2 border-dashed border-[#EAE4D0] hover:border-[#0F4A2D] transition-colors overflow-hidden"
+                    style={{ background: '#FAFAF8' }}
+                  >
+                    {photoPreview ? (
+                      <img src={photoPreview} alt="Preview" className="w-full h-40 object-cover" />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-32 gap-2">
+                        <Camera className="h-8 w-8 text-gray-300" />
+                        <span className="text-sm text-gray-400">Adicionar foto</span>
+                        <span className="text-xs text-gray-300">Clique para selecionar</span>
+                      </div>
+                    )}
+                  </div>
+                  {photoPreview && (
+                    <button
+                      type="button"
+                      onClick={clearPhoto}
+                      className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1 transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={e => {
+                    const file = e.target.files?.[0]
+                    if (file) handlePhoto(file)
+                  }}
+                />
+              </div>
+
               <div className="space-y-1.5">
                 <Label>Título *</Label>
                 <Input
@@ -245,6 +341,13 @@ export default function AnunciarPage() {
               </div>
 
               <hr className="border-[#EAE4D0]" />
+
+              {autoFilled && (
+                <p className="text-xs text-[#0F4A2D] flex items-center gap-1.5 -mb-1">
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                  Dados preenchidos do seu último anúncio
+                </p>
+              )}
 
               <div className="space-y-1.5">
                 <Label>Nome / Fazenda *</Label>

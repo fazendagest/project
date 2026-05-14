@@ -111,7 +111,7 @@ export default async function MarketplacePage({
             </div>
           </form>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 ml-auto">
             <Link href="/login" className="hidden sm:block text-sm font-medium text-white border border-white/30 px-3 py-1.5 rounded-full hover:bg-white/10 transition-colors">
               Entrar
             </Link>
@@ -285,7 +285,7 @@ export default async function MarketplacePage({
                         </div>
                       )}
                       <div className="flex items-baseline justify-between mt-2">
-                        <p className="font-semibold text-[#8C3F1F] text-base font-serif">
+                        <p className="font-semibold text-[#0F4A2D] text-base font-serif">
                           {formatPrice(listing.price, listing.price_type)}
                         </p>
                         <span className="text-[10.5px] text-gray-400">{timeAgo(listing.created_at)}</span>

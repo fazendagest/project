@@ -99,7 +99,7 @@ export default async function ListingPage({ params }: { params: { id: string } }
             {/* Title block */}
             <div className="bg-white rounded-xl border border-[#EAE4D0] p-5">
               <h1 className="text-2xl font-semibold text-gray-900 font-serif leading-tight">{listing.title}</h1>
-              <p className="text-3xl font-semibold text-[#8C3F1F] mt-2 font-serif">
+              <p className="text-3xl font-semibold text-[#0F4A2D] mt-2 font-serif">
                 {formatPrice(listing.price, listing.price_type)}
               </p>
               <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-500">
@@ -163,7 +163,7 @@ export default async function ListingPage({ params }: { params: { id: string } }
           {/* Sidebar contact */}
           <div>
             <div className="bg-white rounded-xl border border-[#EAE4D0] p-5 space-y-4 sticky top-20">
-              <div className="text-2xl font-semibold text-[#8C3F1F] font-serif">
+              <div className="text-2xl font-semibold text-[#0F4A2D] font-serif">
                 {formatPrice(listing.price, listing.price_type)}
               </div>
 
@@ -211,7 +211,7 @@ export default async function ListingPage({ params }: { params: { id: string } }
                     </div>
                     <div className="p-3">
                       <p className="text-sm font-semibold text-gray-900 line-clamp-2">{item.title}</p>
-                      <p className="text-sm font-semibold text-[#8C3F1F] mt-1 font-serif">
+                      <p className="text-sm font-semibold text-[#0F4A2D] mt-1 font-serif">
                         {formatPrice(item.price, item.price_type)}
                       </p>
                     </div>

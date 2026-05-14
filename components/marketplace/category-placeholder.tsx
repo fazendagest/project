@@ -13,10 +13,8 @@ export function CategoryPlaceholder({ category, uid }: { category: string; uid: 
   return (
     <svg
       viewBox="0 0 320 240"
-      width="100%"
-      height="100%"
       preserveAspectRatio="xMidYMid slice"
-      style={{ display: 'block' }}
+      style={{ display: 'block', position: 'absolute', inset: 0, width: '100%', height: '100%' }}
     >
       <defs>
         <pattern id={pid} width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">

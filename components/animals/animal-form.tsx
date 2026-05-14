@@ -19,14 +19,14 @@ import { toTitleCase } from '@/lib/utils'
 const BREED_OPTIONS: Record<string, string[]> = {
   bovino: [
     'Nelore', 'Nelore PO', 'Angus', 'Angus PO', 'Brahman', 'Girolando',
-    'Gir', 'Gir Leiteiro', 'Simental', 'Limousin', 'Charolês', 'Hereford',
-    'Senepol', 'Tabapuã', 'Canchim', 'Bonsmara', 'Wagyu', 'Cruzado',
+    'Gir', 'Gir Leiteiro', 'Simental', 'Caracu', 'Tabapuã', 'Senepol',
+    'Guzerá', 'Holandês', 'Jersey', 'Mestiço', 'Outro',
   ],
   equino: [
-    'Quarto de Milha', 'Mangalarga Marchador', 'Mangalarga', 'Crioulo',
-    'Paint Horse', 'Appaloosa', 'Árabe', 'Puro Sangue Inglês', 'Lusitano',
+    'Quarto de Milha', 'Manga Larga Marchador', 'Campolina',
+    'Árabe', 'Paint Horse', 'Appaloosa', 'Crioulo', 'Mestiço', 'Outro',
   ],
-  suino: ['Landrace', 'Large White', 'Duroc', 'Pietrain', 'Hampshire', 'Agroceres'],
+  suino: ['Large White', 'Landrace', 'Duroc', 'Pietrain', 'Mestiço', 'Outro'],
 }
 
 type Female = { id: string; code: string; name?: string }
@@ -100,7 +100,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
       .then(({ data }) => { if (data) setFemales(data) })
   }, [farmId])
 
-  function set(k: string, v: string | boolean | null) {
+  function set(k: string, v: string | null) {
     if (v === null) return
     setForm(prev => ({ ...prev, [k]: v }))
   }
@@ -196,6 +196,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
   return (
     <form onSubmit={handleSubmit}>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Coluna principal */}
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader><CardTitle>Identificação</CardTitle></CardHeader>
@@ -214,7 +215,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                 </Select>
               </div>
 
-              {/* 2. Código — gerado automaticamente */}
+              {/* 2. Código */}
               <div className="space-y-2">
                 <Label htmlFor="code">
                   Código
@@ -264,17 +265,17 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                   placeholder="Nome do animal" />
               </div>
 
-              {/* 6. Raça */}
+              {/* 6. Raça — Select shadcn/ui, opções por espécie */}
               <div className="space-y-2">
-                <Label htmlFor="breed">Raça</Label>
-                <Input id="breed" value={form.breed} onChange={e => set('breed', e.target.value)}
-                  onBlur={e => set('breed', toTitleCase(e.target.value))}
-                  placeholder="Ex: Nelore, Angus..." list="breed-options" autoComplete="off" />
-                <datalist id="breed-options">
-                  {(BREED_OPTIONS[form.species] ?? []).map(b => (
-                    <option key={b} value={b} />
-                  ))}
-                </datalist>
+                <Label>Raça</Label>
+                <Select value={form.breed} onValueChange={v => set('breed', v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar raça..." /></SelectTrigger>
+                  <SelectContent>
+                    {BREED_OPTIONS[form.species]?.map(b => (
+                      <SelectItem key={b} value={b}>{b}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* 7. Sexo */}
@@ -289,7 +290,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                 </Select>
               </div>
 
-              {/* 8. Peso — compra aparece na seção Dados da Compra */}
+              {/* 8. Peso — só para nascimento/arrendamento; compra tem campo próprio */}
               {form.entry_type !== 'compra' && (
                 <div className="space-y-2">
                   <Label htmlFor="weight_arrobas">Peso (@)</Label>
@@ -426,15 +427,15 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                 </div>
                 <Switch
                   checked={form.to_discard}
-                  onCheckedChange={v => set('to_discard', v)}
+                  onCheckedChange={(checked: boolean) => setForm(prev => ({ ...prev, to_discard: checked }))}
                 />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Foto */}
-        <div className="space-y-6">
+        {/* Coluna lateral — Foto */}
+        <div>
           <Card>
             <CardHeader><CardTitle>Foto</CardTitle></CardHeader>
             <CardContent>
@@ -459,17 +460,19 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
               </Label>
             </CardContent>
           </Card>
-
-          <div className="flex flex-col gap-3">
-            <Button type="submit" className="h-12 text-base" disabled={loading || codeLoading}>
-              {loading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-              {mode === 'create' ? 'Cadastrar Animal' : 'Salvar Alterações'}
-            </Button>
-            <Button type="button" variant="outline" className="h-12" onClick={() => router.push('/animals')}>
-              Cancelar
-            </Button>
-          </div>
         </div>
+      </div>
+
+      {/* Rodapé com botões */}
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 mt-6 pt-6 border-t">
+        <Button type="button" variant="outline" className="h-11 sm:w-36"
+          onClick={() => router.push('/animals')}>
+          Cancelar
+        </Button>
+        <Button type="submit" className="h-11 sm:w-48" disabled={loading || codeLoading}>
+          {loading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+          {mode === 'create' ? 'Cadastrar Animal' : 'Salvar Alterações'}
+        </Button>
       </div>
     </form>
   )

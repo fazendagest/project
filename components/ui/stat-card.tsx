@@ -6,6 +6,8 @@ interface StatCardProps {
   title: string
   value: string | number
   subtitle?: string
+  subtitle2?: string
+  valueColor?: string
   icon?: LucideIcon
   iconColor?: string
   iconBg?: string
@@ -16,6 +18,8 @@ export function StatCard({
   title,
   value,
   subtitle,
+  subtitle2,
+  valueColor,
   icon: Icon,
   iconColor = 'text-primary',
   iconBg = 'bg-primary/10',
@@ -27,9 +31,12 @@ export function StatCard({
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-muted-foreground truncate">{title}</p>
-            <p className="text-sm lg:text-2xl font-bold mt-1 break-words leading-tight">{value}</p>
+            <p className={cn("text-sm lg:text-2xl font-bold mt-1 break-words leading-tight", valueColor)}>{value}</p>
             {subtitle && (
               <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+            )}
+            {subtitle2 && (
+              <p className="text-xs text-muted-foreground mt-0.5">{subtitle2}</p>
             )}
             {trend && (
               <p className={cn(

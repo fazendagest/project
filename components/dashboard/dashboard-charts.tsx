@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { last12Months, monthLabel, formatCurrency } from '@/lib/helpers'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -82,9 +82,13 @@ export function DashboardCharts({ farmId }: { farmId: string }) {
             <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `R$${(v/1000).toFixed(0)}k`} />
             <Tooltip formatter={(v) => formatCurrency(Number(v))} />
             <Legend />
-            <Bar dataKey="Receita" fill="#22c55e" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="Despesas" fill="#f97316" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="Lucro" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Receita" fill="#16a34a" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Despesas" fill="#dc2626" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Lucro" fill="#2563eb" radius={[4, 4, 0, 0]}>
+              {data.map((entry, index) => (
+                <Cell key={`lucro-${index}`} fill={entry.Lucro >= 0 ? '#2563eb' : '#dc2626'} />
+              ))}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

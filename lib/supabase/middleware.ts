@@ -49,11 +49,14 @@ export async function updateSession(request: NextRequest) {
   if (user) {
     const isAdmin = user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL
 
-    // Admin nunca acessa rotas de fazenda — redireciona sempre para /admin
+    // Admin só acessa rotas de fazenda quando estiver impersonando um cliente
     if (isAdmin && !pathname.startsWith('/admin') && !pathname.startsWith('/api/')) {
-      const redirectUrl = request.nextUrl.clone()
-      redirectUrl.pathname = '/admin/dashboard'
-      return NextResponse.redirect(redirectUrl)
+      const impersonatingFarmId = request.cookies.get('admin_viewing_farm_id')?.value
+      if (!impersonatingFarmId) {
+        const redirectUrl = request.nextUrl.clone()
+        redirectUrl.pathname = '/admin/dashboard'
+        return NextResponse.redirect(redirectUrl)
+      }
     }
 
     if (!isAdmin) {

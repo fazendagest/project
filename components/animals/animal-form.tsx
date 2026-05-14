@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 import { Loader2, Upload } from 'lucide-react'
 import { generateAnimalCode } from '@/lib/animal-utils'
@@ -28,6 +29,7 @@ const BREED_OPTIONS: Record<string, string[]> = {
   suino: ['Landrace', 'Large White', 'Duroc', 'Pietrain', 'Hampshire', 'Agroceres'],
 }
 
+type Female = { id: string; code: string; name?: string }
 
 interface AnimalFormProps {
   farmId: string
@@ -43,8 +45,11 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
   const [uploading, setUploading] = useState(false)
   const [codeLoading, setCodeLoading] = useState(false)
   const [photoUrl, setPhotoUrl] = useState(animal?.photo_url ?? '')
+  const [females, setFemales] = useState<Female[]>([])
+
   const [form, setForm] = useState({
     code: animal?.code ?? '',
+    ear_tag: animal?.ear_tag ?? '',
     name: animal?.name ?? '',
     species: animal?.species ?? 'bovino',
     breed: animal?.breed ?? '',
@@ -56,7 +61,11 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
     notes: animal?.notes ?? '',
     market_value: animal?.market_value != null ? formatBRL(animal.market_value) : '',
     weight_arrobas: animal?.weight_arrobas != null ? String(animal.weight_arrobas) : '',
+    to_discard: animal?.to_discard ?? false,
+    mother_id: animal?.mother_id ?? '',
+    rental_owner: '',
   })
+
   const [purchaseForm, setPurchaseForm] = useState({
     purchase_price: existingPurchase?.purchase_price ? formatBRL(existingPurchase.purchase_price) : '',
     weight_kg: existingPurchase?.weight_kg ? String(existingPurchase.weight_kg) : '',
@@ -80,7 +89,18 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function set(k: string, v: string | null) {
+  useEffect(() => {
+    supabase
+      .from('animals')
+      .select('id, code, name')
+      .eq('farm_id', farmId)
+      .eq('sex', 'F')
+      .eq('status', 'ativo')
+      .order('code')
+      .then(({ data }) => { if (data) setFemales(data) })
+  }, [farmId])
+
+  function set(k: string, v: string | boolean | null) {
     if (v === null) return
     setForm(prev => ({ ...prev, [k]: v }))
   }
@@ -119,6 +139,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
     const payload = {
       farm_id: farmId,
       code: form.code,
+      ear_tag: form.ear_tag || null,
       name: form.name || null,
       species: form.species,
       breed: form.breed || null,
@@ -131,6 +152,8 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
       photo_url: photoUrl || null,
       market_value: parseBRL(form.market_value),
       weight_arrobas: form.weight_arrobas ? parseInt(form.weight_arrobas, 10) : null,
+      to_discard: form.to_discard,
+      mother_id: form.mother_id || null,
     }
 
     const purchasePayload = {
@@ -213,7 +236,27 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                 </div>
               </div>
 
-              {/* 3. Nome */}
+              {/* 3. Brinco */}
+              <div className="space-y-2">
+                <Label htmlFor="ear_tag">Brinco</Label>
+                <Input id="ear_tag" value={form.ear_tag} onChange={e => set('ear_tag', e.target.value)}
+                  placeholder="Ex: 245, A-031..." />
+              </div>
+
+              {/* 4. Tipo de Entrada */}
+              <div className="space-y-2">
+                <Label>Tipo de Entrada *</Label>
+                <Select value={form.entry_type} onValueChange={v => set('entry_type', v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="compra">Compra</SelectItem>
+                    <SelectItem value="nascimento">Nascimento</SelectItem>
+                    <SelectItem value="arrendamento">Arrendamento</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 5. Nome */}
               <div className="space-y-2">
                 <Label htmlFor="name">Nome</Label>
                 <Input id="name" value={form.name} onChange={e => set('name', e.target.value)}
@@ -221,7 +264,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                   placeholder="Nome do animal" />
               </div>
 
-              {/* 4. Raça */}
+              {/* 6. Raça */}
               <div className="space-y-2">
                 <Label htmlFor="breed">Raça</Label>
                 <Input id="breed" value={form.breed} onChange={e => set('breed', e.target.value)}
@@ -234,16 +277,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                 </datalist>
               </div>
 
-              {/* 5. Peso — só nascimento; compra aparece na seção Dados da Compra */}
-              {form.entry_type !== 'compra' && (
-                <div className="space-y-2">
-                  <Label htmlFor="weight_arrobas">Peso (@)</Label>
-                  <Input id="weight_arrobas" type="number" step="1" min="0" value={form.weight_arrobas}
-                    onChange={e => set('weight_arrobas', e.target.value)} placeholder="Ex: 15" />
-                </div>
-              )}
-
-              {/* 6. Sexo */}
+              {/* 7. Sexo */}
               <div className="space-y-2">
                 <Label>Sexo *</Label>
                 <Select value={form.sex} onValueChange={v => set('sex', v)}>
@@ -255,33 +289,30 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                 </Select>
               </div>
 
-              {/* 6. Data de Nascimento */}
+              {/* 8. Peso — compra aparece na seção Dados da Compra */}
+              {form.entry_type !== 'compra' && (
+                <div className="space-y-2">
+                  <Label htmlFor="weight_arrobas">Peso (@)</Label>
+                  <Input id="weight_arrobas" type="number" step="1" min="0" value={form.weight_arrobas}
+                    onChange={e => set('weight_arrobas', e.target.value)} placeholder="Ex: 15" />
+                </div>
+              )}
+
+              {/* 9. Data de Nascimento */}
               <div className="space-y-2">
                 <Label htmlFor="birth_date">Data de Nascimento</Label>
                 <Input id="birth_date" type="date" value={form.birth_date}
                   onChange={e => set('birth_date', e.target.value)} />
               </div>
 
-              {/* 7. Data de Entrada */}
+              {/* 10. Data de Entrada */}
               <div className="space-y-2">
                 <Label htmlFor="entry_date">Data de Entrada *</Label>
                 <Input id="entry_date" type="date" value={form.entry_date}
                   onChange={e => set('entry_date', e.target.value)} required />
               </div>
 
-              {/* 8. Tipo de Entrada */}
-              <div className="space-y-2">
-                <Label>Tipo de Entrada *</Label>
-                <Select value={form.entry_type} onValueChange={v => set('entry_type', v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="nascimento">Nascimento</SelectItem>
-                    <SelectItem value="compra">Compra</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* 9. Observações */}
+              {/* 11. Observações */}
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="notes">Observações</Label>
                 <textarea
@@ -296,6 +327,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
             </CardContent>
           </Card>
 
+          {/* Seção condicional: Compra */}
           {form.entry_type === 'compra' && (
             <Card>
               <CardHeader><CardTitle>Dados da Compra</CardTitle></CardHeader>
@@ -309,8 +341,8 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                     placeholder="0,00" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="weight_arrobas">Peso (@)</Label>
-                  <Input id="weight_arrobas" type="number" step="1" min="0"
+                  <Label htmlFor="weight_arrobas_compra">Peso (@)</Label>
+                  <Input id="weight_arrobas_compra" type="number" step="1" min="0"
                     value={form.weight_arrobas}
                     onChange={e => set('weight_arrobas', e.target.value)} placeholder="Ex: 15" />
                 </div>
@@ -321,6 +353,45 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                     onChange={e => setPurchaseForm(p => ({ ...p, seller_name: e.target.value }))}
                     onBlur={e => setPurchaseForm(p => ({ ...p, seller_name: toTitleCase(e.target.value) }))}
                     placeholder="Nome do vendedor" />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Seção condicional: Nascimento — campo Mãe */}
+          {form.entry_type === 'nascimento' && (
+            <Card>
+              <CardHeader><CardTitle>Dados do Nascimento</CardTitle></CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label>Mãe</Label>
+                  <Select value={form.mother_id || 'none'} onValueChange={v => set('mother_id', v === 'none' ? '' : v)}>
+                    <SelectTrigger><SelectValue placeholder="Selecionar mãe..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Não informar</SelectItem>
+                      {females.map(f => (
+                        <SelectItem key={f.id} value={f.id}>
+                          {f.code}{f.name ? ` · ${f.name}` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Seção condicional: Arrendamento */}
+          {form.entry_type === 'arrendamento' && (
+            <Card>
+              <CardHeader><CardTitle>Dados do Arrendamento</CardTitle></CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Label htmlFor="rental_owner">Proprietário do Animal</Label>
+                  <Input id="rental_owner" value={form.rental_owner}
+                    onChange={e => set('rental_owner', e.target.value)}
+                    onBlur={e => set('rental_owner', toTitleCase(e.target.value))}
+                    placeholder="Nome do proprietário" />
                 </div>
               </CardContent>
             </Card>
@@ -348,11 +419,21 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                   onBlur={handleMarketValueBlur}
                   placeholder="8.000,00" />
               </div>
+              <div className="sm:col-span-2 flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <p className="text-sm font-medium">Marcar para descarte futuro</p>
+                  <p className="text-xs text-muted-foreground">Animal que será vendido ou abatido em breve. Não altera o status atual.</p>
+                </div>
+                <Switch
+                  checked={form.to_discard}
+                  onCheckedChange={v => set('to_discard', v)}
+                />
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* 10. Foto */}
+        {/* Foto */}
         <div className="space-y-6">
           <Card>
             <CardHeader><CardTitle>Foto</CardTitle></CardHeader>

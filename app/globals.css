@@ -42,3 +42,15 @@
     @apply bg-background text-foreground;
   }
 }
+
+select option {
+  background-color: white;
+  color: #111;
+}
+
+@media (prefers-color-scheme: dark) {
+  select option {
+    background-color: #1a1a1a;
+    color: #f5f5f5;
+  }
+}

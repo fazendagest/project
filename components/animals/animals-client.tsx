@@ -15,7 +15,7 @@ import { DataCard } from '@/components/ui/data-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import { Eye, Pencil, Trash2, LayoutGrid, List } from 'lucide-react'
+import { Eye, Pencil, Trash2, LayoutGrid, List, AlertTriangle } from 'lucide-react'
 import { calcAge, formatDate, speciesLabel, statusLabel, statusColor, sexLabel } from '@/lib/helpers'
 import Image from 'next/image'
 
@@ -119,7 +119,12 @@ export function AnimalsClient({ initialAnimals, farmId }: { initialAnimals: Anim
               {paged.map(a => (
                 <TableRow key={a.id} className={a.status !== 'ativo' ? 'opacity-50' : ''}>
                   <TableCell className="font-mono font-semibold">{a.code}</TableCell>
-                  <TableCell>{a.name ?? '—'}</TableCell>
+                  <TableCell>
+                    <span className="flex items-center gap-1">
+                      {a.name ?? '—'}
+                      {a.to_discard && <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" title="Marcado para descarte" />}
+                    </span>
+                  </TableCell>
                   <TableCell>{speciesLabel(a.species)}</TableCell>
                   <TableCell>{a.breed ?? '—'}</TableCell>
                   <TableCell>{sexLabel(a.sex)}</TableCell>
@@ -165,7 +170,10 @@ export function AnimalsClient({ initialAnimals, farmId }: { initialAnimals: Anim
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="font-mono font-bold text-primary">{a.code}</p>
-                    <p className="font-semibold">{a.name ?? '(sem nome)'}</p>
+                    <p className="font-semibold flex items-center gap-1">
+                      {a.name ?? '(sem nome)'}
+                      {a.to_discard && <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" title="Marcado para descarte" />}
+                    </p>
                     <p className="text-xs text-muted-foreground">{speciesLabel(a.species)} · {a.breed ?? 'S/R'} · {sexLabel(a.sex)}</p>
                     <p className="text-xs text-muted-foreground">{a.birth_date ? calcAge(a.birth_date) : 'Idade desconhecida'}</p>
                   </div>

@@ -1,7 +1,7 @@
 export type Species = 'bovino' | 'equino' | 'suino'
 export type AnimalStatus = 'ativo' | 'vendido' | 'abatido' | 'morto'
 export type AnimalSex = 'M' | 'F'
-export type EntryType = 'nascimento' | 'compra'
+export type EntryType = 'nascimento' | 'compra' | 'arrendamento'
 export type HealthType = 'vacina' | 'vermifugacao' | 'medicamento' | 'consulta'
 export type ReproStatus = 'coberta' | 'prenha' | 'parida' | 'perdida'
 export type FeedUnit = 'kg' | 'saco' | 'fardo' | 'litro' | 'outro'
@@ -49,6 +49,9 @@ export interface Animal {
   photo_url?: string
   market_value?: number
   weight_arrobas?: number
+  ear_tag?: string
+  to_discard?: boolean
+  mother_id?: string
   created_at: string
 }
 

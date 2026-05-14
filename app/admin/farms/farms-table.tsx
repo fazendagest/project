@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { MoreHorizontal, Pencil } from 'lucide-react'
+import { LogIn, Pencil } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -34,6 +34,22 @@ export function FarmsTable({ farms: initialFarms, adminEmail }: { farms: Farm[];
   const [editingFarm, setEditingFarm] = useState<Farm | null>(null)
   const [editForm, setEditForm] = useState({ name: '', plan: '', trial_ends_at: '' })
   const [saving, setSaving] = useState(false)
+  const [impersonating, setImpersonating] = useState<string | null>(null)
+
+  async function handleImpersonate(farmId: string) {
+    setImpersonating(farmId)
+    const res = await fetch('/api/admin/impersonate-farm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ farmId }),
+    })
+    if (res.ok) {
+      router.push('/dashboard')
+    } else {
+      toast.error('Erro ao acessar fazenda')
+      setImpersonating(null)
+    }
+  }
 
   async function handleToggle(farmId: string, currentActive: boolean) {
     const newActive = !currentActive
@@ -159,20 +175,32 @@ export function FarmsTable({ farms: initialFarms, adminEmail }: { farms: Farm[];
                     {format(new Date(farm.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                   </td>
                   <td className="px-4 py-3">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => openEdit(farm)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs gap-1"
+                        disabled={impersonating === farm.id}
+                        onClick={() => handleImpersonate(farm.id)}
+                      >
+                        <LogIn className="h-3 w-3" />
+                        Acessar
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => openEdit(farm)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
               {farms.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={10} className="px-4 py-12 text-center text-gray-500">
                     Nenhuma fazenda cadastrada.
                   </td>
                 </tr>

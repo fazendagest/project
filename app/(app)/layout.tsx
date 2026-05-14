@@ -1,4 +1,6 @@
+import { cookies } from 'next/headers'
 import { Sidebar } from '@/components/layout/sidebar'
+import { ImpersonationBanner } from '@/components/admin/impersonation-banner'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 
@@ -12,14 +14,26 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const isAdmin = user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL
 
+  const cookieStore = cookies()
+  const impersonatedFarmId = isAdmin ? cookieStore.get('admin_viewing_farm_id')?.value : undefined
+
   let milkActive = false
-  if (!isAdmin) {
+  let impersonatedFarmName: string | undefined
+
+  if (impersonatedFarmId) {
+    const { data: farm } = await supabase
+      .from('farms')
+      .select('name, milk_active')
+      .eq('id', impersonatedFarmId)
+      .single()
+    milkActive = farm?.milk_active ?? false
+    impersonatedFarmName = farm?.name
+  } else if (!isAdmin) {
     const { data: farm } = await supabase
       .from('farms')
       .select('milk_active')
       .eq('owner_id', user.id)
       .maybeSingle()
-    console.log('milk_active from farm:', farm?.milk_active)
     milkActive = farm?.milk_active ?? false
   }
 
@@ -27,6 +41,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-screen">
       <Sidebar isAdmin={isAdmin} milkActive={milkActive} />
       <main className="flex-1 flex flex-col min-w-0 ml-0 md:ml-64">
+        {impersonatedFarmName && (
+          <ImpersonationBanner farmName={impersonatedFarmName} />
+        )}
         <div className="flex-1 pt-16 px-4 pb-4 md:p-6 lg:p-8">
           {children}
         </div>

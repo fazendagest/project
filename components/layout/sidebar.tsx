@@ -26,23 +26,23 @@ import { CowIcon } from '@/components/icons/cow-icon'
 import { Button } from '@/components/ui/button'
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/animals', label: 'Animais', icon: PawPrint },
-  { href: '/health', label: 'Saúde', icon: Heart },
-  { href: '/reproduction', label: 'Reprodução', icon: Baby },
-  { href: '/feeding', label: 'Alimentação', icon: Wheat },
+  { href: '/app/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/app/animals', label: 'Animais', icon: PawPrint },
+  { href: '/app/health', label: 'Saúde', icon: Heart },
+  { href: '/app/reproduction', label: 'Reprodução', icon: Baby },
+  { href: '/app/feeding', label: 'Alimentação', icon: Wheat },
   {
     label: 'Financeiro',
     icon: DollarSign,
     children: [
-      { href: '/financial/movements', label: 'Movimentações' },
-      { href: '/financial/dre', label: 'DRE' },
-      { href: '/financial/cashflow', label: 'Fluxo de Caixa' },
-      { href: '/financial/per-animal', label: 'Por Animal' },
+      { href: '/app/financial/movements', label: 'Movimentações' },
+      { href: '/app/financial/dre', label: 'DRE' },
+      { href: '/app/financial/cashflow', label: 'Fluxo de Caixa' },
+      { href: '/app/financial/per-animal', label: 'Por Animal' },
     ],
   },
-  { href: '/reports', label: 'Relatórios', icon: FileText },
-  { href: '/settings', label: 'Configurações', icon: Settings },
+  { href: '/app/reports', label: 'Relatórios', icon: FileText },
+  { href: '/app/settings', label: 'Configurações', icon: Settings },
 ]
 
 interface SidebarProps {
@@ -60,7 +60,7 @@ export function Sidebar({ isAdmin = false, milkActive = false }: SidebarProps) {
   const effectiveNavItems = milkActive
     ? [
         ...navItems.slice(0, 5),
-        { href: '/milk', label: 'Leite', icon: Milk },
+        { href: '/app/milk', label: 'Leite', icon: Milk },
         ...navItems.slice(5),
       ]
     : navItems
@@ -115,7 +115,7 @@ export function Sidebar({ isAdmin = false, milkActive = false }: SidebarProps) {
                       className={cn(
                         'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                         'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                        pathname.startsWith('/financial') && 'bg-sidebar-accent text-sidebar-accent-foreground'
+                        pathname.startsWith('/app/financial') && 'bg-sidebar-accent text-sidebar-accent-foreground'
                       )}
                     >
                       <item.icon className="h-5 w-5 shrink-0" />
@@ -152,7 +152,7 @@ export function Sidebar({ isAdmin = false, milkActive = false }: SidebarProps) {
                     onClick={() => setOpen(false)}
                     className={cn(
                       'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                      pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href!))
+                      pathname === item.href || (item.href !== '/app/dashboard' && pathname.startsWith(item.href!))
                         ? 'bg-[oklch(0.55_0.15_145)] text-white'
                         : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                     )}

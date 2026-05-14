@@ -39,7 +39,7 @@ export default async function ReproductionPage() {
         title="Reprodução"
         description="Coberturas, gestações e partos"
         actions={
-          <Link href="/reproduction/new">
+          <Link href="/app/reproduction/new">
             <Button className="h-10 gap-2"><Plus className="h-4 w-4" /> Nova Cobertura</Button>
           </Link>
         }

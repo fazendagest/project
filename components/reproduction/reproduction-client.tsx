@@ -119,7 +119,7 @@ export function ReproductionClient({
             {paged.map(r => (
               <TableRow key={r.id}>
                 <TableCell>
-                  <Link href={`/animals/${r.female_id}`} className="font-mono font-semibold text-primary hover:underline">
+                  <Link href={`/app/animals/${r.female_id}`} className="font-mono font-semibold text-primary hover:underline">
                     {(r.female as any)?.code ?? '—'}
                   </Link>
                   <p className="text-xs text-muted-foreground">{(r.female as any)?.name ?? ''}</p>
@@ -146,7 +146,7 @@ export function ReproductionClient({
                         <Baby className="h-4 w-4 text-pink-500" />
                       </Button>
                     )}
-                    <Link href={`/reproduction/${r.id}/edit`}>
+                    <Link href={`/app/reproduction/${r.id}/edit`}>
                       <Button size="icon" variant="ghost"><Pencil className="h-4 w-4" /></Button>
                     </Link>
                     <Button size="icon" variant="ghost" className="text-destructive" onClick={() => setConfirmId(r.id)}>

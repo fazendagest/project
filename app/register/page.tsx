@@ -224,7 +224,7 @@ export default function RegisterPage() {
               </div>
 
               <Button
-                onClick={() => router.push('/onboarding')}
+                onClick={() => router.push('/app/onboarding')}
                 className="w-full h-11 font-semibold bg-[oklch(0.55_0.15_145)] hover:bg-[oklch(0.48_0.15_145)]"
               >
                 Configurar minha fazenda

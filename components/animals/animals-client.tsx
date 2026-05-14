@@ -138,10 +138,10 @@ export function AnimalsClient({ initialAnimals, farmId }: { initialAnimals: Anim
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-1">
-                      <Link href={`/animals/${a.id}`}>
+                      <Link href={`/app/animals/${a.id}`}>
                         <Button size="icon" variant="ghost"><Eye className="h-4 w-4" /></Button>
                       </Link>
-                      <Link href={`/animals/${a.id}/edit`}>
+                      <Link href={`/app/animals/${a.id}/edit`}>
                         <Button size="icon" variant="ghost"><Pencil className="h-4 w-4" /></Button>
                       </Link>
                       <Button size="icon" variant="ghost" className="text-destructive" onClick={() => setConfirmId(a.id)}>
@@ -187,10 +187,10 @@ export function AnimalsClient({ initialAnimals, farmId }: { initialAnimals: Anim
                   </div>
                 </div>
                 <div className="flex gap-1 mt-3">
-                  <Link href={`/animals/${a.id}`} className="flex-1">
+                  <Link href={`/app/animals/${a.id}`} className="flex-1">
                     <Button size="sm" variant="outline" className="w-full"><Eye className="h-3 w-3 mr-1" /> Ver</Button>
                   </Link>
-                  <Link href={`/animals/${a.id}/edit`}>
+                  <Link href={`/app/animals/${a.id}/edit`}>
                     <Button size="sm" variant="outline"><Pencil className="h-3 w-3" /></Button>
                   </Link>
                   <Button size="sm" variant="outline" className="text-destructive" onClick={() => setConfirmId(a.id)}>

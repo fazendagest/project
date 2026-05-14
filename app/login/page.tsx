@@ -27,7 +27,7 @@ export default function LoginPage() {
     if (error) {
       toast.error('Email ou senha incorretos')
     } else {
-      router.push('/dashboard')
+      router.push('/app/dashboard')
       router.refresh()
     }
     setLoading(false)

@@ -31,7 +31,7 @@ export default async function HealthPage() {
         title="Saúde"
         description="Registros de vacinas, vermifugações e medicamentos"
         actions={
-          <Link href="/health/new">
+          <Link href="/app/health/new">
             <Button className="h-10 gap-2"><Plus className="h-4 w-4" /> Novo Registro</Button>
           </Link>
         }

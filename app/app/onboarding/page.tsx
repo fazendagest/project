@@ -110,7 +110,7 @@ export default function OnboardingPage() {
     }
 
     toast.success('Fazenda configurada com sucesso!')
-    router.push('/dashboard')
+    router.push('/app/dashboard')
   }
 
   return (

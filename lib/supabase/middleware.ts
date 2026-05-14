@@ -33,7 +33,16 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  if (!user && !pathname.startsWith('/login') && !pathname.startsWith('/register')) {
+  const isPublicPath =
+    pathname === '/' ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/register') ||
+    pathname.startsWith('/anunciar') ||
+    pathname.startsWith('/anuncio/') ||
+    pathname.startsWith('/eventos/') ||
+    pathname.startsWith('/api/')
+
+  if (!user && !isPublicPath) {
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/login'
     return NextResponse.redirect(redirectUrl)
@@ -42,28 +51,24 @@ export async function updateSession(request: NextRequest) {
   if (user && (pathname === '/login' || pathname.startsWith('/register'))) {
     const redirectUrl = request.nextUrl.clone()
     const isAdmin = user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL
-    redirectUrl.pathname = isAdmin ? '/admin/dashboard' : '/dashboard'
+    redirectUrl.pathname = isAdmin ? '/admin/dashboard' : '/app/dashboard'
     return NextResponse.redirect(redirectUrl)
   }
 
-  if (user) {
+  if (user && pathname.startsWith('/app/')) {
     const isAdmin = user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL
 
-    // Admin só acessa rotas de fazenda quando estiver impersonando um cliente
-    if (isAdmin && !pathname.startsWith('/admin') && !pathname.startsWith('/api/')) {
+    if (isAdmin) {
       const impersonatingFarmId = request.cookies.get('admin_viewing_farm_id')?.value
       if (!impersonatingFarmId) {
         const redirectUrl = request.nextUrl.clone()
         redirectUrl.pathname = '/admin/dashboard'
         return NextResponse.redirect(redirectUrl)
       }
-    }
-
-    if (!isAdmin) {
+    } else {
       const skipFarmCheck =
-        pathname.startsWith('/onboarding') ||
-        pathname.startsWith('/suspended') ||
-        pathname.startsWith('/api/')
+        pathname.startsWith('/app/onboarding') ||
+        pathname.startsWith('/app/suspended')
 
       if (!skipFarmCheck) {
         const { data: farm } = await supabase
@@ -74,13 +79,13 @@ export async function updateSession(request: NextRequest) {
 
         if (!farm) {
           const redirectUrl = request.nextUrl.clone()
-          redirectUrl.pathname = '/onboarding'
+          redirectUrl.pathname = '/app/onboarding'
           return NextResponse.redirect(redirectUrl)
         }
 
-        if (farm && !farm.is_active) {
+        if (!farm.is_active) {
           const redirectUrl = request.nextUrl.clone()
-          redirectUrl.pathname = '/suspended'
+          redirectUrl.pathname = '/app/suspended'
           return NextResponse.redirect(redirectUrl)
         }
       }

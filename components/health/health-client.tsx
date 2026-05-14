@@ -108,7 +108,7 @@ export function HealthClient({
               <TableRow key={r.id}>
                 <TableCell>
                   <div>
-                    <Link href={`/animals/${r.animal_id}`} className="font-mono font-semibold text-primary hover:underline">
+                    <Link href={`/app/animals/${r.animal_id}`} className="font-mono font-semibold text-primary hover:underline">
                       {(r.animal as any)?.code ?? '—'}
                     </Link>
                     <p className="text-xs text-muted-foreground">{(r.animal as any)?.name ?? ''}</p>
@@ -129,7 +129,7 @@ export function HealthClient({
                 <TableCell>{formatCurrency(r.cost)}</TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-1">
-                    <Link href={`/health/${r.id}/edit`}>
+                    <Link href={`/app/health/${r.id}/edit`}>
                       <Button size="icon" variant="ghost"><Pencil className="h-4 w-4" /></Button>
                     </Link>
                     <Button size="icon" variant="ghost" className="text-destructive" onClick={() => setConfirmId(r.id)}>

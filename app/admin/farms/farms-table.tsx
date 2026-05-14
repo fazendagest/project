@@ -44,7 +44,7 @@ export function FarmsTable({ farms: initialFarms, adminEmail }: { farms: Farm[];
       body: JSON.stringify({ farmId }),
     })
     if (res.ok) {
-      router.push('/dashboard')
+      router.push('/app/dashboard')
     } else {
       toast.error('Erro ao acessar fazenda')
       setImpersonating(null)

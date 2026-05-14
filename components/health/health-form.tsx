@@ -103,7 +103,7 @@ export function HealthForm({ farmId, animals, record, mode }: HealthFormProps) {
         : 'Registro atualizado!'
       )
       router.refresh()
-      router.push('/health')
+      router.push('/app/health')
     }
     setLoading(false)
   }
@@ -249,7 +249,7 @@ export function HealthForm({ farmId, animals, record, mode }: HealthFormProps) {
       </div>
 
       <FormActions
-        onCancel={() => router.push('/health')}
+        onCancel={() => router.push('/app/health')}
         submitLabel={mode === 'create' ? 'Registrar' : 'Salvar Alterações'}
         isLoading={loading}
         variant="page"

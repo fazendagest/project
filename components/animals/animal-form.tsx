@@ -276,7 +276,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
     } else {
       toast.success(mode === 'create' ? 'Animal cadastrado!' : 'Animal atualizado!')
       router.refresh()
-      router.push('/animals')
+      router.push('/app/animals')
     }
     setLoading(false)
   }
@@ -551,7 +551,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
       </div>
 
       <FormActions
-        onCancel={() => router.push('/animals')}
+        onCancel={() => router.push('/app/animals')}
         submitLabel={mode === 'create' ? 'Cadastrar Animal' : 'Salvar Alterações'}
         isLoading={loading || codeLoading}
         variant="page"

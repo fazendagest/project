@@ -1,0 +1,319 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
+import { CowIcon } from '@/components/icons/cow-icon'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { toast } from 'sonner'
+import {
+  PawPrint, Landmark, Wrench, Tractor, Stethoscope,
+  FileText, CalendarDays, ChevronLeft, CheckCircle2,
+} from 'lucide-react'
+
+const CATEGORIES = [
+  { key: 'animais', label: 'Animais', icon: PawPrint },
+  { key: 'terras', label: 'Terra', icon: Landmark },
+  { key: 'servicos', label: 'Serviço', icon: Wrench },
+  { key: 'maquinas', label: 'Máquina', icon: Tractor },
+  { key: 'veterinarios', label: 'Veterinário', icon: Stethoscope },
+  { key: 'arrendamento', label: 'Arrendamento', icon: FileText },
+  { key: 'eventos', label: 'Evento', icon: CalendarDays },
+]
+
+const PRICE_TYPES = [
+  { key: 'per_head', label: 'Por cabeça' },
+  { key: 'lot', label: 'Valor do lote' },
+  { key: 'fixed', label: 'Preço fixo' },
+  { key: 'consult', label: 'A consultar' },
+]
+
+const ESTADOS = [
+  'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS',
+  'MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC',
+  'SP','SE','TO',
+]
+
+export default function AnunciarPage() {
+  const supabase = createClient()
+  const [step, setStep] = useState<1 | 2 | 'done'>(1)
+  const [category, setCategory] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [wantTrial, setWantTrial] = useState(false)
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    quantity: '1',
+    price_type: 'fixed',
+    price: '',
+    city: '',
+    state: '',
+    youtube_url: '',
+    seller_name: '',
+    seller_phone: '',
+    seller_email: '',
+  })
+
+  function set(field: string, value: string) {
+    setForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!form.title.trim()) { toast.error('Informe o título'); return }
+    if (!form.seller_name.trim()) { toast.error('Informe seu nome ou da fazenda'); return }
+    if (!form.seller_phone.trim()) { toast.error('Informe o WhatsApp'); return }
+
+    setSubmitting(true)
+    const { error } = await supabase.from('listings').insert({
+      category,
+      title: form.title.trim(),
+      description: form.description.trim() || null,
+      quantity: parseInt(form.quantity) || 1,
+      price_type: form.price_type,
+      price: form.price ? parseFloat(form.price.replace(',', '.')) : null,
+      city: form.city.trim() || null,
+      state: form.state || null,
+      youtube_url: form.youtube_url.trim() || null,
+      seller_name: form.seller_name.trim(),
+      seller_phone: form.seller_phone.trim(),
+      seller_email: form.seller_email.trim() || null,
+      status: 'pending',
+    })
+
+    if (error) {
+      toast.error('Erro ao enviar anúncio: ' + error.message)
+      setSubmitting(false)
+      return
+    }
+
+    setStep('done')
+    setSubmitting(false)
+  }
+
+  if (step === 'done') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <div className="bg-white rounded-2xl border p-8 max-w-sm w-full text-center space-y-4">
+          <CheckCircle2 className="h-14 w-14 text-green-500 mx-auto" />
+          <h1 className="text-xl font-bold text-gray-900">Anúncio enviado!</h1>
+          <p className="text-gray-500 text-sm">Seu anúncio será publicado após aprovação em até 24h.</p>
+          {wantTrial && (
+            <div className="bg-green-50 text-green-700 rounded-xl p-4 text-sm">
+              Recebemos seu interesse! Em breve entraremos em contato para configurar seu acesso.
+            </div>
+          )}
+          <Link href="/" className="block w-full bg-[#166534] text-white font-semibold py-2.5 rounded-xl hover:bg-green-800 transition-colors">
+            Voltar ao marketplace
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-[#166534] text-white">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="bg-white/15 rounded-xl p-1.5">
+              <CowIcon className="h-5 w-5" />
+            </div>
+            <span className="font-bold">FazendaGest</span>
+          </Link>
+        </div>
+      </header>
+
+      <main className="max-w-2xl mx-auto px-4 py-8">
+        {/* Step indicator */}
+        <div className="flex items-center gap-3 mb-6">
+          {step === 2 && (
+            <button onClick={() => setStep(1)} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
+              <ChevronLeft className="h-4 w-4" /> Voltar
+            </button>
+          )}
+          <div className="flex gap-2 items-center">
+            <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${step >= 1 ? 'bg-[#166534] text-white' : 'bg-gray-200 text-gray-500'}`}>1</span>
+            <div className="w-8 h-0.5 bg-gray-200" />
+            <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${step >= 2 ? 'bg-[#166534] text-white' : 'bg-gray-200 text-gray-500'}`}>2</span>
+          </div>
+          <span className="text-sm text-gray-500">{step === 1 ? 'Categoria' : 'Detalhes do anúncio'}</span>
+        </div>
+
+        <div className="bg-white rounded-2xl border p-6 shadow-sm">
+          {step === 1 && (
+            <>
+              <h1 className="text-xl font-bold text-gray-900 mb-1">O que você quer anunciar?</h1>
+              <p className="text-sm text-gray-500 mb-6">Escolha a categoria do seu anúncio</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {CATEGORIES.map(cat => {
+                  const Icon = cat.icon
+                  return (
+                    <button
+                      key={cat.key}
+                      onClick={() => { setCategory(cat.key); setStep(2) }}
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-100 hover:border-[#166534] hover:bg-green-50 transition-colors group"
+                    >
+                      <Icon className="h-7 w-7 text-gray-400 group-hover:text-[#166534]" />
+                      <span className="text-sm font-medium text-gray-700 group-hover:text-[#166534]">{cat.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          )}
+
+          {step === 2 && (
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <h1 className="text-xl font-bold text-gray-900">Detalhes do anúncio</h1>
+
+              <div className="space-y-1.5">
+                <Label>Título *</Label>
+                <Input
+                  placeholder="Ex: Venda de 20 Nelore PO, 2 anos, vacinados"
+                  value={form.title}
+                  onChange={e => set('title', e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Descrição</Label>
+                <textarea
+                  value={form.description}
+                  onChange={e => set('description', e.target.value)}
+                  rows={3}
+                  placeholder="Descreva o que você está oferecendo..."
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Quantidade</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={form.quantity}
+                    onChange={e => set('quantity', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Tipo de valor</Label>
+                  <select
+                    value={form.price_type}
+                    onChange={e => set('price_type', e.target.value)}
+                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  >
+                    {PRICE_TYPES.map(pt => (
+                      <option key={pt.key} value={pt.key}>{pt.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {form.price_type !== 'consult' && (
+                <div className="space-y-1.5">
+                  <Label>Valor (R$)</Label>
+                  <Input
+                    placeholder="Ex: 3500,00"
+                    value={form.price}
+                    onChange={e => set('price', e.target.value)}
+                  />
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Cidade *</Label>
+                  <Input
+                    placeholder="Ex: Uberaba"
+                    value={form.city}
+                    onChange={e => set('city', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Estado *</Label>
+                  <select
+                    value={form.state}
+                    onChange={e => set('state', e.target.value)}
+                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  >
+                    <option value="">Selecione</option>
+                    {ESTADOS.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Vídeo YouTube (opcional)</Label>
+                <Input
+                  placeholder="https://youtube.com/watch?v=..."
+                  value={form.youtube_url}
+                  onChange={e => set('youtube_url', e.target.value)}
+                />
+              </div>
+
+              <hr />
+
+              <div className="space-y-1.5">
+                <Label>Nome / Fazenda *</Label>
+                <Input
+                  placeholder="Seu nome ou nome da fazenda"
+                  value={form.seller_name}
+                  onChange={e => set('seller_name', e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>WhatsApp *</Label>
+                <Input
+                  placeholder="(64) 99999-9999"
+                  value={form.seller_phone}
+                  onChange={e => set('seller_phone', e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>E-mail (opcional)</Label>
+                <Input
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={form.seller_email}
+                  onChange={e => set('seller_email', e.target.value)}
+                />
+              </div>
+
+              <label className="flex items-start gap-3 p-4 rounded-xl bg-green-50 border border-green-100 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={wantTrial}
+                  onChange={e => setWantTrial(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-[#166534]"
+                />
+                <span className="text-sm text-green-800">
+                  <span className="font-semibold">Quero experimentar o sistema de gestão grátis</span>
+                  <br />
+                  <span className="text-green-700">90 dias grátis para gestão de animais, finanças e muito mais.</span>
+                </span>
+              </label>
+
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="w-full h-11 bg-[#166534] hover:bg-green-800 text-white font-semibold"
+              >
+                {submitting ? 'Enviando...' : 'Enviar anúncio'}
+              </Button>
+            </form>
+          )}
+        </div>
+      </main>
+    </div>
+  )
+}

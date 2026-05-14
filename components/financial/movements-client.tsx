@@ -309,7 +309,7 @@ export function ExpensesClient({
                     <TableCell>{formatDate(s.sale_date)}</TableCell>
                     <TableCell>
                       <div>
-                        <Link href={`/animals/${s.animal_id}`} className="font-mono font-semibold text-sm text-primary hover:underline">
+                        <Link href={`/app/animals/${s.animal_id}`} className="font-mono font-semibold text-sm text-primary hover:underline">
                           {(s.animal as any)?.code ?? '—'}
                         </Link>
                         {(s.animal as any)?.name && <span className="text-xs text-gray-500 block">{(s.animal as any)?.name}</span>}
@@ -350,7 +350,7 @@ export function ExpensesClient({
                     <TableCell>{formatDate(p.purchase_date)}</TableCell>
                     <TableCell>
                       <div>
-                        <Link href={`/animals/${p.animal_id}`} className="font-mono font-semibold text-sm text-primary hover:underline">
+                        <Link href={`/app/animals/${p.animal_id}`} className="font-mono font-semibold text-sm text-primary hover:underline">
                           {(p.animal as any)?.code ?? '—'}
                         </Link>
                         {(p.animal as any)?.name && <span className="text-xs text-gray-500 block">{(p.animal as any)?.name}</span>}
@@ -376,7 +376,7 @@ export function ExpensesClient({
           <div className="flex justify-between items-center mb-4">
             <p className="text-sm text-muted-foreground">
               Total: {formatCurrency(feedStock.reduce((s, r) => s + (r.total_cost ?? 0), 0))}
-              {' '}· Entradas de estoque lançadas em <Link href="/feeding" className="text-primary hover:underline">Alimentação</Link>
+              {' '}· Entradas de estoque lançadas em <Link href="/app/feeding" className="text-primary hover:underline">Alimentação</Link>
             </p>
           </div>
           <DataCard>
@@ -410,7 +410,7 @@ export function ExpensesClient({
           <div className="flex justify-between items-center mb-4">
             <p className="text-sm text-muted-foreground">
               Total: {formatCurrency(healthRecords.reduce((s, r) => s + (r.cost ?? 0), 0))}
-              {' '}· Registros lançados em <Link href="/health" className="text-primary hover:underline">Saúde</Link>
+              {' '}· Registros lançados em <Link href="/app/health" className="text-primary hover:underline">Saúde</Link>
             </p>
           </div>
           <DataCard>
@@ -431,7 +431,7 @@ export function ExpensesClient({
                     <TableCell>{formatDate(r.application_date)}</TableCell>
                     <TableCell>
                       <div>
-                        <Link href={`/animals/${r.animal_id}`} className="font-mono font-semibold text-sm text-primary hover:underline">
+                        <Link href={`/app/animals/${r.animal_id}`} className="font-mono font-semibold text-sm text-primary hover:underline">
                           {(r.animal as any)?.code ?? '—'}
                         </Link>
                         {(r.animal as any)?.name && <span className="text-xs text-gray-500 block">{(r.animal as any)?.name}</span>}

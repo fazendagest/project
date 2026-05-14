@@ -45,7 +45,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
         title={animal.code + (animal.name ? ` · ${animal.name}` : '')}
         description={`${speciesLabel(animal.species)} · Cadastrado em ${formatDate(animal.entry_date)}`}
         actions={
-          <Link href={`/animals/${animal.id}/edit`}>
+          <Link href={`/app/animals/${animal.id}/edit`}>
             <Button className="gap-2"><Pencil className="h-4 w-4" /> Editar</Button>
           </Link>
         }

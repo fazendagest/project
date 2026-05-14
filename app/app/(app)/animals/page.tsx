@@ -23,7 +23,7 @@ export default async function AnimalsPage() {
         title="Animais"
         description="Gerencie o plantel da sua fazenda"
         actions={
-          <Link href="/animals/new">
+          <Link href="/app/animals/new">
             <Button className="h-10 gap-2">
               <Plus className="h-4 w-4" /> Novo Animal
             </Button>

@@ -96,7 +96,7 @@ export function PerAnimalClient({ initialData }: { initialData: AnimalCost[] }) 
             {paged.map(a => (
               <TableRow key={a.animal_id}>
                 <TableCell>
-                  <Link href={`/animals/${a.animal_id}`} className="hover:underline">
+                  <Link href={`/app/animals/${a.animal_id}`} className="hover:underline">
                     <span className="font-mono font-semibold text-primary">{a.code}</span>
                     {a.name && <span className="text-muted-foreground ml-1 text-xs">{a.name}</span>}
                   </Link>

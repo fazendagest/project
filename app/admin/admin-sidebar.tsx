@@ -6,11 +6,12 @@ import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { CowIcon } from '@/components/icons/cow-icon'
-import { LayoutDashboard, Building2, LogOut } from 'lucide-react'
+import { LayoutDashboard, Building2, LogOut, ShoppingBag } from 'lucide-react'
 
 const navItems = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/farms', label: 'Fazendas', icon: Building2 },
+  { href: '/admin/marketplace', label: 'Marketplace', icon: ShoppingBag },
 ]
 
 export function AdminSidebar() {

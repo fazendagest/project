@@ -80,7 +80,7 @@ export function ReproductionForm({ farmId, females, males, record, mode }: Repro
     else {
       toast.success(mode === 'create' ? 'Cobertura registrada!' : 'Registro atualizado!')
       router.refresh()
-      router.push('/reproduction')
+      router.push('/app/reproduction')
     }
     setLoading(false)
   }
@@ -204,7 +204,7 @@ export function ReproductionForm({ farmId, females, males, record, mode }: Repro
           </div>
 
           <FormActions
-            onCancel={() => router.push('/reproduction')}
+            onCancel={() => router.push('/app/reproduction')}
             submitLabel={mode === 'create' ? 'Registrar Cobertura' : 'Salvar Alterações'}
             isLoading={loading}
             variant="page"

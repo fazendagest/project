@@ -122,7 +122,11 @@ export function AnimalsClient({ initialAnimals, farmId }: { initialAnimals: Anim
                   <TableCell>
                     <span className="flex items-center gap-1">
                       {a.name ?? '—'}
-                      {a.to_discard && <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" title="Marcado para descarte" />}
+                      {a.to_discard && (
+                      <span title="Marcado para descarte">
+                        <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" aria-label="Marcado para descarte" />
+                      </span>
+                    )}
                     </span>
                   </TableCell>
                   <TableCell>{speciesLabel(a.species)}</TableCell>
@@ -172,7 +176,11 @@ export function AnimalsClient({ initialAnimals, farmId }: { initialAnimals: Anim
                     <p className="font-mono font-bold text-primary">{a.code}</p>
                     <p className="font-semibold flex items-center gap-1">
                       {a.name ?? '(sem nome)'}
-                      {a.to_discard && <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" title="Marcado para descarte" />}
+                      {a.to_discard && (
+                      <span title="Marcado para descarte">
+                        <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" aria-label="Marcado para descarte" />
+                      </span>
+                    )}
                     </p>
                     <p className="text-xs text-muted-foreground">{speciesLabel(a.species)} · {a.breed ?? 'S/R'} · {sexLabel(a.sex)}</p>
                     <p className="text-xs text-muted-foreground">{a.birth_date ? calcAge(a.birth_date) : 'Idade desconhecida'}</p>

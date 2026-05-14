@@ -5,7 +5,12 @@ import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
 
 const workSans = Work_Sans({ subsets: ['latin'], variable: '--font-sans', weight: ['400', '500', '600', '700'] })
-const sourceSerif4 = Source_Serif_4({ subsets: ['latin'], variable: '--font-serif', weight: ['400', '500', '600', '700'], axes: ['opsz'] })
+const sourceSerif = Source_Serif_4({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-serif',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'FazendaGest',
@@ -21,7 +26,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body className={`${workSans.variable} ${sourceSerif4.variable} font-sans`}>
+      <body className={`${workSans.variable} ${sourceSerif.variable} font-sans`}>
         {children}
         <Toaster richColors position="top-right" />
         <Script id="sw-register" strategy="afterInteractive">{`

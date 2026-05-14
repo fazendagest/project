@@ -34,12 +34,15 @@ const CAT_BADGE: Record<string, string> = {
   arrendamento: 'bg-[#F1E8D4] text-[#5C4419] border-[#E2D5B5]',
 }
 
-function formatPrice(price: number | null, priceType: string) {
+function formatPriceValue(price: number | null, priceType: string): string {
   if (priceType === 'consult' || !price) return 'A consultar'
-  const formatted = price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-  if (priceType === 'per_head') return `${formatted}/cab.`
-  if (priceType === 'lot') return `${formatted} (lote)`
-  return formatted
+  return price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
+}
+
+function formatPriceSuffix(priceType: string): string | null {
+  if (priceType === 'per_head') return '/cab.'
+  if (priceType === 'lot') return 'lote'
+  return null
 }
 
 function timeAgo(dateStr: string) {
@@ -132,16 +135,12 @@ export default async function MarketplacePage({
             <h1 className="font-serif text-3xl sm:text-[40px] leading-tight font-medium tracking-tight max-w-lg">
               Compre, venda e negocie no campo.
             </h1>
-            <div className="flex flex-wrap gap-4 mt-4 text-sm opacity-85">
-              <span className="flex items-center gap-1.5">
-                <Shield className="h-3.5 w-3.5" /> Anúncio grátis
-              </span>
-              <span className="flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5" /> Foco regional em Goiás
-              </span>
-              <span className="flex items-center gap-1.5">
-                <MessageCircle className="h-3.5 w-3.5" /> Comprador fala direto no WhatsApp
-              </span>
+            <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-4 text-sm opacity-85">
+              <span className="flex items-center gap-1.5"><Shield className="h-3.5 w-3.5" /> Anúncio grátis</span>
+              <span className="opacity-50">·</span>
+              <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> Foco regional em Goiás</span>
+              <span className="opacity-50">·</span>
+              <span className="flex items-center gap-1.5"><MessageCircle className="h-3.5 w-3.5" /> Comprador fala direto no WhatsApp</span>
             </div>
           </div>
 
@@ -153,8 +152,8 @@ export default async function MarketplacePage({
               ['1.200+', 'fazendas'],
             ].map(([n, l]) => (
               <div key={n} className="text-center">
-                <div className="text-2xl font-bold font-serif">{n}</div>
-                <div className="text-[11px] opacity-70 uppercase tracking-wide mt-0.5">{l}</div>
+                <div className="text-3xl font-bold font-serif">{n}</div>
+                <div className="text-[11px] opacity-70 uppercase tracking-wider mt-0.5 font-sans">{l}</div>
               </div>
             ))}
           </div>
@@ -285,8 +284,15 @@ export default async function MarketplacePage({
                         </div>
                       )}
                       <div className="flex items-baseline justify-between mt-2">
-                        <p className="font-semibold text-[#0F4A2D] text-base font-serif">
-                          {formatPrice(listing.price, listing.price_type)}
+                        <p className="flex items-baseline gap-0.5">
+                          <span className="font-semibold text-[#0F4A2D] text-base font-serif">
+                            {formatPriceValue(listing.price, listing.price_type)}
+                          </span>
+                          {formatPriceSuffix(listing.price_type) && (
+                            <span className="text-xs text-[#0F4A2D] font-sans">
+                              {formatPriceSuffix(listing.price_type)}
+                            </span>
+                          )}
                         </p>
                         <span className="text-[10.5px] text-gray-400">{timeAgo(listing.created_at)}</span>
                       </div>

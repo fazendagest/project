@@ -43,6 +43,9 @@
   }
 }
 
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 select option {
   background-color: white;
   color: #111;

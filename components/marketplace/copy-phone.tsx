@@ -15,13 +15,24 @@ export function CopyPhone({ phone }: { phone: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="flex items-center justify-between w-full bg-gray-50 hover:bg-gray-100 border rounded-xl px-4 py-3 transition-colors"
+      className="flex items-center justify-between w-full rounded-xl px-4 py-3 transition-colors"
+      style={{
+        background: '#FAFAF8',
+        border: '1.5px dashed #D9CDB8',
+      }}
+      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F5EFE2' }}
+      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#FAFAF8' }}
     >
-      <span className="text-sm font-medium text-gray-700">{phone}</span>
+      <div className="flex flex-col items-start gap-0.5">
+        <span className="text-[10px] text-gray-400 uppercase tracking-wider">Telefone</span>
+        <span className="text-sm font-semibold text-gray-900 tabular-nums">{phone}</span>
+      </div>
       {copied ? (
-        <Check className="h-4 w-4 text-green-600 shrink-0" />
+        <div className="flex items-center gap-1 text-[#166534] text-xs font-semibold">
+          <Check className="h-3.5 w-3.5 shrink-0" /> Copiado
+        </div>
       ) : (
-        <Copy className="h-4 w-4 text-gray-400 shrink-0" />
+        <span className="text-xs text-gray-400 font-medium">Copiar</span>
       )}
     </button>
   )

@@ -2,22 +2,31 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { CowIcon } from '@/components/icons/cow-icon'
+import { CategoryPlaceholder } from '@/components/marketplace/category-placeholder'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { MapPin, Phone, Copy, MessageCircle, ChevronLeft } from 'lucide-react'
+import { MapPin, ChevronLeft, MessageCircle } from 'lucide-react'
 import { CopyPhone } from '@/components/marketplace/copy-phone'
 
-const PRICE_TYPE_LABEL: Record<string, string> = {
-  fixed: 'Preço fixo',
-  per_head: 'Por cabeça',
-  lot: 'Valor do lote',
-  consult: 'A consultar',
+const CAT_LABEL: Record<string, string> = {
+  animais: 'Animal', terras: 'Terra', servicos: 'Serviço',
+  maquinas: 'Máquina', veterinarios: 'Veterinário', arrendamento: 'Arrendamento',
+}
+
+const CAT_BADGE: Record<string, string> = {
+  animais:      'bg-[#FBEDD8] text-[#7A4A12] border-[#F0DBB4]',
+  terras:       'bg-[#E6EFD9] text-[#3F5A20] border-[#D2DFBE]',
+  servicos:     'bg-[#EFE4F0] text-[#5A3262] border-[#DECCDF]',
+  maquinas:     'bg-[#E2E8EF] text-[#2C4663] border-[#C8D2DE]',
+  veterinarios: 'bg-[#FAE0E0] text-[#7A2A2A] border-[#EFCACA]',
+  arrendamento: 'bg-[#F1E8D4] text-[#5C4419] border-[#E2D5B5]',
 }
 
 function formatPrice(price: number | null, priceType: string) {
   if (priceType === 'consult' || !price) return 'A consultar'
   const formatted = price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
   if (priceType === 'per_head') return `${formatted}/cab.`
+  if (priceType === 'lot') return `${formatted} (lote)`
   return formatted
 }
 
@@ -52,50 +61,51 @@ export default async function ListingPage({ params }: { params: { id: string } }
     : null
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-[#166534] text-white">
+    <div className="min-h-screen" style={{ background: '#FAF8F3' }}>
+      <header className="bg-[#166534] text-white border-b border-green-800">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="bg-white/15 rounded-xl p-1.5">
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="bg-white/15 rounded-xl p-1.5 border border-white/20">
               <CowIcon className="h-5 w-5" />
             </div>
-            <span className="font-bold hidden sm:block">FazendaGest</span>
+            <div className="leading-none hidden sm:block">
+              <div className="font-bold text-base font-serif">FazendaGest</div>
+              <div className="text-[10px] opacity-70 uppercase tracking-widest mt-0.5">Marketplace · Goiás</div>
+            </div>
           </Link>
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-8">
-        <Link href="/" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-6">
-          <ChevronLeft className="h-4 w-4" /> Voltar ao marketplace
+        <Link href="/" className="inline-flex items-center gap-1 text-sm text-[#166534] font-medium hover:underline mb-6">
+          <ChevronLeft className="h-4 w-4" /> Marketplace
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main content */}
-          <div className="lg:col-span-2 space-y-5">
+          <div className="lg:col-span-2 space-y-4">
             {/* Photo */}
-            <div className="aspect-[16/9] bg-gray-100 rounded-xl overflow-hidden">
+            <div className="aspect-[16/9] rounded-xl overflow-hidden border border-[#E8DFC9] relative">
               {listing.photo_url ? (
                 <img src={listing.photo_url} alt={listing.title} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <CowIcon className="h-16 w-16 text-gray-300" />
-                </div>
+                <CategoryPlaceholder category={listing.category} uid={listing.id} />
               )}
+              <span className={`absolute top-3 left-3 text-[10.5px] font-semibold px-2.5 py-0.5 rounded-full border ${CAT_BADGE[listing.category] ?? 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+                {CAT_LABEL[listing.category] ?? listing.category}
+              </span>
             </div>
 
-            {/* Title */}
-            <div className="bg-white rounded-xl border p-5">
-              <span className="text-xs font-semibold uppercase text-[#166534] bg-green-50 px-2 py-0.5 rounded-full capitalize">
-                {listing.category}
-              </span>
-              <h1 className="text-2xl font-bold text-gray-900 mt-3">{listing.title}</h1>
-              <p className="text-3xl font-bold text-[#166534] mt-2">
+            {/* Title block */}
+            <div className="bg-white rounded-xl border border-[#E8DFC9] p-5">
+              <h1 className="text-2xl font-semibold text-gray-900 font-serif leading-tight">{listing.title}</h1>
+              <p className="text-3xl font-semibold text-[#166534] mt-2 font-serif">
                 {formatPrice(listing.price, listing.price_type)}
               </p>
-              <div className="flex items-center gap-4 mt-3 text-sm text-gray-500 flex-wrap">
+              <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-500">
                 {(listing.city || listing.state) && (
                   <span className="flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
+                    <MapPin className="h-3.5 w-3.5" />
                     {[listing.city, listing.state].filter(Boolean).join(' · ')}
                   </span>
                 )}
@@ -106,37 +116,37 @@ export default async function ListingPage({ params }: { params: { id: string } }
             </div>
 
             {/* Info */}
-            <div className="bg-white rounded-xl border p-5 space-y-3">
-              <h2 className="font-semibold text-gray-900">Informações</h2>
-              <dl className="grid grid-cols-2 gap-3 text-sm">
-                {listing.seller_name && (
-                  <>
-                    <dt className="text-gray-500">Anunciante</dt>
-                    <dd className="font-medium text-gray-900">{listing.seller_name}</dd>
-                  </>
-                )}
-                {listing.quantity && listing.quantity > 1 && (
-                  <>
-                    <dt className="text-gray-500">Quantidade</dt>
-                    <dd className="font-medium text-gray-900">{listing.quantity} unidades</dd>
-                  </>
-                )}
-                <dt className="text-gray-500">Tipo de preço</dt>
-                <dd className="font-medium text-gray-900">{PRICE_TYPE_LABEL[listing.price_type] ?? listing.price_type}</dd>
-              </dl>
-            </div>
+            {(listing.seller_name || listing.quantity > 1) && (
+              <div className="bg-white rounded-xl border border-[#E8DFC9] p-5 space-y-3">
+                <h2 className="font-semibold text-gray-900">Informações</h2>
+                <dl className="grid grid-cols-2 gap-3 text-sm">
+                  {listing.seller_name && (
+                    <>
+                      <dt className="text-gray-500">Anunciante</dt>
+                      <dd className="font-medium text-gray-900">{listing.seller_name}</dd>
+                    </>
+                  )}
+                  {listing.quantity && listing.quantity > 1 && (
+                    <>
+                      <dt className="text-gray-500">Quantidade</dt>
+                      <dd className="font-medium text-gray-900">{listing.quantity} unidades</dd>
+                    </>
+                  )}
+                </dl>
+              </div>
+            )}
 
             {/* Description */}
             {listing.description && (
-              <div className="bg-white rounded-xl border p-5">
-                <h2 className="font-semibold text-gray-900 mb-3">Descrição</h2>
-                <p className="text-sm text-gray-700 whitespace-pre-line">{listing.description}</p>
+              <div className="bg-white rounded-xl border border-[#E8DFC9] p-5">
+                <h2 className="font-semibold text-gray-900 mb-3 font-serif">Descrição</h2>
+                <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">{listing.description}</p>
               </div>
             )}
 
             {/* YouTube */}
             {youtubeId && (
-              <div className="bg-white rounded-xl border p-5">
+              <div className="bg-white rounded-xl border border-[#E8DFC9] p-5">
                 <h2 className="font-semibold text-gray-900 mb-3">Vídeo</h2>
                 <div className="aspect-video rounded-lg overflow-hidden">
                   <iframe
@@ -151,19 +161,19 @@ export default async function ListingPage({ params }: { params: { id: string } }
           </div>
 
           {/* Sidebar contact */}
-          <div className="space-y-4">
-            <div className="bg-white rounded-xl border p-5 space-y-4 sticky top-24">
-              <h2 className="font-semibold text-gray-900">Contato</h2>
-              {listing.seller_name && (
-                <p className="text-sm text-gray-600">{listing.seller_name}</p>
-              )}
+          <div>
+            <div className="bg-white rounded-xl border border-[#E8DFC9] p-5 space-y-4 sticky top-20">
+              <div className="text-2xl font-semibold text-[#166534] font-serif">
+                {formatPrice(listing.price, listing.price_type)}
+              </div>
 
               {whatsappLink && (
                 <a
                   href={whatsappLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 rounded-xl transition-colors"
+                  className="flex items-center justify-center gap-2 w-full text-white font-semibold py-3 rounded-xl transition-colors text-sm"
+                  style={{ background: '#25D366' }}
                 >
                   <MessageCircle className="h-5 w-5" />
                   Chamar no WhatsApp
@@ -173,6 +183,13 @@ export default async function ListingPage({ params }: { params: { id: string } }
               {listing.seller_phone && (
                 <CopyPhone phone={listing.seller_phone} />
               )}
+
+              {listing.seller_name && (
+                <div className="pt-3 border-t border-[#E8DFC9] text-sm text-gray-600">
+                  <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Anunciante</p>
+                  <p className="font-medium text-gray-900">{listing.seller_name}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -180,23 +197,21 @@ export default async function ListingPage({ params }: { params: { id: string } }
         {/* Related listings */}
         {related && related.length > 0 && (
           <section className="mt-12">
-            <h2 className="text-lg font-bold text-gray-900 mb-4">Outros anúncios da região</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 font-serif">Outros anúncios da região</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {related.map(item => (
                 <Link key={item.id} href={`/anuncio/${item.id}`}>
-                  <div className="bg-white rounded-xl border hover:shadow-md transition-shadow overflow-hidden">
-                    <div className="aspect-[4/3] bg-gray-100">
+                  <div className="bg-white rounded-xl border border-[#E8DFC9] hover:shadow-md transition-shadow overflow-hidden">
+                    <div className="aspect-[4/3] relative overflow-hidden">
                       {item.photo_url ? (
                         <img src={item.photo_url} alt={item.title} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <CowIcon className="h-8 w-8 text-gray-300" />
-                        </div>
+                        <CategoryPlaceholder category={item.category} uid={item.id} />
                       )}
                     </div>
                     <div className="p-3">
                       <p className="text-sm font-semibold text-gray-900 line-clamp-2">{item.title}</p>
-                      <p className="text-sm font-bold text-[#166534] mt-1">
+                      <p className="text-sm font-semibold text-[#166534] mt-1 font-serif">
                         {formatPrice(item.price, item.price_type)}
                       </p>
                     </div>

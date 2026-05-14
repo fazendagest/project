@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import {
   PawPrint, Landmark, Wrench, Tractor, Stethoscope,
-  FileText, CalendarDays, ChevronLeft, CheckCircle2,
+  FileText, CalendarDays, ChevronLeft, CheckCircle2, ArrowRight,
 } from 'lucide-react'
 
 const CATEGORIES = [
@@ -95,17 +95,19 @@ export default function AnunciarPage() {
 
   if (step === 'done') {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <div className="bg-white rounded-2xl border p-8 max-w-sm w-full text-center space-y-4">
-          <CheckCircle2 className="h-14 w-14 text-green-500 mx-auto" />
-          <h1 className="text-xl font-bold text-gray-900">Anúncio enviado!</h1>
+      <div className="min-h-screen flex flex-col items-center justify-center p-4" style={{ background: '#FAF8F3' }}>
+        <div className="bg-white rounded-2xl border border-[#E8DFC9] p-8 max-w-sm w-full text-center space-y-4 shadow-sm">
+          <div className="w-16 h-16 rounded-full bg-green-50 border border-green-100 flex items-center justify-center mx-auto">
+            <CheckCircle2 className="h-9 w-9 text-[#166534]" />
+          </div>
+          <h1 className="text-xl font-semibold text-gray-900 font-serif">Anúncio enviado!</h1>
           <p className="text-gray-500 text-sm">Seu anúncio será publicado após aprovação em até 24h.</p>
           {wantTrial && (
-            <div className="bg-green-50 text-green-700 rounded-xl p-4 text-sm">
+            <div className="rounded-xl p-4 text-sm text-green-800" style={{ background: '#F0FDF4', border: '1px solid #D1FAE5' }}>
               Recebemos seu interesse! Em breve entraremos em contato para configurar seu acesso.
             </div>
           )}
-          <Link href="/" className="block w-full bg-[#166534] text-white font-semibold py-2.5 rounded-xl hover:bg-green-800 transition-colors">
+          <Link href="/" className="flex items-center justify-center gap-2 w-full bg-[#166534] text-white font-semibold py-2.5 rounded-xl hover:bg-green-800 transition-colors text-sm">
             Voltar ao marketplace
           </Link>
         </div>
@@ -114,15 +116,18 @@ export default function AnunciarPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ background: '#FAF8F3' }}>
       {/* Header */}
-      <header className="bg-[#166534] text-white">
+      <header className="bg-[#166534] text-white border-b border-green-800">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="bg-white/15 rounded-xl p-1.5">
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="bg-white/15 rounded-xl p-1.5 border border-white/20">
               <CowIcon className="h-5 w-5" />
             </div>
-            <span className="font-bold">FazendaGest</span>
+            <div className="leading-none">
+              <div className="font-bold text-base font-serif">FazendaGest</div>
+              <div className="text-[10px] opacity-70 uppercase tracking-widest mt-0.5">Marketplace · Goiás</div>
+            </div>
           </Link>
         </div>
       </header>
@@ -135,19 +140,18 @@ export default function AnunciarPage() {
               <ChevronLeft className="h-4 w-4" /> Voltar
             </button>
           )}
-          <div className="flex gap-2 items-center">
-            <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${step >= 1 ? 'bg-[#166534] text-white' : 'bg-gray-200 text-gray-500'}`}>1</span>
-            <div className="w-8 h-0.5 bg-gray-200" />
-            <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${step >= 2 ? 'bg-[#166534] text-white' : 'bg-gray-200 text-gray-500'}`}>2</span>
+          <div className="flex gap-1 items-center flex-1">
+            <div className="flex-1 h-1 rounded-full bg-[#166534]" />
+            <div className={`flex-1 h-1 rounded-full ${step !== 1 ? 'bg-[#166534]' : 'bg-gray-200'}`} />
           </div>
-          <span className="text-sm text-gray-500">{step === 1 ? 'Categoria' : 'Detalhes do anúncio'}</span>
+          <span className="text-xs text-gray-400">Passo {typeof step === 'number' ? step : 2} de 2</span>
         </div>
 
-        <div className="bg-white rounded-2xl border p-6 shadow-sm">
+        <div className="bg-white rounded-2xl border border-[#E8DFC9] p-6 shadow-sm">
           {step === 1 && (
             <>
-              <h1 className="text-xl font-bold text-gray-900 mb-1">O que você quer anunciar?</h1>
-              <p className="text-sm text-gray-500 mb-6">Escolha a categoria do seu anúncio</p>
+              <h1 className="text-xl font-semibold text-gray-900 mb-1 font-serif">O que você quer anunciar?</h1>
+              <p className="text-sm text-gray-500 mb-6">Anúncio grátis, sem taxas.</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {CATEGORIES.map(cat => {
                   const Icon = cat.icon
@@ -155,7 +159,7 @@ export default function AnunciarPage() {
                     <button
                       key={cat.key}
                       onClick={() => { setCategory(cat.key); setStep(2) }}
-                      className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-100 hover:border-[#166534] hover:bg-green-50 transition-colors group"
+                      className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-[#E8DFC9] hover:border-[#166534] hover:bg-green-50 transition-colors group"
                     >
                       <Icon className="h-7 w-7 text-gray-400 group-hover:text-[#166534]" />
                       <span className="text-sm font-medium text-gray-700 group-hover:text-[#166534]">{cat.label}</span>
@@ -168,7 +172,7 @@ export default function AnunciarPage() {
 
           {step === 2 && (
             <form onSubmit={handleSubmit} className="space-y-5">
-              <h1 className="text-xl font-bold text-gray-900">Detalhes do anúncio</h1>
+              <h1 className="text-xl font-semibold text-gray-900 font-serif">Detalhes do anúncio</h1>
 
               <div className="space-y-1.5">
                 <Label>Título *</Label>
@@ -194,12 +198,7 @@ export default function AnunciarPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label>Quantidade</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={form.quantity}
-                    onChange={e => set('quantity', e.target.value)}
-                  />
+                  <Input type="number" min="1" value={form.quantity} onChange={e => set('quantity', e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Tipo de valor</Label>
@@ -218,22 +217,14 @@ export default function AnunciarPage() {
               {form.price_type !== 'consult' && (
                 <div className="space-y-1.5">
                   <Label>Valor (R$)</Label>
-                  <Input
-                    placeholder="Ex: 3500,00"
-                    value={form.price}
-                    onChange={e => set('price', e.target.value)}
-                  />
+                  <Input placeholder="Ex: 3500,00" value={form.price} onChange={e => set('price', e.target.value)} />
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label>Cidade *</Label>
-                  <Input
-                    placeholder="Ex: Uberaba"
-                    value={form.city}
-                    onChange={e => set('city', e.target.value)}
-                  />
+                  <Input placeholder="Ex: Uberaba" value={form.city} onChange={e => set('city', e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Estado *</Label>
@@ -250,65 +241,46 @@ export default function AnunciarPage() {
 
               <div className="space-y-1.5">
                 <Label>Vídeo YouTube (opcional)</Label>
-                <Input
-                  placeholder="https://youtube.com/watch?v=..."
-                  value={form.youtube_url}
-                  onChange={e => set('youtube_url', e.target.value)}
-                />
+                <Input placeholder="https://youtube.com/watch?v=..." value={form.youtube_url} onChange={e => set('youtube_url', e.target.value)} />
               </div>
 
-              <hr />
+              <hr className="border-[#E8DFC9]" />
 
               <div className="space-y-1.5">
                 <Label>Nome / Fazenda *</Label>
-                <Input
-                  placeholder="Seu nome ou nome da fazenda"
-                  value={form.seller_name}
-                  onChange={e => set('seller_name', e.target.value)}
-                  required
-                />
+                <Input placeholder="Seu nome ou nome da fazenda" value={form.seller_name} onChange={e => set('seller_name', e.target.value)} required />
               </div>
 
               <div className="space-y-1.5">
                 <Label>WhatsApp *</Label>
-                <Input
-                  placeholder="(64) 99999-9999"
-                  value={form.seller_phone}
-                  onChange={e => set('seller_phone', e.target.value)}
-                  required
-                />
+                <Input placeholder="(64) 99999-9999" value={form.seller_phone} onChange={e => set('seller_phone', e.target.value)} required />
               </div>
 
               <div className="space-y-1.5">
                 <Label>E-mail (opcional)</Label>
-                <Input
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={form.seller_email}
-                  onChange={e => set('seller_email', e.target.value)}
-                />
+                <Input type="email" placeholder="seu@email.com" value={form.seller_email} onChange={e => set('seller_email', e.target.value)} />
               </div>
 
-              <label className="flex items-start gap-3 p-4 rounded-xl bg-green-50 border border-green-100 cursor-pointer">
+              <label className="flex items-start gap-3 p-4 rounded-xl cursor-pointer" style={{ background: '#F5EFE2', border: '1px solid #E8DFC9' }}>
                 <input
                   type="checkbox"
                   checked={wantTrial}
                   onChange={e => setWantTrial(e.target.checked)}
                   className="mt-0.5 h-4 w-4 accent-[#166534]"
                 />
-                <span className="text-sm text-green-800">
+                <span className="text-sm text-green-900">
                   <span className="font-semibold">Quero experimentar o sistema de gestão grátis</span>
                   <br />
-                  <span className="text-green-700">90 dias grátis para gestão de animais, finanças e muito mais.</span>
+                  <span className="text-green-800 opacity-80">90 dias grátis para gestão de animais, finanças e muito mais.</span>
                 </span>
               </label>
 
               <Button
                 type="submit"
                 disabled={submitting}
-                className="w-full h-11 bg-[#166534] hover:bg-green-800 text-white font-semibold"
+                className="w-full h-11 bg-[#166534] hover:bg-green-800 text-white font-semibold flex items-center justify-center gap-2"
               >
-                {submitting ? 'Enviando...' : 'Enviar anúncio'}
+                {submitting ? 'Enviando...' : (<>Enviar anúncio <ArrowRight className="h-4 w-4" /></>)}
               </Button>
             </form>
           )}

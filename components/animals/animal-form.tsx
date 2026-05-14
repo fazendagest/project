@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Animal, Species } from '@/types'
@@ -9,27 +9,115 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Switch } from '@/components/ui/switch'
+import { FormActions } from '@/components/ui/form-actions'
 import { toast } from 'sonner'
-import { Loader2, Upload } from 'lucide-react'
+import { Loader2, Upload, ChevronsUpDown, Check } from 'lucide-react'
 import { generateAnimalCode } from '@/lib/animal-utils'
 import { parseBRL, formatBRL } from '@/lib/helpers'
 import { toTitleCase } from '@/lib/utils'
 
 const BREED_OPTIONS: Record<string, string[]> = {
   bovino: [
-    'Nelore', 'Nelore PO', 'Angus', 'Angus PO', 'Brahman', 'Girolando',
-    'Gir', 'Gir Leiteiro', 'Simental', 'Caracu', 'Tabapuã', 'Senepol',
-    'Guzerá', 'Holandês', 'Jersey', 'Mestiço', 'Outro',
+    'Aberdeen Angus', 'Angus', 'Ayrshire', 'Braford', 'Brahman', 'Brangus',
+    'Canchim', 'Caracu', 'Careta Brasileiro', 'Charolês', 'Chianina',
+    'Composto', 'Cruzamento Industrial', 'Devon', 'F1', 'Friesian',
+    'Gir', 'Gir Leiteiro', 'Girolando', 'Guernsey', 'Guzerá', 'Guzerá Leiteiro',
+    'Guzolando', 'Hereford', 'Holandês', 'Holandês Frísia', 'Holandês Preto e Branco',
+    'Holandês Vermelho', 'Indubrasil', 'Jafarabadi', 'Jersey', 'Jersolando',
+    'Kiwi', 'Lacaune', 'Mediterranean', 'Mini Gado', 'Montbeliard',
+    'Murrah', 'Murray Grey', 'Nelore', 'Nelore Mocho', 'Nelore Pintado',
+    'Nelore Pintado Preto', 'Nelore Pintado Vermelho', 'Nerolando', 'Normando',
+    'Norueguês Vermelho', 'Pardo Alpina', 'Pardo Suíça (Schwyz)', 'Purunã',
+    'Red Angus', 'S1', 'Saanen', 'Santa Inês', 'Senepol', 'Sindi',
+    'Sindi Mocho', 'Sindi Padrão', 'Sindolando', 'Sinjer', 'Simental',
+    'Speckle Park', 'Suffolk', 'Sueca Vermelha e Branca', 'Tabapuã', 'Tabolanda',
+    'Texel', 'Tricross', 'Ultrablack', 'WAGYU', 'Zebuíno',
+    'Mestiça', 'Desconhecida', 'Outro',
   ],
   equino: [
-    'Quarto de Milha', 'Manga Larga Marchador', 'Campolina',
-    'Árabe', 'Paint Horse', 'Appaloosa', 'Crioulo', 'Mestiço', 'Outro',
+    'Appaloosa', 'Árabe', 'Campolina', 'Crioulo', 'Manga Larga Marchador',
+    'Paint Horse', 'Quarto de Milha', 'Mestiço', 'Outro',
   ],
-  suino: ['Large White', 'Landrace', 'Duroc', 'Pietrain', 'Mestiço', 'Outro'],
+  suino: ['Duroc', 'Landrace', 'Large White', 'Mestiço', 'Pietrain', 'Outro'],
 }
 
 type Female = { id: string; code: string; name?: string }
+
+function BreedCombobox({ value, onChange, options }: {
+  value: string
+  onChange: (v: string) => void
+  options: string[]
+}) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const filtered = options.filter(o =>
+    !search || o.toLowerCase().includes(search.toLowerCase())
+  )
+
+  useEffect(() => {
+    function handleOutsideClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+        setSearch('')
+      }
+    }
+    if (open) document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [open])
+
+  function select(breed: string) {
+    onChange(breed)
+    setOpen(false)
+    setSearch('')
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <span className={value ? 'text-foreground' : 'text-muted-foreground'}>
+          {value || 'Buscar raça...'}
+        </span>
+        <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+      </button>
+      {open && (
+        <div className="absolute top-full z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
+          <div className="border-b px-3 py-2">
+            <input
+              autoFocus
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar raça..."
+              className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            />
+          </div>
+          <div className="max-h-52 overflow-y-auto p-1">
+            {filtered.length === 0 ? (
+              <p className="py-2 text-center text-sm text-muted-foreground">Nenhuma raça encontrada</p>
+            ) : (
+              filtered.map(b => (
+                <button
+                  key={b}
+                  type="button"
+                  onMouseDown={e => { e.preventDefault(); select(b) }}
+                  className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground ${value === b ? 'bg-accent/40' : ''}`}
+                >
+                  <Check className={`h-3.5 w-3.5 shrink-0 ${value === b ? 'opacity-100' : 'opacity-0'}`} />
+                  {b}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface AnimalFormProps {
   farmId: string
@@ -265,17 +353,14 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                   placeholder="Nome do animal" />
               </div>
 
-              {/* 6. Raça — Select shadcn/ui, opções por espécie */}
+              {/* 6. Raça — Combobox com busca */}
               <div className="space-y-2">
                 <Label>Raça</Label>
-                <Select value={form.breed} onValueChange={v => set('breed', v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecionar raça..." /></SelectTrigger>
-                  <SelectContent>
-                    {BREED_OPTIONS[form.species]?.map(b => (
-                      <SelectItem key={b} value={b}>{b}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <BreedCombobox
+                  value={form.breed}
+                  onChange={v => set('breed', v)}
+                  options={BREED_OPTIONS[form.species] ?? []}
+                />
               </div>
 
               {/* 7. Sexo */}
@@ -425,9 +510,11 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                   <p className="text-sm font-medium">Marcar para descarte futuro</p>
                   <p className="text-xs text-muted-foreground">Animal que será vendido ou abatido em breve. Não altera o status atual.</p>
                 </div>
-                <Switch
+                <input
+                  type="checkbox"
                   checked={form.to_discard}
-                  onCheckedChange={(checked: boolean) => setForm(prev => ({ ...prev, to_discard: checked }))}
+                  onChange={(e) => setForm(prev => ({ ...prev, to_discard: e.target.checked }))}
+                  className="h-4 w-4 cursor-pointer accent-primary"
                 />
               </div>
             </CardContent>
@@ -463,17 +550,12 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
         </div>
       </div>
 
-      {/* Rodapé com botões */}
-      <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 mt-6 pt-6 border-t">
-        <Button type="button" variant="outline" className="h-11 sm:w-36"
-          onClick={() => router.push('/animals')}>
-          Cancelar
-        </Button>
-        <Button type="submit" className="h-11 sm:w-48" disabled={loading || codeLoading}>
-          {loading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-          {mode === 'create' ? 'Cadastrar Animal' : 'Salvar Alterações'}
-        </Button>
-      </div>
+      <FormActions
+        onCancel={() => router.push('/animals')}
+        submitLabel={mode === 'create' ? 'Cadastrar Animal' : 'Salvar Alterações'}
+        isLoading={loading || codeLoading}
+        variant="page"
+      />
     </form>
   )
 }

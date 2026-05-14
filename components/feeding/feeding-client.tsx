@@ -16,12 +16,13 @@ import { DataCard } from '@/components/ui/data-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Package, AlertTriangle, Loader2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Package, AlertTriangle } from 'lucide-react'
 import { toTitleCase } from '@/lib/utils'
 import { formatDate, formatCurrency, formatNumber, speciesLabel, parseBRL, formatBRL } from '@/lib/helpers'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
+import { FormActions } from '@/components/ui/form-actions'
 
 type StockWithStatus = FeedStock & { low?: boolean }
 
@@ -329,13 +330,11 @@ export function FeedingClient({
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setStockDialog(null)}>Cancelar</Button>
-            <Button onClick={saveStock} disabled={stockLoading}>
-              {stockLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Salvar
-            </Button>
-          </DialogFooter>
+          <FormActions
+            onCancel={() => setStockDialog(null)}
+            onSubmit={saveStock}
+            isLoading={stockLoading}
+          />
         </DialogContent>
       </Dialog>
 
@@ -395,13 +394,11 @@ export function FeedingClient({
               <Label>Observações</Label>
               <Input value={consumeForm.notes} onChange={e => setConsumeForm(p => ({ ...p, notes: e.target.value }))} placeholder="Opcional" />
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setConsumeDialog(false)}>Cancelar</Button>
-              <Button type="submit" disabled={consumeLoading}>
-                {consumeLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Registrar
-              </Button>
-            </DialogFooter>
+            <FormActions
+              onCancel={() => setConsumeDialog(false)}
+              submitLabel="Registrar"
+              isLoading={consumeLoading}
+            />
           </form>
         </DialogContent>
       </Dialog>

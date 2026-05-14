@@ -12,9 +12,10 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { FormActions } from '@/components/ui/form-actions'
 import { toast } from 'sonner'
-import { Plus, Trash2, Loader2, Pencil } from 'lucide-react'
+import { Plus, Trash2, Pencil } from 'lucide-react'
 import { toTitleCase } from '@/lib/utils'
 import { DataCard } from '@/components/ui/data-card'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -480,10 +481,10 @@ export function ExpensesClient({
               <Label>Descrição *</Label>
               <Input value={expForm.description} onChange={e => setExpForm(p => ({ ...p, description: e.target.value }))} placeholder="Descreva a despesa" required />
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setExpDialog(false)}>Cancelar</Button>
-              <Button type="submit" disabled={expLoading}>{expLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar</Button>
-            </DialogFooter>
+            <FormActions
+              onCancel={() => setExpDialog(false)}
+              isLoading={expLoading}
+            />
           </form>
         </DialogContent>
       </Dialog>
@@ -552,10 +553,11 @@ export function ExpensesClient({
                 onChange={e => setSaleForm(p => ({ ...p, buyer_name: e.target.value }))}
                 onBlur={e => setSaleForm(p => ({ ...p, buyer_name: toTitleCase(e.target.value) }))} />
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setSaleDialog(false)}>Cancelar</Button>
-              <Button type="submit" disabled={saleLoading || !saleForm.animal_id}>{saleLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar</Button>
-            </DialogFooter>
+            <FormActions
+              onCancel={() => setSaleDialog(false)}
+              isLoading={saleLoading}
+              disabled={!saleForm.animal_id}
+            />
           </form>
         </DialogContent>
       </Dialog>
@@ -612,10 +614,10 @@ export function ExpensesClient({
                 onChange={e => setSaleEditForm(p => ({ ...p, buyer_name: e.target.value }))}
                 onBlur={e => setSaleEditForm(p => ({ ...p, buyer_name: toTitleCase(e.target.value) }))} />
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setSaleEditDialog(null)}>Cancelar</Button>
-              <Button type="submit" disabled={saleEditLoading}>{saleEditLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar</Button>
-            </DialogFooter>
+            <FormActions
+              onCancel={() => setSaleEditDialog(null)}
+              isLoading={saleEditLoading}
+            />
           </form>
         </DialogContent>
       </Dialog>
@@ -653,10 +655,10 @@ export function ExpensesClient({
               <Label>Descrição *</Label>
               <Input value={expEditForm.description} onChange={e => setExpEditForm(p => ({ ...p, description: e.target.value }))} required />
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setExpEditDialog(null)}>Cancelar</Button>
-              <Button type="submit" disabled={expEditLoading}>{expEditLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Salvar</Button>
-            </DialogFooter>
+            <FormActions
+              onCancel={() => setExpEditDialog(null)}
+              isLoading={expEditLoading}
+            />
           </form>
         </DialogContent>
       </Dialog>
@@ -698,13 +700,10 @@ export function ExpensesClient({
                   onBlur={e => setPurchaseForm(p => ({ ...p, seller_name: toTitleCase(e.target.value) }))} />
               </div>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setPurchaseDialog(null)}>Cancelar</Button>
-              <Button type="submit" disabled={purchaseLoading}>
-                {purchaseLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Salvar
-              </Button>
-            </DialogFooter>
+            <FormActions
+              onCancel={() => setPurchaseDialog(null)}
+              isLoading={purchaseLoading}
+            />
           </form>
         </DialogContent>
       </Dialog>

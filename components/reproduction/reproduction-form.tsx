@@ -4,13 +4,12 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { ReproductionRecord, Species } from '@/types'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { FormActions } from '@/components/ui/form-actions'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
 import { calcExpectedBirth } from '@/lib/helpers'
 import { toTitleCase } from '@/lib/utils'
 
@@ -204,15 +203,12 @@ export function ReproductionForm({ farmId, females, males, record, mode }: Repro
             />
           </div>
 
-          <div className="flex gap-3 pt-2">
-            <Button type="submit" className="h-12 px-8" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-              {mode === 'create' ? 'Registrar Cobertura' : 'Salvar'}
-            </Button>
-            <Button type="button" variant="outline" className="h-12" onClick={() => router.push('/reproduction')}>
-              Cancelar
-            </Button>
-          </div>
+          <FormActions
+            onCancel={() => router.push('/reproduction')}
+            submitLabel={mode === 'create' ? 'Registrar Cobertura' : 'Salvar Alterações'}
+            isLoading={loading}
+            variant="page"
+          />
         </CardContent>
       </Card>
     </form>

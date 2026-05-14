@@ -10,8 +10,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
+import { FormActions } from '@/components/ui/form-actions'
 import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
 import { parseBRL, formatBRL } from '@/lib/helpers'
 import { toTitleCase } from '@/lib/utils'
 
@@ -248,15 +248,12 @@ export function HealthForm({ farmId, animals, record, mode }: HealthFormProps) {
         </Card>
       </div>
 
-      <div className="flex gap-3 mt-6">
-        <Button type="submit" className="h-12 px-8 text-base" disabled={loading}>
-          {loading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-          {mode === 'create' ? 'Registrar' : 'Salvar'}
-        </Button>
-        <Button type="button" variant="outline" className="h-12" onClick={() => router.push('/health')}>
-          Cancelar
-        </Button>
-      </div>
+      <FormActions
+        onCancel={() => router.push('/health')}
+        submitLabel={mode === 'create' ? 'Registrar' : 'Salvar Alterações'}
+        isLoading={loading}
+        variant="page"
+      />
     </form>
   )
 }

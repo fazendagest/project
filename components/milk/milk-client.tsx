@@ -13,9 +13,10 @@ import { DataCard } from '@/components/ui/data-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { FormActions } from '@/components/ui/form-actions'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Loader2, Droplets, TrendingUp, DollarSign } from 'lucide-react'
+import { Plus, Pencil, Trash2, Droplets, TrendingUp, DollarSign } from 'lucide-react'
 import { formatDate, formatCurrency, formatNumber, parseBRL, formatBRL, monthLabel } from '@/lib/helpers'
 import { toTitleCase } from '@/lib/utils'
 
@@ -375,13 +376,11 @@ export function MilkClient({
                 onChange={e => setProdForm(p => ({ ...p, notes: e.target.value }))} />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setProdDialog(null)}>Cancelar</Button>
-            <Button onClick={saveProd} disabled={prodLoading}>
-              {prodLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Salvar
-            </Button>
-          </DialogFooter>
+          <FormActions
+            onCancel={() => setProdDialog(null)}
+            onSubmit={saveProd}
+            isLoading={prodLoading}
+          />
         </DialogContent>
       </Dialog>
 
@@ -438,13 +437,11 @@ export function MilkClient({
                 onChange={e => setPayForm(p => ({ ...p, notes: e.target.value }))} />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPayDialog(null)}>Cancelar</Button>
-            <Button onClick={savePay} disabled={payLoading}>
-              {payLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Salvar
-            </Button>
-          </DialogFooter>
+          <FormActions
+            onCancel={() => setPayDialog(null)}
+            onSubmit={savePay}
+            isLoading={payLoading}
+          />
         </DialogContent>
       </Dialog>
 

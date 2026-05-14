@@ -40,6 +40,12 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  }
+
+  .font-serif {
+    font-family: var(--font-serif), Georgia, serif;
+    letter-spacing: -0.015em;
   }
 }
 

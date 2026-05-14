@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
-import { Inter, Lora } from 'next/font/google'
+import { Work_Sans, Source_Serif_4 } from 'next/font/google'
 import Script from 'next/script'
 import './globals.css'
 import { Toaster } from '@/components/ui/sonner'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
-const lora = Lora({ subsets: ['latin'], variable: '--font-serif', weight: ['400', '500', '600', '700'] })
+const workSans = Work_Sans({ subsets: ['latin'], variable: '--font-sans', weight: ['400', '500', '600', '700'] })
+const sourceSerif4 = Source_Serif_4({ subsets: ['latin'], variable: '--font-serif', weight: ['400', '500', '600', '700'], axes: ['opsz'] })
 
 export const metadata: Metadata = {
   title: 'FazendaGest',
@@ -15,13 +15,13 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
     title: 'FazendaGest',
   },
-  themeColor: '#166534',
+  themeColor: '#0F4A2D',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body className={`${inter.variable} ${lora.variable} font-sans`}>
+      <body className={`${workSans.variable} ${sourceSerif4.variable} font-sans`}>
         {children}
         <Toaster richColors position="top-right" />
         <Script id="sw-register" strategy="afterInteractive">{`

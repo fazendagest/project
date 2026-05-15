@@ -227,7 +227,7 @@ export default async function MarketplacePage({
                   className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                     active
                       ? 'bg-[#0F4A2D] text-white border-[#0F4A2D]'
-                      : 'text-gray-700 border-[#EAE4D0] hover:border-[#0F4A2D] hover:text-[#0F4A2D]'
+                      : 'bg-white text-[#0F4A2D] border-[#EAE4D0] hover:border-[#0F4A2D]'
                   }`}
                 >
                   <Icon className="h-4 w-4 shrink-0" />

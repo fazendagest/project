@@ -239,10 +239,8 @@ export default function AnunciarPage() {
 
           {step === 1 && (
             <>
-              <div className="hidden sm:block mb-6">
-                <h1 className="text-xl font-semibold text-gray-900 mb-1 font-serif">O que você quer anunciar?</h1>
-                <p className="text-sm text-gray-500">Anúncio grátis, sem taxas.</p>
-              </div>
+              <h1 className="hidden sm:block text-2xl font-medium text-gray-900 font-serif">O que você quer anunciar?</h1>
+              <p className="hidden sm:block text-sm text-gray-500 mt-1 mb-6">Anúncio grátis, sem taxas.</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {CATEGORIES.map(cat => {
                   const Icon = cat.icon

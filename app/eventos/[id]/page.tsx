@@ -204,7 +204,7 @@ export default async function EventPage({ params }: { params: { id: string } }) 
                       {item.photo_url ? (
                         <img src={item.photo_url} alt={item.title} className="w-full h-full object-cover" />
                       ) : (
-                        <CategoryPlaceholder category={item.category} uid={item.id} />
+                        <CategoryPlaceholder category={item.category} />
                       )}
                     </div>
                     <div className="p-3">

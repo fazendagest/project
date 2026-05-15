@@ -89,7 +89,7 @@ export default async function ListingPage({ params }: { params: { id: string } }
               {listing.photo_url ? (
                 <img src={listing.photo_url} alt={listing.title} className="w-full h-full object-cover" />
               ) : (
-                <CategoryPlaceholder category={listing.category} uid={listing.id} />
+                <CategoryPlaceholder category={listing.category} />
               )}
               <span className={`absolute top-3 left-3 text-[10.5px] font-semibold px-2.5 py-0.5 rounded-full border ${CAT_BADGE[listing.category] ?? 'bg-gray-100 text-gray-700 border-gray-200'}`}>
                 {CAT_LABEL[listing.category] ?? listing.category}
@@ -206,7 +206,7 @@ export default async function ListingPage({ params }: { params: { id: string } }
                       {item.photo_url ? (
                         <img src={item.photo_url} alt={item.title} className="w-full h-full object-cover" />
                       ) : (
-                        <CategoryPlaceholder category={item.category} uid={item.id} />
+                        <CategoryPlaceholder category={item.category} />
                       )}
                     </div>
                     <div className="p-3">

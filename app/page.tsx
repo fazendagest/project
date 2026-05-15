@@ -7,7 +7,7 @@ import { ptBR } from 'date-fns/locale'
 import {
   MapPin, MessageCircle, PawPrint, Mountain, Wrench,
   Tractor, Stethoscope, Home, LayoutGrid, ArrowRight,
-  Shield, ChevronRight,
+  Shield, CheckCircle2, ChevronRight,
 } from 'lucide-react'
 
 const CATEGORIES = [
@@ -47,6 +47,7 @@ function formatPriceSuffix(priceType: string): string | null {
 
 function timeAgo(dateStr: string) {
   return formatDistanceToNow(new Date(dateStr), { addSuffix: true, locale: ptBR })
+    .replace('cerca de ', '')
 }
 
 export default async function MarketplacePage({
@@ -78,6 +79,22 @@ export default async function MarketplacePage({
     .order('start_date', { ascending: true })
     .limit(6)
 
+  const { count: totalListings } = await supabase
+    .from('listings')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'published')
+
+  const { data: cityRows } = await supabase
+    .from('listings')
+    .select('city')
+    .eq('status', 'published')
+    .not('city', 'is', null)
+  const totalCities = new Set((cityRows ?? []).map(r => r.city).filter(Boolean)).size
+
+  const { count: totalFarms } = await supabase
+    .from('farms')
+    .select('*', { count: 'exact', head: true })
+
   const whatsapp = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? ''
   const showEvents = events && events.length > 0 && (!categoria || categoria === 'eventos')
 
@@ -86,7 +103,7 @@ export default async function MarketplacePage({
 
       {/* ── Header ── */}
       <header className="bg-[#0F4A2D] text-white sticky top-0 z-40 border-b border-[#0C3B24]">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-5">
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
             <div className="bg-white/15 rounded-xl p-1.5 border border-white/20">
               <CowIcon className="h-5 w-5" />
@@ -114,7 +131,7 @@ export default async function MarketplacePage({
             </div>
           </form>
 
-          <div className="flex items-center gap-2 shrink-0 ml-auto">
+          <div className="flex items-center gap-2 shrink-0">
             <Link href="/login" className="hidden sm:block text-sm font-medium text-white border border-white/30 px-3 py-1.5 rounded-full hover:bg-white/10 transition-colors">
               Entrar
             </Link>
@@ -130,7 +147,7 @@ export default async function MarketplacePage({
         <div className="max-w-7xl mx-auto px-4 py-7 flex items-center justify-between gap-8">
           <div>
             <p className="text-xs uppercase tracking-widest opacity-80 mb-2">
-              Interior de Goiás · 247 anúncios ativos
+              Interior de Goiás · {totalListings ?? 0} anúncios ativos
             </p>
             <h1 className="font-serif text-3xl sm:text-[40px] leading-tight font-medium tracking-tight max-w-lg">
               Compre, venda e negocie no campo.
@@ -146,11 +163,11 @@ export default async function MarketplacePage({
 
           {/* Stats */}
           <div className="hidden lg:grid grid-cols-3 gap-6 bg-white/10 border border-white/20 rounded-2xl px-7 py-5 shrink-0">
-            {[
-              ['247', 'anúncios ativos'],
-              ['52', 'municípios'],
-              ['1.200+', 'fazendas'],
-            ].map(([n, l]) => (
+            {([
+              [String(totalListings ?? 0), 'anúncios ativos'],
+              [totalCities ? String(totalCities) : '—', 'municípios'],
+              [totalFarms ? String(totalFarms) : '—', 'fazendas'],
+            ] as [string, string][]).map(([n, l]) => (
               <div key={n} className="text-center">
                 <div className="text-3xl font-bold font-serif">{n}</div>
                 <div className="text-[11px] opacity-70 uppercase tracking-wider mt-0.5 font-sans">{l}</div>
@@ -266,7 +283,7 @@ export default async function MarketplacePage({
                       {listing.photo_url ? (
                         <img src={listing.photo_url} alt={listing.title} className="w-full h-full object-cover" />
                       ) : (
-                        <CategoryPlaceholder category={listing.category} uid={listing.id} />
+                        <CategoryPlaceholder category={listing.category} />
                       )}
                       <span className={`absolute top-2 left-2 text-[10.5px] font-semibold px-2 py-0.5 rounded-full border ${CAT_BADGE[listing.category] ?? 'bg-gray-100 text-gray-700 border-gray-200'}`}>
                         {CAT_LABEL[listing.category] ?? listing.category}
@@ -300,7 +317,7 @@ export default async function MarketplacePage({
                         <p className="text-[11px] text-gray-500 mt-1.5 pt-1.5 border-t border-[#EAE4D0] flex items-center gap-1 truncate">
                           Por{' '}
                           <span className="font-medium text-[#1F1A12] truncate">{listing.seller_name}</span>
-                          <Shield className="h-3 w-3 text-[#0F4A2D] shrink-0" />
+                          <CheckCircle2 className="h-3 w-3 text-[#0F4A2D] shrink-0" />
                         </p>
                       )}
                     </div>

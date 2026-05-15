@@ -104,15 +104,17 @@ export default async function MarketplacePage({
       {/* ── Header ── */}
       <header className="bg-[#0F4A2D] text-white sticky top-0 z-40 border-b border-[#0C3B24]">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center">
-          <Link href="/" className="flex items-center gap-2.5 shrink-0 mr-auto sm:mr-0">
+          <Link href="/" className="flex items-center gap-2.5 shrink-0">
             <div className="bg-white/15 rounded-xl p-1.5 border border-white/20">
               <CowIcon className="h-5 w-5" />
             </div>
-            <div className="hidden sm:block leading-none">
+            <div className="leading-none">
               <div className="font-bold text-base font-serif">FazendaGest</div>
               <div className="text-[10px] opacity-70 uppercase tracking-widest mt-0.5">Marketplace · Goiás</div>
             </div>
           </Link>
+
+          <div className="flex-1 sm:hidden" />
 
           <form method="GET" action="/" className="hidden sm:flex flex-1 ml-14">
             <div className="flex items-center bg-white rounded-xl px-3 gap-2 shadow-sm">
@@ -131,12 +133,14 @@ export default async function MarketplacePage({
             </div>
           </form>
 
-          <div className="flex items-center gap-2 shrink-0 ml-8">
-            <Link href="/login" className="hidden sm:block text-sm font-medium text-white border border-white/30 px-3 py-1.5 rounded-full hover:bg-white/10 transition-colors">
+          <div className="flex items-center gap-2 shrink-0 sm:ml-8">
+            <Link href="/login" className="text-sm font-medium text-white border border-white/30 px-3 py-1.5 rounded-full hover:bg-white/10 transition-colors">
               Entrar
             </Link>
             <Link href="/anunciar" className="text-sm font-semibold bg-white text-[#0F4A2D] px-3 py-1.5 rounded-full hover:bg-[#F0EBD8] transition-colors flex items-center gap-1">
-              <span className="text-base leading-none">+</span> Anunciar grátis
+              <span className="text-base leading-none">+</span>
+              <span className="sm:hidden">Anunciar</span>
+              <span className="hidden sm:inline">Anunciar grátis</span>
             </Link>
           </div>
         </div>
@@ -175,9 +179,17 @@ export default async function MarketplacePage({
             <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-4 text-sm opacity-85">
               <span className="flex items-center gap-1.5"><Shield className="h-3.5 w-3.5" /> Anúncio grátis</span>
               <span className="opacity-50">·</span>
-              <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> Foco regional em Goiás</span>
+              <span className="flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5" />
+                <span className="sm:hidden">Foco regional</span>
+                <span className="hidden sm:inline">Foco regional em Goiás</span>
+              </span>
               <span className="opacity-50">·</span>
-              <span className="flex items-center gap-1.5"><MessageCircle className="h-3.5 w-3.5" /> Comprador fala direto no WhatsApp</span>
+              <span className="flex items-center gap-1.5">
+                <MessageCircle className="h-3.5 w-3.5" />
+                <span className="sm:hidden">Direto no WhatsApp</span>
+                <span className="hidden sm:inline">Comprador fala direto no WhatsApp</span>
+              </span>
             </div>
           </div>
 

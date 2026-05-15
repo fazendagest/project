@@ -114,7 +114,7 @@ export default async function MarketplacePage({
             </div>
           </Link>
 
-          <form method="GET" action="/" className="flex-1 ml-8">
+          <form method="GET" action="/" className="flex-1 ml-14">
             <div className="flex items-center bg-white rounded-xl px-3 gap-2 shadow-sm">
               <input
                 name="q"

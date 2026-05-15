@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { CowIcon } from '@/components/icons/cow-icon'
 import { Button } from '@/components/ui/button'
@@ -38,6 +39,7 @@ const ESTADOS = [
 
 export default function AnunciarPage() {
   const supabase = createClient()
+  const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
   const [step, setStep] = useState<1 | 2 | 'done'>(1)
   const [category, setCategory] = useState('')
@@ -170,11 +172,19 @@ export default function AnunciarPage() {
     )
   }
 
+  const stepNum = typeof step === 'number' ? step : 2
+
+  function handleBack() {
+    if (step === 2) setStep(1)
+    else router.push('/')
+  }
+
   return (
     <div className="min-h-screen" style={{ background: '#F8F5EB' }}>
-      {/* Header */}
-      <header className="bg-[#0F4A2D] text-white border-b border-[#0C3B24]">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+
+      {/* ── Header Desktop ── */}
+      <header className="hidden sm:block bg-[#0F4A2D] text-white border-b border-[#0C3B24]">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center">
           <Link href="/" className="flex items-center gap-2.5">
             <div className="bg-white/15 rounded-xl p-1.5 border border-white/20">
               <CowIcon className="h-5 w-5" />
@@ -187,26 +197,52 @@ export default function AnunciarPage() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-8">
-        {/* Step indicator */}
-        <div className="flex items-center gap-3 mb-6">
-          {step === 2 && (
-            <button onClick={() => setStep(1)} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
-              <ChevronLeft className="h-4 w-4" /> Voltar
-            </button>
-          )}
-          <div className="flex gap-1 items-center flex-1">
-            <div className="flex-1 h-1 rounded-full bg-[#0F4A2D]" />
-            <div className={`flex-1 h-1 rounded-full ${step !== 1 ? 'bg-[#0F4A2D]' : 'bg-gray-200'}`} />
-          </div>
-          <span className="text-xs text-gray-400">Passo {typeof step === 'number' ? step : 2} de 2</span>
+      {/* ── Header Mobile + Progress + Title (green strip) ── */}
+      <div className="sm:hidden bg-[#0F4A2D] text-white">
+        <div className="flex items-center px-4 py-3">
+          <button onClick={handleBack} className="p-1 -ml-1">
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <span className="flex-1 text-center text-sm font-medium">Passo {stepNum} de 2</span>
+          <Link href="/" className="p-1 -mr-1">
+            <X className="h-5 w-5" />
+          </Link>
         </div>
+        <div className="h-1 bg-white/20">
+          <div className={`h-full bg-white transition-all duration-300 ${stepNum === 1 ? 'w-1/2' : 'w-full'}`} />
+        </div>
+        {step === 1 && (
+          <div className="px-4 pt-5 pb-6">
+            <h1 className="text-xl font-semibold font-serif">O que você quer anunciar?</h1>
+            <p className="text-sm opacity-80 mt-1">Anúncio grátis, sem taxas.</p>
+          </div>
+        )}
+        {step === 2 && (
+          <div className="px-4 pt-5 pb-6">
+            <h1 className="text-xl font-semibold font-serif">Detalhes do anúncio</h1>
+          </div>
+        )}
+      </div>
 
-        <div className="bg-white rounded-2xl border border-[#EAE4D0] p-6 shadow-sm">
+      {/* ── Progress bar Desktop ── */}
+      <div className="hidden sm:block border-b border-[#EAE4D0] bg-white">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+          <div className="flex-1 h-1 rounded-full bg-gray-200 overflow-hidden">
+            <div className={`h-full rounded-full bg-[#0F4A2D] transition-all duration-300 ${stepNum === 1 ? 'w-1/2' : 'w-full'}`} />
+          </div>
+          <span className="text-sm text-gray-500 shrink-0">Passo {stepNum} de 2</span>
+        </div>
+      </div>
+
+      <main className="px-4 py-6 sm:px-0 sm:py-0">
+        <div className="sm:max-w-lg sm:mx-auto sm:mt-8 sm:mb-8 sm:bg-white sm:rounded-2xl sm:border sm:border-[#EAE4D0] sm:p-8">
+
           {step === 1 && (
             <>
-              <h1 className="text-xl font-semibold text-gray-900 mb-1 font-serif">O que você quer anunciar?</h1>
-              <p className="text-sm text-gray-500 mb-6">Anúncio grátis, sem taxas.</p>
+              <div className="hidden sm:block mb-6">
+                <h1 className="text-xl font-semibold text-gray-900 mb-1 font-serif">O que você quer anunciar?</h1>
+                <p className="text-sm text-gray-500">Anúncio grátis, sem taxas.</p>
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {CATEGORIES.map(cat => {
                   const Icon = cat.icon
@@ -214,10 +250,10 @@ export default function AnunciarPage() {
                     <button
                       key={cat.key}
                       onClick={() => { setCategory(cat.key); setStep(2) }}
-                      className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-[#EAE4D0] hover:border-[#0F4A2D] hover:bg-[#F0EBD8] transition-colors group"
+                      className="flex flex-col items-center gap-2 py-5 px-4 rounded-xl border border-[#EAE4D0] bg-white hover:border-[#0F4A2D] hover:bg-[#F0F7F0] transition-colors"
                     >
-                      <Icon className="h-7 w-7 text-gray-400 group-hover:text-[#0F4A2D]" />
-                      <span className="text-sm font-medium text-gray-700 group-hover:text-[#0F4A2D]">{cat.label}</span>
+                      <Icon className="h-7 w-7 text-[#0F4A2D]" />
+                      <span className="text-sm font-medium text-gray-900">{cat.label}</span>
                     </button>
                   )
                 })}
@@ -227,7 +263,7 @@ export default function AnunciarPage() {
 
           {step === 2 && (
             <form onSubmit={handleSubmit} className="space-y-5">
-              <h1 className="text-xl font-semibold text-gray-900 font-serif">Detalhes do anúncio</h1>
+              <h1 className="hidden sm:block text-xl font-semibold text-gray-900 font-serif">Detalhes do anúncio</h1>
 
               {/* Photo upload */}
               <div className="space-y-1.5">
@@ -387,6 +423,7 @@ export default function AnunciarPage() {
               </Button>
             </form>
           )}
+
         </div>
       </main>
     </div>

@@ -104,7 +104,7 @@ export default async function MarketplacePage({
       {/* ── Header ── */}
       <header className="bg-[#0F4A2D] text-white sticky top-0 z-40 border-b border-[#0C3B24]">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center">
-          <Link href="/" className="flex items-center gap-2.5 shrink-0">
+          <Link href="/" className="flex items-center gap-2.5 shrink-0 mr-auto sm:mr-0">
             <div className="bg-white/15 rounded-xl p-1.5 border border-white/20">
               <CowIcon className="h-5 w-5" />
             </div>
@@ -144,7 +144,7 @@ export default async function MarketplacePage({
 
       {/* ── Hero strip ── */}
       <div className="bg-[#0F4A2D] text-white border-b border-[#0C3B24]">
-        <div className="max-w-7xl mx-auto px-4 py-7 flex items-center justify-between gap-8">
+        <div className="max-w-7xl mx-auto px-4 pt-6 pb-7 sm:py-7 flex items-center justify-between gap-8">
           <div>
             <p className="text-xs uppercase tracking-widest opacity-80 mb-2">
               Interior de Goiás · {totalListings ?? 0} anúncios ativos
@@ -200,7 +200,7 @@ export default async function MarketplacePage({
       {/* ── Category bar ── */}
       <div className="bg-white border-b border-[#EAE4D0] sticky top-[60px] z-30">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar py-3">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar py-3 pr-4">
             {CATEGORIES.map(cat => {
               const Icon = cat.icon
               const active = categoria === cat.key

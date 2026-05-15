@@ -177,17 +177,21 @@ export default async function MarketplacePage({
             </form>
 
             <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-4 text-sm opacity-85">
-              <span className="flex items-center gap-1.5"><Shield className="h-3.5 w-3.5" /> Anúncio grátis</span>
+              <span className="flex items-center gap-1.5">
+                <Shield className="h-3.5 w-3.5" />
+                <span className="sm:hidden">Grátis</span>
+                <span className="hidden sm:inline">Anúncio grátis</span>
+              </span>
               <span className="hidden sm:inline opacity-50">·</span>
               <span className="flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5" />
-                <span className="sm:hidden">Foco regional</span>
+                <span className="sm:hidden">Regional</span>
                 <span className="hidden sm:inline">Foco regional em Goiás</span>
               </span>
               <span className="hidden sm:inline opacity-50">·</span>
               <span className="flex items-center gap-1.5">
                 <MessageCircle className="h-3.5 w-3.5" />
-                <span className="sm:hidden">Direto no WhatsApp</span>
+                <span className="sm:hidden">WhatsApp</span>
                 <span className="hidden sm:inline">Comprador fala direto no WhatsApp</span>
               </span>
             </div>

@@ -131,7 +131,7 @@ export default async function MarketplacePage({
             </div>
           </form>
 
-          <div className="flex items-center gap-2 shrink-0 ml-3">
+          <div className="flex items-center gap-2 shrink-0 ml-8">
             <Link href="/login" className="hidden sm:block text-sm font-medium text-white border border-white/30 px-3 py-1.5 rounded-full hover:bg-white/10 transition-colors">
               Entrar
             </Link>

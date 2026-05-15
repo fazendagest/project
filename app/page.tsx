@@ -178,13 +178,13 @@ export default async function MarketplacePage({
 
             <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-4 text-sm opacity-85">
               <span className="flex items-center gap-1.5"><Shield className="h-3.5 w-3.5" /> Anúncio grátis</span>
-              <span className="opacity-50">·</span>
+              <span className="hidden sm:inline opacity-50">·</span>
               <span className="flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5" />
                 <span className="sm:hidden">Foco regional</span>
                 <span className="hidden sm:inline">Foco regional em Goiás</span>
               </span>
-              <span className="opacity-50">·</span>
+              <span className="hidden sm:inline opacity-50">·</span>
               <span className="flex items-center gap-1.5">
                 <MessageCircle className="h-3.5 w-3.5" />
                 <span className="sm:hidden">Direto no WhatsApp</span>
@@ -210,7 +210,7 @@ export default async function MarketplacePage({
       </div>
 
       {/* ── Category bar ── */}
-      <div className="bg-white border-b border-[#EAE4D0] sticky top-[60px] z-30">
+      <div className="bg-[#F8F5EB] border-b border-[#EAE4D0] sticky top-[60px] z-30">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex gap-2 overflow-x-auto no-scrollbar py-3 pr-4">
             {CATEGORIES.map(cat => {
@@ -235,7 +235,7 @@ export default async function MarketplacePage({
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8 space-y-10">
+      <div className="max-w-7xl mx-auto px-4 pt-5 pb-8 space-y-10">
 
         {/* ── Events ── */}
         {showEvents && (

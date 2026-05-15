@@ -103,7 +103,7 @@ export default async function MarketplacePage({
 
       {/* ── Header ── */}
       <header className="bg-[#0F4A2D] text-white sticky top-0 z-40 border-b border-[#0C3B24]">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-5">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center">
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
             <div className="bg-white/15 rounded-xl p-1.5 border border-white/20">
               <CowIcon className="h-5 w-5" />
@@ -114,7 +114,7 @@ export default async function MarketplacePage({
             </div>
           </Link>
 
-          <form method="GET" action="/" className="flex-1 max-w-2xl">
+          <form method="GET" action="/" className="flex-1 max-w-2xl ml-8">
             <div className="flex items-center bg-white rounded-xl px-3 gap-2 shadow-sm">
               <input
                 name="q"
@@ -131,7 +131,7 @@ export default async function MarketplacePage({
             </div>
           </form>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 ml-3">
             <Link href="/login" className="hidden sm:block text-sm font-medium text-white border border-white/30 px-3 py-1.5 rounded-full hover:bg-white/10 transition-colors">
               Entrar
             </Link>

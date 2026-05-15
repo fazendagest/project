@@ -7,7 +7,7 @@ import { ptBR } from 'date-fns/locale'
 import {
   MapPin, MessageCircle, PawPrint, Mountain, Wrench,
   Tractor, Stethoscope, Home, LayoutGrid, ArrowRight,
-  Shield, CheckCircle2, ChevronRight,
+  Shield, CheckCircle2, ChevronRight, Search,
 } from 'lucide-react'
 
 const CATEGORIES = [
@@ -114,7 +114,7 @@ export default async function MarketplacePage({
             </div>
           </Link>
 
-          <form method="GET" action="/" className="flex-1 ml-14">
+          <form method="GET" action="/" className="hidden sm:flex flex-1 ml-14">
             <div className="flex items-center bg-white rounded-xl px-3 gap-2 shadow-sm">
               <input
                 name="q"
@@ -152,6 +152,26 @@ export default async function MarketplacePage({
             <h1 className="font-serif text-3xl sm:text-[40px] leading-tight font-medium tracking-tight max-w-lg">
               Compre, venda e negocie no campo.
             </h1>
+
+            {/* Busca mobile */}
+            <form method="GET" action="/" className="sm:hidden mt-4">
+              <div className="flex items-center bg-white rounded-xl px-3 gap-2 shadow-sm">
+                <Search className="h-4 w-4 text-gray-400 shrink-0" />
+                <input
+                  name="q"
+                  defaultValue={q}
+                  placeholder="Buscar animais, terras, serviços…"
+                  className="flex-1 py-2.5 bg-transparent text-[#1F1A12] placeholder-gray-400 text-sm focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  className="bg-[#0F4A2D] text-white text-sm font-semibold px-4 py-1.5 rounded-lg hover:bg-[#0C3B24] transition-colors shrink-0"
+                >
+                  Buscar
+                </button>
+              </div>
+            </form>
+
             <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-4 text-sm opacity-85">
               <span className="flex items-center gap-1.5"><Shield className="h-3.5 w-3.5" /> Anúncio grátis</span>
               <span className="opacity-50">·</span>

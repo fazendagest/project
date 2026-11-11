@@ -15,6 +15,8 @@ import {
 import Image from 'next/image'
 import { DeleteAnimalButton } from '@/components/animals/delete-animal-button'
 import { computeInvested } from '@/lib/investment'
+import { getIfagPrices } from '@/lib/ifag'
+import { animalValue } from '@/lib/herd-value'
 
 export default async function AnimalDetailPage({ params }: { params: { id: string } }) {
   const supabase = await createClient()
@@ -33,6 +35,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
     { data: expenses },
     { data: lastChecks },
     { data: farmAnimals },
+    ifag,
   ] = await Promise.all([
     supabase.from('animals').select('*').eq('id', params.id).eq('farm_id', farmId).single(),
     supabase.from('health_records').select('*').eq('animal_id', params.id).order('application_date', { ascending: false }),
@@ -45,6 +48,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
     supabase.from('operational_expenses').select('*').eq('farm_id', farmId),
     supabase.from('pregnancy_checks').select('exam_date, result, expected_birth_date').eq('animal_id', params.id).eq('farm_id', farmId).order('exam_date', { ascending: false }).limit(1),
     supabase.from('animals').select('id, species, sex, birth_date, is_breeder, weight_arrobas, mother_id').eq('farm_id', farmId),
+    getIfagPrices(),
   ])
 
   if (!animal) notFound()
@@ -60,6 +64,8 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
   const generalShare = shares?.general ?? 0
   const totalCost = (purchase?.purchase_price || 0) + totalHealthCost + feedShare + generalShare
   const profit = sale ? sale.sale_price - totalCost : null
+  // Valor de mercado com a referência de Goiás ao lado (Tião, P6 item 5).
+  const mv = animalValue(animal, ifag)
 
   return (
     <div>
@@ -134,8 +140,16 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
                 {sale.sale_reason && <Row label="Motivo" value={SALE_REASONS[sale.sale_reason] ?? sale.sale_reason} />}
               </>
             )}
-            {animal.market_value && (
-              <Row label="Valor de Mercado" value={formatCurrency(animal.market_value)} />
+            {mv.source === 'digitado' && mv.value != null && (
+              <Row label="Valor de mercado (digitado)" value={formatCurrency(mv.value)} />
+            )}
+            {mv.ifag != null && mv.refName && (
+              <Row label={mv.source === 'digitado' ? `Referência de ${mv.refName}` : `Valor de mercado, ${mv.refName}`} value={formatCurrency(mv.ifag)} />
+            )}
+            {mv.farFromMarket && mv.ifag != null && mv.value != null && (
+              <p className="text-xs font-medium text-amber-800 pt-1">
+                O valor digitado está {Math.round((mv.value / mv.ifag - 1) * 100)}% acima da referência de Goiás. Confira se esse é mesmo o preço de venda na região.
+              </p>
             )}
           </CardContent>
         </Card>

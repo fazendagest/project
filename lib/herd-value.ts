@@ -2,7 +2,7 @@
 // por animal ativo vale o valor digitado; sem valor digitado, o preço do IFAG.
 // Cavalos são de trabalho e ficam fora da soma. Nunca chamar isto de lucro.
 import { animalCategory, ANIMAL_GROUPS } from '@/lib/helpers'
-import { marketReference, type IfagPrices } from '@/lib/market-reference'
+import { marketReference, referenceName, TYPED_ABOVE_LIMIT, type IfagPrices } from '@/lib/market-reference'
 import type { Invested } from '@/lib/investment'
 
 export type HerdAnimal = {
@@ -18,14 +18,17 @@ export type HerdAnimal = {
   mother_id?: string | null
 }
 
-export type ValueSource = 'digitado' | 'ifag' | 'sem_preco'
+/** 'estimativa' = raça de leite, conta feita a partir da Scot ou do IFAG (sem cotação oficial). */
+export type ValueSource = 'digitado' | 'ifag' | 'estimativa' | 'sem_preco'
 
 export type AnimalValue = {
   value: number | null
   source: ValueSource
-  /** Preço do IFAG para comparar com o digitado. */
+  /** Referência de mercado (IFAG ou estimativa) para comparar com o digitado. */
   ifag: number | null
-  /** Digitado a mais de 30% do IFAG. */
+  /** Nome curto da referência: "Goiás (IFAG)" ou "Goiás (estimativa)". */
+  refName: string | null
+  /** Digitado mais de 20% acima da referência (Tião, P6 item 5). */
   farFromMarket: boolean
   /** Data da cotação do IFAG usada. */
   ifagDate: string | null
@@ -50,19 +53,24 @@ export type HerdValue = {
   groups: HerdGroup[]
   ifagDate: string | null
   workHorses: number
+  /** Animais com valor digitado mais de 20% acima da referência de Goiás. */
+  aboveReference: number
+  /** O rebanho pela referência de Goiás onde ela existe (digitado só onde não há referência). */
+  totalAtReference: number
 }
 
 export function animalValue(a: HerdAnimal, ifag: IfagPrices | null): AnimalValue {
   const ref = marketReference(a, ifag)
   const ifagValue = ref?.perHead ?? null
   const ifagDate = ref?.quotedAt ?? null
+  const refName = ref && ifagValue != null ? referenceName(ref) : null
   const typed = a.market_value != null && Number(a.market_value) > 0 ? Number(a.market_value) : null
   if (typed != null) {
-    const far = ifagValue != null && ifagValue > 0 && Math.abs(typed - ifagValue) / ifagValue > 0.3
-    return { value: typed, source: 'digitado', ifag: ifagValue, farFromMarket: far, ifagDate }
+    const far = ifagValue != null && ifagValue > 0 && typed > ifagValue * (1 + TYPED_ABOVE_LIMIT)
+    return { value: typed, source: 'digitado', ifag: ifagValue, refName, farFromMarket: far, ifagDate }
   }
-  if (ifagValue != null) return { value: ifagValue, source: 'ifag', ifag: ifagValue, farFromMarket: false, ifagDate }
-  return { value: null, source: 'sem_preco', ifag: null, farFromMarket: false, ifagDate: null }
+  if (ifagValue != null) return { value: ifagValue, source: ref?.estimate ? 'estimativa' : 'ifag', ifag: ifagValue, refName, farFromMarket: false, ifagDate }
+  return { value: null, source: 'sem_preco', ifag: null, refName: null, farFromMarket: false, ifagDate: null }
 }
 
 export function computeHerdValue(
@@ -72,8 +80,8 @@ export function computeHerdValue(
 ): HerdValue {
   const mothers = new Set(animals.map(a => a.mother_id).filter(Boolean) as string[])
   const groups = new Map<string, HerdGroup>()
-  const counts: Record<ValueSource, number> = { digitado: 0, ifag: 0, sem_preco: 0 }
-  let total = 0, inv = 0, workHorses = 0
+  const counts: Record<ValueSource, number> = { digitado: 0, ifag: 0, estimativa: 0, sem_preco: 0 }
+  let total = 0, inv = 0, workHorses = 0, aboveReference = 0, totalAtReference = 0
   let ifagDate: string | null = null
 
   for (const a of animals) {
@@ -92,8 +100,10 @@ export function computeHerdValue(
     if (excluded) { workHorses++; continue }
     counts[v.source]++
     if (v.source === 'ifag' && v.ifagDate && (!ifagDate || v.ifagDate > ifagDate)) ifagDate = v.ifagDate
+    if (v.farFromMarket) aboveReference++
     if (v.value != null) {
       total += v.value
+      totalAtReference += v.ifag ?? v.value
       inv += animalInvested
     }
   }
@@ -107,5 +117,7 @@ export function computeHerdValue(
     groups: [...groups.values()].sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key)),
     ifagDate,
     workHorses,
+    aboveReference,
+    totalAtReference,
   }
 }

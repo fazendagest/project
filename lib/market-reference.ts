@@ -30,11 +30,27 @@ export interface MarketReference {
   quotedAt: string
   /** Cotação com mais de 14 dias. */
   stale: boolean
+  /** De onde veio: IFAG (média de Goiás) ou Scot (vaca de leite, sem cotação oficial). */
+  source: 'ifag' | 'scot'
+  /** Conta feita por nós a partir de uma cotação (raça de leite), não o preço publicado. */
+  estimate?: boolean
 }
 
 export const IFAG_SOURCE_URL = 'https://ifag.org.br/'
 
 const KG_PER_ARROBA = 15
+
+/**
+ * Vaca de leite adulta (P5 e P6 do Tião): não há cotação oficial; usa a vaca boiadeira mestiça de reposição em Goiás.
+ * [V] Scot Consultoria, GO, R$ 3.512,86 por cabeça (315 kg, 10,5 @), fechamento 11/11/2026, no Notícias Agrícolas.
+ * Número fixo, sem leitura automática: atualizar à mão (o aviso de desatualizado aparece depois de 90 dias).
+ */
+export const DAIRY_COW_REFERENCE = { perHead: 3513, quotedAt: '2026-11-11' }
+export const SCOT_SOURCE_URL = 'https://www.noticiasagricolas.com.br/cotacoes/boi-gordo/femea-mestica-reposico-vaca-boiadeira-300-kg-10'
+/** Bezerro e novilha de leite ou cruzado de leite: mestiço da mesma faixa menos 15% (estimativa do Tião, P5). */
+export const DAIRY_YOUNG_DISCOUNT = 0.15
+/** Aviso quando o valor digitado passa a referência em mais de 20% (Tião, P6 item 5). */
+export const TYPED_ABOVE_LIMIT = 0.2
 
 /**
  * Rendimento de carcaça do animal gordo: o frigorífico paga a arroba da carcaça, cerca de metade do
@@ -57,9 +73,11 @@ export function isStale(quotedAt: string, today = new Date()) {
   return (today.getTime() - d.getTime()) / 86_400_000 > 14
 }
 
-/** Gir, Girolando, Holandês, Jersey, Guzerá leiteiro e afins. */
+/** Gir, Girolando, Holandês, Jersey, Guzerá leiteiro e afins. O F1 (Angus × Gir) vale como mestiço de corte (P5). */
 export function isDairyBreed(breed?: string | null) {
-  return /gir|holand|jersey|pardo[- ]su[ií]..o|leiteir/i.test(breed ?? '')
+  const b = breed ?? ''
+  if (/f1/i.test(b)) return false
+  return /gir|holand|jersey|pardo[- ]su[ií]..o|leiteir/i.test(b)
 }
 
 function find(prices: IfagPrice[], product: string) {
@@ -94,6 +112,7 @@ export function marketReference(
       fat: { perArroba: p.avg, liveArrobas: live, liveKg, carcassArrobas: carcass, yieldPct },
       quotedAt: p.quotedAt,
       stale: isStale(p.quotedAt, today),
+      source: 'ifag',
     }
   }
 
@@ -109,28 +128,53 @@ export function marketReference(
       perKg: p.avg,
       quotedAt: p.quotedAt,
       stale: isStale(p.quotedAt, today),
+      source: 'ifag',
     }
   }
 
-  // Touro e cavalo não têm cotação no IFAG; sem data de nascimento não dá para saber a faixa.
-  if (a.species !== 'bovino' || a.is_breeder || !a.birth_date) return null
+  // Touro e cavalo não têm cotação no IFAG.
+  if (a.species !== 'bovino' || a.is_breeder) return null
 
-  // O IFAG cota gado de corte (Nelore e mestiço). Raça leiteira tem outro preço: sem referência.
-  if (isDairyBreed(a.breed)) return null
+  const m = a.birth_date ? monthsSince(a.birth_date, today) : null
+  const dairy = isDairyBreed(a.breed)
 
-  const m = monthsSince(a.birth_date, today)
+  // O IFAG cota gado de corte (Nelore e mestiço). Vaca de leite adulta (ou sem data de nascimento) usa a
+  // vaca boiadeira mestiça da Scot; os mais novos, o mestiço da faixa menos 15% (Tião, P5 e P6).
+  if (dairy && a.sex === 'F' && (m == null || m > 36)) {
+    return {
+      label: 'Vaca boiadeira mestiça de Goiás (Scot Consultoria)',
+      perHead: DAIRY_COW_REFERENCE.perHead,
+      min: null,
+      max: null,
+      quotedAt: DAIRY_COW_REFERENCE.quotedAt,
+      stale: (today.getTime() - new Date(DAIRY_COW_REFERENCE.quotedAt + 'T12:00:00').getTime()) / 86_400_000 > 90,
+      source: 'scot',
+      estimate: true,
+    }
+  }
+  // Sem data de nascimento não dá para saber a faixa.
+  if (m == null) return null
+
   const band = m <= 12 ? '0-12 Meses' : m <= 24 ? '13-24 Meses' : m <= 36 ? '25-36 Meses' : 'Acima de 36 Meses'
-  const breed = /nelore/i.test(a.breed ?? '') ? 'Nelore' : 'Mestiço'
+  const breed = !dairy && /nelore/i.test(a.breed ?? '') ? 'Nelore' : 'Mestiço'
   const sex = a.sex === 'F' ? 'Fêmea' : 'Macho'
   const product = `${breed} ${sex} (${band})`
   const p = find(data.prices, product)
   if (!p) return null
+  const k = dairy ? 1 - DAIRY_YOUNG_DISCOUNT : 1
   return {
-    label: product,
-    perHead: Math.round(p.avg),
-    min: Math.round(p.min),
-    max: Math.round(p.max),
+    label: dairy ? `${product}, menos 15% por ser de leite` : product,
+    perHead: Math.round(p.avg * k),
+    min: Math.round(p.min * k),
+    max: Math.round(p.max * k),
     quotedAt: p.quotedAt,
     stale: isStale(p.quotedAt, today),
+    source: 'ifag',
+    estimate: dairy || undefined,
   }
+}
+
+/** Nome curto da referência, para lista e ficha. */
+export function referenceName(ref: Pick<MarketReference, 'source' | 'estimate'>) {
+  return ref.estimate ? 'Goiás (estimativa)' : 'Goiás (IFAG)'
 }

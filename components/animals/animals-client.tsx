@@ -143,10 +143,16 @@ export function AnimalsClient({ initialAnimals, invested, feedIncluded, missingC
           </span>
         </Link>
       )}
+      {filtered.length > 0 && herd.aboveReference > 0 && (
+        <p className="text-sm text-amber-900 rounded-lg border border-amber-300 bg-amber-50 p-3 mb-3">
+          {herd.aboveReference} {herd.aboveReference === 1 ? 'animal está' : 'animais estão'} com valor digitado mais de 20% acima da referência de Goiás.
+          {' '}Pela referência, o rebanho daria {formatMoney(herd.totalAtReference)}, e não {formatMoney(herd.total)}.
+        </p>
+      )}
 
       {filtered.length > 0 && (
         <p className="text-xs text-muted-foreground mb-4">
-          Investido: compra + saúde{feedIncluded ? ' + sal, milho, ração e despesas da fazenda divididos pelo tamanho de cada animal (estimado)' : ''}. Mercado: o valor digitado no cadastro; sem valor digitado, o preço do IFAG (média de Goiás).
+          Investido: compra + saúde{feedIncluded ? ' + sal, milho, ração e despesas da fazenda divididos pelo tamanho de cada animal (estimado)' : ''}. Mercado: o valor digitado no cadastro; sem valor digitado, o preço do IFAG (média de Goiás). Vaca de leite não tem cotação oficial: a referência é uma estimativa (vaca boiadeira mestiça de Goiás, Scot Consultoria).
           {missingCosts.length > 0 && <span className="font-medium text-amber-800"> O ganho pode ser menor: falta lançar {missingCosts.join(' e ')}.</span>}
         </p>
       )}
@@ -207,7 +213,11 @@ export function AnimalsClient({ initialAnimals, invested, feedIncluded, missingC
                   <TableCell className="text-right tabular-nums">
                     {a.mv.value != null ? formatMoney(a.mv.value) : ''}
                     {a.mv.source === 'ifag' && <span className="text-xs text-muted-foreground"> IFAG</span>}
-                    {a.mv.farFromMarket && <AlertTriangle className="inline h-3.5 w-3.5 ml-1 text-amber-600" aria-label="Longe da média de Goiás (IFAG)" />}
+                    {a.mv.source === 'estimativa' && <span className="text-xs text-muted-foreground"> estimativa</span>}
+                    {a.mv.farFromMarket && <AlertTriangle className="inline h-3.5 w-3.5 ml-1 text-amber-600" aria-label="Mais de 20% acima da referência de Goiás" />}
+                    {a.mv.source === 'digitado' && a.mv.ifag != null && (
+                      <span className={cn('block text-xs', a.mv.farFromMarket ? 'text-amber-800' : 'text-muted-foreground')}>{a.mv.refName}: {formatMoney(a.mv.ifag)}</span>
+                    )}
                   </TableCell>
                   <TableCell><Badge className={statusColor(a.status)}>{statusLabel(a.status)}</Badge></TableCell>
                 </TableRow>
@@ -243,7 +253,7 @@ function AnimalCard({ a }: { a: Row }) {
             <p className="text-sm text-muted-foreground">{a.sex === 'F' ? 'Filha' : 'Filho'} da {a.motherName}</p>
           )}
           {(a.investedTotal > 0 || a.mv.value != null) ? (
-            <dl className="mt-2 flex gap-6 text-sm">
+            <dl className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm">
               {a.investedTotal > 0 && (
                 <div>
                   <dt className="text-xs text-muted-foreground">Investido</dt>
@@ -252,14 +262,20 @@ function AnimalCard({ a }: { a: Row }) {
               )}
               {a.mv.value != null ? (
                 <div>
-                  <dt className="text-xs text-muted-foreground">{a.mv.source === 'ifag' ? 'Mercado (IFAG)' : 'Mercado'}</dt>
+                  <dt className="text-xs text-muted-foreground">{a.mv.source === 'ifag' ? 'Mercado (IFAG)' : a.mv.source === 'estimativa' ? 'Mercado (estimativa)' : 'Mercado'}</dt>
                   <dd className="font-medium tabular-nums">{formatMoney(a.mv.value)}</dd>
                 </div>
               ) : null}
+              {a.mv.source === 'digitado' && a.mv.ifag != null && (
+                <div>
+                  <dt className="text-xs text-muted-foreground">{a.mv.refName}</dt>
+                  <dd className="tabular-nums text-muted-foreground">{formatMoney(a.mv.ifag)}</dd>
+                </div>
+              )}
             </dl>
           ) : null}
           {a.mv.farFromMarket && a.mv.ifag != null && (
-            <p className="text-xs text-amber-800 mt-1">Longe da média de Goiás (IFAG): {formatMoney(a.mv.ifag)}</p>
+            <p className="text-xs font-medium text-amber-800 mt-1">Digitado {Math.round((a.mv.value! / a.mv.ifag - 1) * 100)}% acima da referência de Goiás</p>
           )}
           {(a.to_discard || a.status !== 'ativo') && (
             <div className="flex gap-1 mt-1">

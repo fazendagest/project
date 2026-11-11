@@ -15,7 +15,7 @@ import { Loader2, Upload, ChevronsUpDown, Check } from 'lucide-react'
 import { generateAnimalCode } from '@/lib/animal-utils'
 import { parseBRL, formatBRL, animalCategory, formatDate, formatCurrencyCard, DEATH_CAUSES } from '@/lib/helpers'
 import { toTitleCase } from '@/lib/utils'
-import { marketReference, isDairyBreed, IFAG_SOURCE_URL, type IfagPrices } from '@/lib/market-reference'
+import { marketReference, isDairyBreed, IFAG_SOURCE_URL, SCOT_SOURCE_URL, type IfagPrices } from '@/lib/market-reference'
 
 const BREED_OPTIONS: Record<string, string[]> = {
   bovino: [
@@ -177,7 +177,7 @@ function MarketHint({ ifag, animal, onUse }: {
     <div className={`rounded-lg border p-3 text-sm space-y-2 ${ref.stale ? 'border-amber-300 bg-amber-50' : 'bg-muted/40'}`}>
       {ref.perHead != null ? (
         <p>
-          Média de Goiás (IFAG): <span className="font-semibold tabular-nums">{formatCurrencyCard(ref.perHead)}</span>
+          {ref.estimate ? 'Referência de Goiás (estimativa)' : 'Média de Goiás (IFAG)'}: <span className="font-semibold tabular-nums">{formatCurrencyCard(ref.perHead)}</span>
           {ref.fat && ref.fat.carcassArrobas != null ? (
             <span className="text-muted-foreground tabular-nums"> ({ref.fat.liveArrobas}&nbsp;@ do comércio, {ref.fat.liveKg}&nbsp;kg vivos, cerca de {String(ref.fat.carcassArrobas).replace('.', ',')}&nbsp;@ de carcaça, a R$&nbsp;{ref.fat.perArroba.toFixed(2).replace('.', ',')} a arroba)</span>
           ) : ref.perKg != null && animal.weight_arrobas ? (
@@ -198,7 +198,13 @@ function MarketHint({ ifag, animal, onUse }: {
         </p>
       )}
       <p className="text-xs text-muted-foreground">
-        Média do estado ({ref.label}), cotação do {source} de {formatDate(ref.quotedAt)}.
+        {ref.source === 'scot' ? (
+          <>Vaca de leite não tem cotação oficial. Estimativa pela {ref.label}, da <a href={SCOT_SOURCE_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">Scot Consultoria</a>, de {formatDate(ref.quotedAt)}.</>
+        ) : ref.estimate ? (
+          <>Raça de leite não tem cotação oficial. Estimativa: {ref.label}, cotação do {source} de {formatDate(ref.quotedAt)}.</>
+        ) : (
+          <>Média do estado ({ref.label}), cotação do {source} de {formatDate(ref.quotedAt)}.</>
+        )}
         {' '}Em Faina pode variar: se souber o preço da região, digite o seu.
       </p>
       {ref.fat ? (
@@ -211,7 +217,7 @@ function MarketHint({ ifag, animal, onUse }: {
         </p>
       )}
       {ref.stale && (
-        <p className="text-xs font-medium text-amber-800">Essa cotação tem mais de 14 dias e pode estar desatualizada.</p>
+        <p className="text-xs font-medium text-amber-800">Essa cotação tem mais de {ref.source === 'scot' ? 90 : 14} dias e pode estar desatualizada.</p>
       )}
       {ref.perHead != null && (
         <Button type="button" variant="outline" size="sm" className="h-11 md:h-9 w-full sm:w-auto" onClick={() => onUse(ref.perHead!)}>

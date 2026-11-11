@@ -300,6 +300,7 @@ export default async function DashboardPage() {
   const horses = herd.groups.find(g => g.key === 'cavalos' && g.count > 0)
   const sourceParts = [
     herd.counts.ifag > 0 && `${herd.counts.ifag} pelo preço do IFAG${herd.ifagDate ? ` de ${formatDate(herd.ifagDate)}` : ''}`,
+    herd.counts.estimativa > 0 && `${herd.counts.estimativa} por estimativa (raça de leite, sem cotação oficial)`,
     herd.counts.digitado > 0 && `${herd.counts.digitado} pelo valor que você digitou`,
     herd.counts.sem_preco > 0 && `${herd.counts.sem_preco} sem preço (fora da soma)`,
   ].filter(Boolean) as string[]
@@ -344,6 +345,13 @@ export default async function DashboardPage() {
                 {herd.counts.ifag > 0 && (
                   <> Preço do <a href={IFAG_SOURCE_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">IFAG</a>: média de Goiás, em Faina pode variar.</>
                 )}
+              </p>
+            )}
+            {herd.aboveReference > 0 && (
+              <p className="text-sm font-medium text-amber-800 mt-2">
+                {herd.aboveReference} {herd.aboveReference === 1 ? 'animal está' : 'animais estão'} com valor digitado mais de 20% acima da referência de Goiás.
+                {' '}Pela referência, o rebanho daria {money(herd.totalAtReference)}.{' '}
+                <Link href="/app/animals" className="underline underline-offset-2">Ver na lista</Link>
               </p>
             )}
           </CardContent>

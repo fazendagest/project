@@ -19,7 +19,8 @@ import { Plus, Trash2, Pencil } from 'lucide-react'
 import { toTitleCase } from '@/lib/utils'
 import { DataCard } from '@/components/ui/data-card'
 import { EmptyState } from '@/components/ui/empty-state'
-import { formatDate, formatCurrency, formatNumber, expenseCategoryLabel, healthTypeLabel, parseBRL, formatBRL } from '@/lib/helpers'
+import { formatDate, formatCurrency, formatNumber, expenseCategoryLabel, healthTypeLabel, parseBRL, formatBRL, animalCategory } from '@/lib/helpers'
+import type { Invested } from '@/lib/investment'
 import Link from 'next/link'
 
 const today = new Date().toISOString().slice(0, 10)
@@ -31,6 +32,7 @@ export function ExpensesClient({
   initialFeedStock,
   initialHealthRecords,
   initialAnimals,
+  invested,
   farmId,
 }: {
   initialExpenses: OperationalExpense[]
@@ -38,7 +40,8 @@ export function ExpensesClient({
   initialSales: (AnimalSale & { animal?: any })[]
   initialFeedStock: FeedStock[]
   initialHealthRecords: (HealthRecord & { animal?: any })[]
-  initialAnimals: Pick<Animal, 'id' | 'code' | 'name'>[]
+  initialAnimals: Pick<Animal, 'id' | 'code' | 'name' | 'species' | 'sex' | 'birth_date' | 'is_breeder'>[]
+  invested: Record<string, Invested>
   farmId: string
 }) {
   const router = useRouter()
@@ -59,12 +62,13 @@ export function ExpensesClient({
   const [deleting, setDeleting] = useState(false)
   const [expLoading, setExpLoading] = useState(false)
   const [saleLoading, setSaleLoading] = useState(false)
+  const [saleSearch, setSaleSearch] = useState('')
   const [purchaseLoading, setPurchaseLoading] = useState(false)
   const [saleEditLoading, setSaleEditLoading] = useState(false)
   const [expEditLoading, setExpEditLoading] = useState(false)
 
   const [expForm, setExpForm] = useState({ category: 'mao_de_obra', date: today, amount: '', description: '', notes: '' })
-  const [saleForm, setSaleForm] = useState({ animal_id: '', buyer_name: '', sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', notes: '' })
+  const [saleForm, setSaleForm] = useState({ animal_ids: [] as string[], buyer_name: '', sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', notes: '' })
   const [purchaseForm, setPurchaseForm] = useState({
     seller_name: '',
     purchase_date: today,
@@ -131,27 +135,33 @@ export function ExpensesClient({
 
   async function saveSale(e: React.FormEvent) {
     e.preventDefault()
-    if (!saleForm.animal_id) return toast.error('Selecione um animal')
+    const ids = saleForm.animal_ids
+    if (ids.length === 0) return toast.error('Selecione pelo menos um animal')
+    const total = parseBRL(saleForm.sale_price) ?? 0
+    if (total <= 0) return toast.error('Informe o valor da venda')
     setSaleLoading(true)
-    const { data, error } = await supabase.from('animal_sales').insert({
+    // Venda de vários animais juntos: o valor total é dividido igualmente entre eles.
+    const each = Math.round((total / ids.length) * 100) / 100
+    const rows = ids.map((animal_id, i) => ({
       farm_id: farmId,
-      animal_id: saleForm.animal_id,
+      animal_id,
       buyer_name: saleForm.buyer_name || null,
       sale_date: saleForm.sale_date,
-      sale_price: parseBRL(saleForm.sale_price) ?? 0,
+      sale_price: i === ids.length - 1 ? Math.round((total - each * (ids.length - 1)) * 100) / 100 : each,
       weight_kg: saleForm.weight_kg ? parseInt(saleForm.weight_kg, 10) : null,
       price_per_kg: parseBRL(saleForm.price_per_kg),
       sale_type: saleForm.sale_type,
       notes: saleForm.notes || null,
-    }).select('*, animal:animal_id(code, name)').single()
+    }))
+    const { data, error } = await supabase.from('animal_sales').insert(rows).select('*, animal:animal_id(code, name)')
 
     if (error) { toast.error('Erro: ' + error.message); setSaleLoading(false); return }
 
     const newStatus = saleForm.sale_type === 'abate' ? 'abatido' : 'vendido'
-    await supabase.from('animals').update({ status: newStatus }).eq('id', saleForm.animal_id)
-    setSales(prev => [data, ...prev])
+    await supabase.from('animals').update({ status: newStatus }).in('id', ids).eq('farm_id', farmId)
+    setSales(prev => [...(data ?? []), ...prev])
     setSaleDialog(false)
-    toast.success('Venda registrada! Status do animal atualizado.')
+    toast.success(ids.length > 1 ? `Venda de ${ids.length} animais registrada.` : 'Venda registrada! Status do animal atualizado.')
     router.refresh()
     setSaleLoading(false)
   }
@@ -287,7 +297,7 @@ export function ExpensesClient({
         <TabsContent value="sales">
           <div className="flex justify-between items-center mb-4">
             <p className="text-sm text-muted-foreground">Total: {formatCurrency(sales.reduce((s, r) => s + r.sale_price, 0))}</p>
-            <Button onClick={() => { setSaleForm({ animal_id: '', buyer_name: '', sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', notes: '' }); setSaleDialog(true) }} className="gap-2"><Plus className="h-4 w-4" /> Registrar Venda</Button>
+            <Button onClick={() => { setSaleForm({ animal_ids: [], buyer_name: '', sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', notes: '' }); setSaleDialog(true) }} className="gap-2"><Plus className="h-4 w-4" /> Registrar Venda</Button>
           </div>
           <DataCard>
             <Table>
@@ -470,7 +480,7 @@ export function ExpensesClient({
                 <Input type="date" value={expForm.date} onChange={e => setExpForm(p => ({ ...p, date: e.target.value }))} required />
               </div>
               <div className="space-y-2">
-                <Label>Valor (R$) *</Label>
+                <Label>{saleForm.animal_ids.length > 1 ? 'Valor total (R$) *' : 'Valor (R$) *'}</Label>
                 <Input type="text" inputMode="decimal" value={expForm.amount}
                   onChange={e => setExpForm(p => ({ ...p, amount: e.target.value }))}
                   onBlur={() => { const n = parseBRL(expForm.amount); if (n !== null) setExpForm(p => ({ ...p, amount: formatBRL(n) })) }}
@@ -495,22 +505,37 @@ export function ExpensesClient({
           <DialogHeader><DialogTitle>Registrar Venda / Abate</DialogTitle></DialogHeader>
           <form onSubmit={saveSale} className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Animal *</Label>
+              <Label>Animais vendidos *</Label>
               {initialAnimals.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhum animal ativo cadastrado.</p>
               ) : (
-                <Select value={saleForm.animal_id} onValueChange={v => v && setSaleForm(p => ({ ...p, animal_id: v }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um animal..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {initialAnimals.map(a => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.code}{a.name ? ` · ${a.name}` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <>
+                  <Input value={saleSearch} onChange={e => setSaleSearch(e.target.value)} placeholder="Buscar por nome, código ou categoria" />
+                  <ul className="max-h-56 overflow-y-auto rounded-md border divide-y">
+                    {initialAnimals
+                      .filter(a => {
+                        const q = saleSearch.trim().toLowerCase()
+                        return !q || a.code.toLowerCase().includes(q) || (a.name ?? '').toLowerCase().includes(q) || animalCategory(a).toLowerCase().includes(q)
+                      })
+                      .map(a => {
+                        const checked = saleForm.animal_ids.includes(a.id)
+                        return (
+                          <li key={a.id}>
+                            <label className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-muted">
+                              <input type="checkbox" className="h-4 w-4 accent-primary" checked={checked}
+                                onChange={() => setSaleForm(p => ({
+                                  ...p,
+                                  animal_ids: checked ? p.animal_ids.filter(x => x !== a.id) : [...p.animal_ids, a.id],
+                                }))} />
+                              <span className="min-w-0 flex-1 truncate">{a.name ?? 'Sem nome'} <span className="font-mono text-xs text-muted-foreground">{a.code}</span></span>
+                              <span className="text-xs text-muted-foreground">{animalCategory(a)}</span>
+                            </label>
+                          </li>
+                        )
+                      })}
+                  </ul>
+                  <p className="text-xs text-muted-foreground">{saleForm.animal_ids.length} selecionado(s). Vendeu vários juntos? Marque todos e informe o valor total.</p>
+                </>
               )}
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -529,7 +554,7 @@ export function ExpensesClient({
                 <Input type="date" value={saleForm.sale_date} onChange={e => setSaleForm(p => ({ ...p, sale_date: e.target.value }))} required />
               </div>
               <div className="space-y-2">
-                <Label>Valor (R$) *</Label>
+                <Label>{saleForm.animal_ids.length > 1 ? 'Valor total (R$) *' : 'Valor (R$) *'}</Label>
                 <Input type="text" inputMode="decimal" value={saleForm.sale_price}
                   onChange={e => setSaleForm(p => ({ ...p, sale_price: e.target.value }))}
                   onBlur={() => { const n = parseBRL(saleForm.sale_price); if (n !== null) setSaleForm(p => ({ ...p, sale_price: formatBRL(n) })) }}
@@ -547,6 +572,19 @@ export function ExpensesClient({
                   placeholder="0,00" />
               </div>
             </div>
+            {saleForm.animal_ids.length > 0 && (parseBRL(saleForm.sale_price) ?? 0) > 0 && (() => {
+              const total = parseBRL(saleForm.sale_price) ?? 0
+              const cost = saleForm.animal_ids.reduce((sum, id) => sum + (invested[id]?.total ?? 0), 0)
+              const profit = total - cost
+              return (
+                <div className="rounded-lg bg-muted px-3 py-2 text-sm space-y-0.5">
+                  {saleForm.animal_ids.length > 1 && <p>Cada animal: <span className="font-medium tabular-nums">{formatCurrency(total / saleForm.animal_ids.length)}</span></p>}
+                  <p>Investido nesses animais: <span className="font-medium tabular-nums">{formatCurrency(cost)}</span></p>
+                  <p>Lucro: <span className={`font-semibold tabular-nums ${profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatCurrency(profit)}</span></p>
+                  {cost === 0 && <p className="text-xs text-muted-foreground">Sem compra, saúde ou alimentação lançadas: o lucro aparece igual ao valor da venda.</p>}
+                </div>
+              )
+            })()}
             <div className="space-y-2">
               <Label>Comprador</Label>
               <Input value={saleForm.buyer_name}
@@ -556,7 +594,7 @@ export function ExpensesClient({
             <FormActions
               onCancel={() => setSaleDialog(false)}
               isLoading={saleLoading}
-              disabled={!saleForm.animal_id}
+              disabled={saleForm.animal_ids.length === 0}
             />
           </form>
         </DialogContent>
@@ -590,7 +628,7 @@ export function ExpensesClient({
                 <Input type="date" value={saleEditForm.sale_date} onChange={e => setSaleEditForm(p => ({ ...p, sale_date: e.target.value }))} required />
               </div>
               <div className="space-y-2">
-                <Label>Valor (R$) *</Label>
+                <Label>{saleForm.animal_ids.length > 1 ? 'Valor total (R$) *' : 'Valor (R$) *'}</Label>
                 <Input type="text" inputMode="decimal" value={saleEditForm.sale_price}
                   onChange={e => setSaleEditForm(p => ({ ...p, sale_price: e.target.value }))}
                   onBlur={() => { const n = parseBRL(saleEditForm.sale_price); if (n !== null) setSaleEditForm(p => ({ ...p, sale_price: formatBRL(n) })) }}
@@ -644,7 +682,7 @@ export function ExpensesClient({
                 <Input type="date" value={expEditForm.date} onChange={e => setExpEditForm(p => ({ ...p, date: e.target.value }))} required />
               </div>
               <div className="space-y-2">
-                <Label>Valor (R$) *</Label>
+                <Label>{saleForm.animal_ids.length > 1 ? 'Valor total (R$) *' : 'Valor (R$) *'}</Label>
                 <Input type="text" inputMode="decimal" value={expEditForm.amount}
                   onChange={e => setExpEditForm(p => ({ ...p, amount: e.target.value }))}
                   onBlur={() => { const n = parseBRL(expEditForm.amount); if (n !== null) setExpEditForm(p => ({ ...p, amount: formatBRL(n) })) }}

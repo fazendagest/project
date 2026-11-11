@@ -181,6 +181,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
     mother_id: animal?.mother_id ?? '',
     is_breeder: animal?.is_breeder ?? false,
     rental_owner: '',
+    count: '1',
   })
 
   const [purchaseForm, setPurchaseForm] = useState({
@@ -285,10 +286,20 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
 
     let error
     if (mode === 'create') {
-      const { data: created, error: err } = await supabase.from('animals').insert(payload).select('id').single()
+      // Vários animais iguais de uma vez (ex.: leitões da mesma ninhada): códigos em sequência.
+      const count = Math.min(50, Math.max(1, parseInt(form.count, 10) || 1))
+      const [prefix, numStr] = form.code.split('-')
+      const start = parseInt(numStr, 10)
+      const rows = Array.from({ length: count }, (_, i) => ({
+        ...payload,
+        code: count === 1 || isNaN(start) ? form.code : `${prefix}-${String(start + i).padStart(3, '0')}`,
+        name: count > 1 && form.name ? `${form.name} ${i + 1}` : payload.name,
+        ear_tag: count > 1 ? null : payload.ear_tag,
+      }))
+      const { data: created, error: err } = await supabase.from('animals').insert(rows).select('id')
       error = err
       if (!error && created && form.entry_type === 'compra') {
-        await supabase.from('animal_purchases').insert({ ...purchasePayload, animal_id: created.id })
+        await supabase.from('animal_purchases').insert(created.map(c => ({ ...purchasePayload, animal_id: c.id })))
       }
     } else {
       ;({ error } = await supabase.from('animals').update(payload).eq('id', animal!.id).eq('farm_id', farmId))
@@ -305,7 +316,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
       if (error.code === '23505') toast.error('Código já existe nesta fazenda')
       else toast.error('Erro ao salvar: ' + error.message)
     } else {
-      toast.success(mode === 'create' ? 'Animal cadastrado!' : 'Animal atualizado!')
+      toast.success(mode === 'create' ? (parseInt(form.count, 10) > 1 ? `${parseInt(form.count, 10)} animais cadastrados!` : 'Animal cadastrado!') : 'Animal atualizado!')
       router.refresh()
       router.push('/app/animals')
     }
@@ -455,6 +466,15 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                 </Select>
               </div>
 
+              {mode === 'create' && (
+                <div className="space-y-2">
+                  <Label htmlFor="count">Quantos animais iguais?</Label>
+                  <Input id="count" type="number" min="1" max="50" inputMode="numeric" value={form.count}
+                    onChange={e => set('count', e.target.value)} />
+                  <p className="text-xs text-muted-foreground">Para cadastrar uma ninhada ou um lote de uma vez. Cada um ganha o seu código.</p>
+                </div>
+              )}
+
               {/* 10. Data de Entrada */}
               <div className="space-y-2">
                 <Label htmlFor="entry_date">Data de Entrada *</Label>
@@ -483,7 +503,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
               <CardHeader><CardTitle>Dados da Compra</CardTitle></CardHeader>
               <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="purchase_price">Valor da Compra (R$)</Label>
+                  <Label htmlFor="purchase_price">{parseInt(form.count, 10) > 1 ? 'Valor de cada animal (R$)' : 'Valor da Compra (R$)'}</Label>
                   <Input id="purchase_price" type="text" inputMode="decimal"
                     value={purchaseForm.purchase_price}
                     onChange={e => setPurchaseForm(p => ({ ...p, purchase_price: e.target.value }))}

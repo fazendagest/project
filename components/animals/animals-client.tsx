@@ -27,11 +27,13 @@ const SPECIES_FILTERS = [
 
 type Row = Animal & { category: string; motherName: string | null; investedTotal: number; mv: AnimalValue }
 
-export function AnimalsClient({ initialAnimals, invested, feedIncluded, ifag }: {
+export function AnimalsClient({ initialAnimals, invested, feedIncluded, missingCosts = [], ifag }: {
   initialAnimals: Animal[]
   farmId: string
   invested: Record<string, Invested>
   feedIncluded: boolean
+  /** Custos que faltam lançar: o ganho no papel sai maior que o real. */
+  missingCosts?: string[]
   ifag: IfagPrices | null
 }) {
   const router = useRouter()
@@ -134,9 +136,10 @@ export function AnimalsClient({ initialAnimals, invested, feedIncluded, ifag }: 
           </span>
           <span className="text-right text-sm">
             <span className="block text-muted-foreground">Ganho no papel</span>
-            <span className={cn('block font-medium tabular-nums', herd.paperGain >= 0 ? 'text-green-700' : 'text-red-700')}>
+            <span className={cn('block font-medium tabular-nums', herd.paperGain < 0 ? 'text-red-700' : missingCosts.length > 0 ? '' : 'text-green-700')}>
               {herd.paperGain > 0 ? '+' : ''}{formatMoney(herd.paperGain)}
             </span>
+            {missingCosts.length > 0 && <span className="block text-xs font-medium text-amber-800">pode ser menor</span>}
           </span>
         </Link>
       )}
@@ -144,6 +147,7 @@ export function AnimalsClient({ initialAnimals, invested, feedIncluded, ifag }: 
       {filtered.length > 0 && (
         <p className="text-xs text-muted-foreground mb-4">
           Investido: compra + saúde{feedIncluded ? ' + sal, milho e ração divididos por cabeça (estimado)' : ''}. Mercado: o valor digitado no cadastro; sem valor digitado, o preço do IFAG (média de Goiás).
+          {missingCosts.length > 0 && <span className="font-medium text-amber-800"> O ganho pode ser menor: falta lançar {missingCosts.join(' e ')}.</span>}
         </p>
       )}
 

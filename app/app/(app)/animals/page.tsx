@@ -3,7 +3,8 @@ import { getFarmId } from '@/lib/farm'
 import { PageHeader, MobileActionBar } from '@/components/layout/page-header'
 import { AnimalsClient } from '@/components/animals/animals-client'
 import { MissingCostsAlert } from '@/components/dashboard/missing-costs-alert'
-import { computeInvested } from '@/lib/investment'
+import { computeInvested, OUTSIDE_HERD_CATEGORY } from '@/lib/investment'
+import { expandExpenses, todaySP } from '@/lib/fixed-expenses'
 import { getIfagPrices } from '@/lib/ifag'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -23,6 +24,11 @@ export default async function AnimalsPage() {
   ])
   const invested = computeInvested(costs ?? [], feeds ?? [], expenses ?? [])
   const feedIncluded = (feeds ?? []).some(f => Number(f.total_cost ?? 0) > 0)
+  // Mesma regra do Dashboard: sem alimentação ou sem despesa em 60 dias, o ganho no papel sai maior que o real.
+  const today = todaySP()
+  const cut = new Date(new Date(today + 'T12:00:00').getTime() - 60 * 86_400_000).toISOString().slice(0, 10)
+  const recentExpense = expandExpenses((expenses ?? []).filter(e => e.category !== OUTSIDE_HERD_CATEGORY), today).some(e => e.date >= cut)
+  const missingCosts = [!feedIncluded && 'sal, milho e ração', !recentExpense && 'despesas da fazenda'].filter(Boolean) as string[]
 
   return (
     <div className="pb-24 md:pb-0">
@@ -39,7 +45,7 @@ export default async function AnimalsPage() {
         }
       />
       <MissingCostsAlert farmId={farmId} />
-      <AnimalsClient initialAnimals={animals ?? []} farmId={farmId} invested={invested} feedIncluded={feedIncluded} ifag={ifag} />
+      <AnimalsClient initialAnimals={animals ?? []} farmId={farmId} invested={invested} feedIncluded={feedIncluded} missingCosts={missingCosts} ifag={ifag} />
       <MobileActionBar>
         <Link href="/app/animals/new" className="block">
           <Button className="h-12 w-full gap-2 text-base">

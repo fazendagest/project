@@ -36,13 +36,14 @@ function tone(v: number): 'pos' | 'neg' | undefined {
   return v > 0 ? 'pos' : v < 0 ? 'neg' : undefined
 }
 
-function Row({ label, value, strong, tone, hint }: { label: string; value: string; strong?: boolean; tone?: 'pos' | 'neg'; hint?: string }) {
+function Row({ label, value, strong, tone, hint, warn }: { label: string; value: string; strong?: boolean; tone?: 'pos' | 'neg'; hint?: string; warn?: string }) {
   const color = tone === 'pos' ? 'text-green-700' : tone === 'neg' ? 'text-red-700' : ''
   return (
     <div className="flex items-baseline justify-between gap-3 py-2">
       <div className="min-w-0">
         <p className={strong ? 'font-medium' : 'text-muted-foreground'}>{label}</p>
         {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+        {warn && <p className="text-xs font-medium text-amber-800">{warn}</p>}
       </div>
       <p className={`tabular-nums whitespace-nowrap ${strong ? 'font-semibold' : ''} ${color}`}>{value}</p>
     </div>
@@ -131,7 +132,13 @@ export default async function DashboardPage() {
   // Despesas da fazenda (caseiro, energia, diesel): avisar quando nada foi lançado e lembrar das fixas do mês.
   const herdExpenses = expandExpenses((allExpenses ?? []).filter(e => e.category !== OUTSIDE_HERD_CATEGORY), todayStr)
   const recentCut = format(subDays(now, 60), 'yyyy-MM-dd')
-  if (!herdExpenses.some(e => e.date >= recentCut)) {
+  const anyRecentExpense = herdExpenses.some(e => e.date >= recentCut)
+  // Custo que falta lançar: o investido fica menor que o real e o ganho no papel, maior.
+  const missingCosts = [
+    !anyFeed && 'sal, milho e ração',
+    !anyRecentExpense && 'despesas da fazenda (caseiro, energia)',
+  ].filter(Boolean) as string[]
+  if (!anyRecentExpense) {
     tasks.push({
       key: 'despesas-fazenda',
       title: 'Lançar as despesas da fazenda',
@@ -220,8 +227,9 @@ export default async function DashboardPage() {
                 label="Ganho no papel"
                 value={signedMoney(herd.paperGain)}
                 strong
-                tone={tone(herd.paperGain)}
+                tone={missingCosts.length > 0 && herd.paperGain > 0 ? undefined : tone(herd.paperGain)}
                 hint="Só vira dinheiro quando vender"
+                warn={missingCosts.length > 0 ? `Pode ser menor: falta lançar ${missingCosts.join(' e ')}.` : undefined}
               />
               {horses && (
                 <Row

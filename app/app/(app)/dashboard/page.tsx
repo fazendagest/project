@@ -7,6 +7,8 @@ import { UpcomingBirths } from '@/components/dashboard/upcoming-births'
 import { LowStock } from '@/components/dashboard/low-stock'
 import { PendingTasks, type PendingTask } from '@/components/dashboard/pending-tasks'
 import { BruceloseCard } from '@/components/health/brucelose-card'
+import { DineuvanCard } from '@/components/dashboard/dineuvan-card'
+import { dineuvanTodo } from '@/lib/dineuvan-todo'
 import { bruceloseStatus } from '@/lib/brucelose'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -85,6 +87,7 @@ export default async function DashboardPage() {
     { data: thirdHerds },
     { data: yearPurchases },
     { data: bruceloseRecords },
+    { data: declRow },
     ifag,
   ] = await Promise.all([
     supabase.from('animals').select('id, code, name, species, sex, birth_date, breed, is_breeder, is_fat, weight_arrobas, market_value, mother_id, status, entry_type, entry_date').eq('farm_id', farmId),
@@ -92,7 +95,7 @@ export default async function DashboardPage() {
     supabase.from('animal_costs').select('animal_id, entry_date, sale_date, purchase_cost, health_cost, species').eq('farm_id', farmId),
     supabase.from('feed_stock').select('purchase_date, total_cost, for_pigs').eq('farm_id', farmId),
     supabase.from('operational_expenses').select('*').eq('farm_id', farmId),
-    supabase.from('animal_sales').select('animal_id, sale_price, sale_date').eq('farm_id', farmId).gte('sale_date', yearStart),
+    supabase.from('animal_sales').select('animal_id, sale_price, sale_date, sale_reason').eq('farm_id', farmId).gte('sale_date', yearStart),
     supabase.from('animal_purchases').select('purchase_price').eq('farm_id', farmId).gte('purchase_date', monthStart).lte('purchase_date', monthEnd),
     supabase.from('health_records').select('cost').eq('farm_id', farmId).gte('application_date', monthStart).lte('application_date', monthEnd),
     supabase.from('milk_production').select('liters').eq('farm_id', farmId).eq('date', todayStr),
@@ -101,7 +104,9 @@ export default async function DashboardPage() {
     supabase.from('health_records').select('cost').eq('farm_id', farmId).gte('application_date', yearStart),
     supabase.from('third_party_herds').select('*').eq('farm_id', farmId),
     supabase.from('animal_purchases').select('purchase_price').eq('farm_id', farmId).gte('purchase_date', yearStart),
-    supabase.from('health_records').select('animal_id, product_name').eq('farm_id', farmId),
+    supabase.from('health_records').select('animal_id, product_name, notes').eq('farm_id', farmId),
+    // Declaração de Rebanho marcada como feita (P7). Consulta à parte: sem a coluna, o painel continua de pé.
+    supabase.from('farms').select('herd_declarations').eq('id', farmId).maybeSingle(),
     getIfagPrices(),
   ])
 
@@ -187,15 +192,6 @@ export default async function DashboardPage() {
   // Animal que entrou por compra sem preço: o investido e o lucro dele ficam errados.
   const costById = new Map((costs ?? []).map(c => [c.animal_id, c]))
   const boughtNoPrice = active.filter(a => a.entry_type === 'compra' && Number(costById.get(a.id)?.purchase_cost ?? 0) === 0)
-  if (boughtNoPrice.length > 0) {
-    tasks.push({
-      key: `compra-sem-preco-${boughtNoPrice.map(a => a.id).sort().join('-')}`,
-      title: boughtNoPrice.length === 1 ? `Informar quanto pagou em ${nameOf(boughtNoPrice[0])}` : `Informar quanto pagou em ${boughtNoPrice.length} animais`,
-      detail: `${boughtNoPrice.map(nameOf).join(', ')}: entrou como compra, mas sem preço. Em Financeiro, aba Compras, toque no lápis do animal.`,
-      href: '/app/financial/movements',
-      action: 'Abrir Compras',
-    })
-  }
 
   // Custo de manter o rebanho no mês (sem compra de animal), por cabeça.
   const monthUpkeep = monthOut - (monthPurchases ?? []).reduce((s, r) => s + Number(r.purchase_price || 0), 0)
@@ -230,15 +226,10 @@ export default async function DashboardPage() {
   const thirdHeads = thirdOnFarm.reduce((s, h) => s + h.head_count, 0)
   const totalUA = ownUA + thirdUA
   const perHa = area > 0 ? totalUA / area : null
-  if (usingTotalArea || area <= 0 || (perHa != null && perHa < 0.02)) {
-    tasks.push({
-      key: 'area-pasto',
-      title: area > 0 && !usingTotalArea ? `Corrigir a área de pasto (está ${area.toLocaleString('pt-BR')} ha)` : 'Informar quanto da fazenda é pasto',
-      detail: 'Em hectares, só o que é pasto (sem lavoura, mata e sede). 1 alqueire goiano = 4,84 ha. Serve para saber quanto gado o pasto aguenta.',
-      href: '/app/settings',
-      action: 'Informar em Configurações',
-    })
-  }
+  // Área de pasto vai para o cartão "Para ver com o Dineuvan" (P7).
+  const pastureTitle = usingTotalArea || area <= 0 || (perHa != null && perHa < 0.02)
+    ? (area > 0 && !usingTotalArea ? `Corrigir a área de pasto (está ${area.toLocaleString('pt-BR')} ha)` : 'Informar quanto da fazenda é pasto')
+    : null
   const calvesNoMother = active.filter(a => a.species === 'bovino' && !a.mother_id && a.entry_type === 'nascimento' && (monthsOld(a.birth_date) ?? 99) < 12)
   if (calvesNoMother.length > 0) {
     tasks.push({
@@ -299,6 +290,20 @@ export default async function DashboardPage() {
     .filter(r => !r.calving || differenceInDays(parseISO(r.exam), parseISO(r.calving)) >= RECENT_CALVING_DAYS)
   const pregnancyRate = examined.length > 0 ? pregnant.length / examined.length : null
 
+  // Para ver com o Dineuvan (P7): o que só o dono resolve.
+  const declaredPeriods = ((declRow as { herd_declarations?: string[] | null } | null)?.herd_declarations) ?? []
+  const animalById = new Map(allAnimals.map(a => [a.id, a]))
+  const todo = dineuvanTodo({
+    today: todayStr,
+    animals: allAnimals,
+    checkedIds: new Set(lastCheck.keys()),
+    health: bruceloseRecords ?? [],
+    declaredPeriods,
+    pastureTitle,
+    boughtNoPrice,
+    salesNoReason: sales.filter(r => !r.sale_reason).map(r => animalById.get(r.animal_id)).filter(Boolean) as { id: string; code: string; name?: string | null }[],
+  })
+
   const milkLiters = milkToday?.reduce((s, r) => s + (r.liters || 0), 0) ?? 0
 
   const horses = herd.groups.find(g => g.key === 'cavalos' && g.count > 0)
@@ -312,6 +317,7 @@ export default async function DashboardPage() {
     <div>
       <PageHeader title="Dashboard" description="Quanto vale o rebanho e quanto você está ganhando" />
       <BruceloseCard {...bruceloseStatus(allAnimals, bruceloseRecords ?? [], todayStr)} />
+      <DineuvanCard items={todo} farmId={farmId} declaredPeriods={declaredPeriods} />
       <PendingTasks tasks={tasks} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">

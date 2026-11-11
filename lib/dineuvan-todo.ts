@@ -134,7 +134,7 @@ export function dineuvanTodo(input: {
     items.push({
       key: 'area-pasto',
       title: input.pastureTitle,
-      detail: 'Em hectares, só o que é pasto (sem lavoura, mata e sede). 1 alqueire goiano = 4,84 ha. Serve para saber quanto gado o pasto aguenta.',
+      detail: 'Em alqueires (ou hectares), só o que é pasto, sem lavoura, mata e sede. Serve para saber quanto gado o pasto aguenta.',
       href: '/app/settings',
       action: 'Informar em Configurações',
     })

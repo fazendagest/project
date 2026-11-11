@@ -9,7 +9,7 @@ export default async function FeedingPage() {
   if (!farmId) return null
 
   const [{ data: stock }, { data: records }] = await Promise.all([
-    supabase.from('feed_stock').select('*').eq('farm_id', farmId).order('product_name'),
+    supabase.from('feed_stock').select('*').eq('farm_id', farmId).order('purchase_date', { ascending: false }),
     supabase
       .from('feed_records')
       .select('*, feed_stock:feed_stock_id(product_name, unit)')
@@ -20,7 +20,7 @@ export default async function FeedingPage() {
 
   return (
     <div>
-      <PageHeader title="Alimentação" description="Controle de estoque e consumo de ração" />
+      <PageHeader title="Alimentação" description="Compras de sal, milho e ração, e o estoque" />
       <FeedingClient initialStock={stock ?? []} initialRecords={records ?? []} farmId={farmId} />
     </div>
   )

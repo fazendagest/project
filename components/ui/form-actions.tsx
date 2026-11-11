@@ -29,13 +29,14 @@ export function FormActions({
 
   return (
     <div className={classes}>
-      <Button type="button" variant="outline" onClick={onCancel}>
+      <Button type="button" variant="outline" onClick={onCancel} className={variant === 'dialog' ? 'h-11 sm:flex-1' : undefined}>
         {cancelLabel}
       </Button>
       <Button
         type={onSubmit ? 'button' : 'submit'}
         disabled={isLoading || disabled}
         onClick={onSubmit}
+        className={variant === 'dialog' ? 'h-11 sm:flex-1' : undefined}
       >
         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {submitLabel}

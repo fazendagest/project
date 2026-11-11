@@ -11,7 +11,16 @@ export async function LowStock({ farmId }: { farmId: string }) {
     .select('product_name, current_quantity, min_quantity, unit')
     .eq('farm_id', farmId)
 
-  const low = data?.filter(s => s.current_quantity <= s.min_quantity) ?? []
+  // Cada linha é uma compra: soma por produto e só avisa quem tem mínimo definido.
+  const byProduct = new Map<string, { product_name: string; unit: string; current_quantity: number; min_quantity: number }>()
+  for (const s of data ?? []) {
+    const key = `${s.product_name.trim().toLowerCase()}|${s.unit}`
+    const g = byProduct.get(key) ?? { product_name: s.product_name, unit: s.unit, current_quantity: 0, min_quantity: 0 }
+    g.current_quantity += Number(s.current_quantity ?? 0)
+    g.min_quantity = Math.max(g.min_quantity, Number(s.min_quantity ?? 0))
+    byProduct.set(key, g)
+  }
+  const low = Array.from(byProduct.values()).filter(s => s.min_quantity > 0 && s.current_quantity <= s.min_quantity)
 
   return (
     <Card>

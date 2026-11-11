@@ -28,7 +28,9 @@ export type SaleRef = {
   /** 'arroba' compara com o R$ por @; 'cabeca' com o valor por animal. */
   kind: 'arroba' | 'cabeca'
   value: number
-  /** Nome da referência com fonte e data, ex.: "vaca gorda, @ viva, IFAG 10/11". */
+  /** Que referência é: "reposição", "vaca gorda", "vaca boiadeira mestiça GO". */
+  group: string
+  /** Detalhe com fonte e data, ex.: "@ viva, IFAG 10/11, preço de hoje". */
   label: string
   stale: boolean
 }
@@ -37,6 +39,8 @@ export type SaleArroba = {
   /** R$ por @ que saiu (digitado ou valor ÷ peso). Null sem peso e sem preço por @. */
   perArroba: number | null
   basis: ArrobaBasis
+  /** A venda não diz de que é a arroba: vale o padrão do sistema (peso vivo). */
+  basisDefault: boolean
   /** Valor por animal. */
   perHead: number
   refs: SaleRef[]
@@ -60,6 +64,8 @@ const monthsAt = (birth: string, on: string) => {
 /** "Mestiço Macho (0-12 Meses)" vira "Mestiço macho 0 a 12 meses", sem parênteses dentro do rótulo. */
 const plainBand = (label: string) =>
   label.replace(/ \(([^)]*) Meses\)/, (_, b: string) => ` ${b.replace('-', ' a ').replace('Acima de', 'acima de')} meses`).replace(/ (Macho|Fêmea) /, (_, x: string) => ` ${x.toLowerCase()} `)
+/** O sistema não guarda a cotação do dia da venda: a referência é a de hoje, e o rótulo diz isso (Tião). */
+const TODAY = 'preço de hoje'
 const ddmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
 
 export function saleArroba(
@@ -87,7 +93,7 @@ export function saleArroba(
     if (!p) return
     const name = kind === 'macho' ? 'boi gordo' : kind === 'novilha' ? 'novilha gorda' : 'vaca gorda'
     const value = basis === 'vivo' ? p.avg * CARCASS_YIELD[kind] * 2 : p.avg
-    refs.push({ kind: 'arroba', value: Math.round(value * 100) / 100, label: `${name}, ${basis === 'vivo' ? '@ viva' : '@ de carcaça'}, IFAG ${ddmm(p.quotedAt)}`, stale: isStale(p.quotedAt) })
+    refs.push({ kind: 'arroba', value: Math.round(value * 100) / 100, group: name, label: `${basis === 'vivo' ? '@ viva' : '@ de carcaça'}, IFAG ${ddmm(p.quotedAt)}, ${TODAY}`, stale: isStale(p.quotedAt) })
   }
 
   if (bovine && animal?.is_fat) {
@@ -97,14 +103,15 @@ export function saleArroba(
     refs.push({
       kind: 'cabeca',
       value: DAIRY_COW_REFERENCE.perHead,
-      label: `vaca boiadeira mestiça GO, Scot ${ddmm(DAIRY_COW_REFERENCE.quotedAt)}`,
+      group: 'vaca boiadeira mestiça GO',
+      label: `Scot ${ddmm(DAIRY_COW_REFERENCE.quotedAt)}, ${TODAY}`,
       stale: false,
     })
   } else if (animal) {
     // Reposição por cabeça, na idade do dia da venda (a cotação é a de hoje).
     const ref = marketReference({ ...animal, species: animal.species ?? 'bovino', sex: animal.sex ?? '', is_fat: false }, ifag, new Date(s.sale_date + 'T12:00:00'))
     if (ref?.perHead != null) {
-      refs.push({ kind: 'cabeca', value: ref.perHead, label: `${plainBand(ref.label)}, ${ref.source === 'scot' ? 'Scot' : 'IFAG'} ${ddmm(ref.quotedAt)}`, stale: isStale(ref.quotedAt) })
+      refs.push({ kind: 'cabeca', value: ref.perHead, group: 'reposição', label: `${plainBand(ref.label)}, ${ref.source === 'scot' ? 'Scot' : 'IFAG'} ${ddmm(ref.quotedAt)}, ${TODAY}`, stale: isStale(ref.quotedAt) })
     }
   }
 
@@ -115,5 +122,6 @@ export function saleArroba(
   const closest = gaps.length ? Math.max(...gaps) : null
   const belowPct = closest != null && closest < -BELOW_REFERENCE ? Math.round(-closest * 100) : null
 
-  return { perArroba: perArroba != null ? Math.round(perArroba * 100) / 100 : null, basis, perHead, refs, belowPct }
+  const basisDefault = s.arroba_basis !== 'carcaca' && s.arroba_basis !== 'vivo'
+  return { perArroba: perArroba != null ? Math.round(perArroba * 100) / 100 : null, basis, basisDefault, perHead, refs, belowPct }
 }

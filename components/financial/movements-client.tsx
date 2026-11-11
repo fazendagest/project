@@ -432,7 +432,7 @@ export function ExpensesClient({
                       {s.sale_reason && <span className="block text-xs text-muted-foreground mt-0.5">{SALE_REASONS[s.sale_reason] ?? s.sale_reason}</span>}
                     </TableCell>
                     <TableCell>{s.weight_kg != null ? `${s.weight_kg} @` : ''}</TableCell>
-                    <TableCell><ArrobaCell a={saleArroba(s, s.animal, ifag)} /></TableCell>
+                    <TableCell><ArrobaCell a={saleArroba(s, s.animal, ifag)} onEdit={() => openEditSale(s)} /></TableCell>
                     <TableCell className="font-semibold text-green-600">{formatCurrency(s.sale_price)}</TableCell>
                     <TableCell><div className="flex justify-end gap-1"><Button size="icon" variant="ghost" onClick={() => openEditSale(s)}><Pencil className="h-4 w-4" /></Button><Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDelConfirm({ type: 'sale', id: s.id })}><Trash2 className="h-4 w-4" /></Button></div></TableCell>
                   </TableRow>
@@ -1011,8 +1011,9 @@ function perArrobaOf(typed: string, total: number, weight: string) {
 const reais = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 
 /** "R$ 2.800/@ vivo", ou o valor por cabeça quando não há peso. */
-const soldText = (a: SaleArroba) => (a.perArroba != null ? `${reais(a.perArroba)}/${ARROBA_BASIS[a.basis].short}` : `${reais(a.perHead)} por cabeça`)
-const refText = (r: SaleRef) => `${reais(r.value)}${r.kind === 'arroba' ? '/@' : ' por cabeça'} (${r.label})`
+const soldText = (a: SaleArroba) =>
+  a.perArroba != null ? `${reais(a.perArroba)}/${ARROBA_BASIS[a.basis].short}${a.basisDefault ? ' (padrão do sistema)' : ''}` : `${reais(a.perHead)} por cabeça`
+const refText = (r: SaleRef) => `Goiás, ${r.group}: ${reais(r.value)}${r.kind === 'arroba' ? '/@' : ' por cabeça'} (${r.label})`
 const belowText = (a: SaleArroba) => `Vendeu ${a.belowPct}% abaixo da referência de Goiás`
 
 /** Campos do cartão da venda no celular (cor neutra, Tião). */
@@ -1020,18 +1021,21 @@ function arrobaFields(a: SaleArroba) {
   if (a.perArroba == null && a.refs.length === 0) return []
   return [
     ...(a.perArroba != null ? [{ label: 'R$ por @', value: soldText(a) }] : []),
-    ...a.refs.map(r => ({ label: 'Goiás hoje', value: refText(r) })),
+    ...a.refs.map(r => ({ label: 'Referência', value: refText(r) })),
     ...(a.belowPct != null ? [{ label: 'Comparação', value: belowText(a) }] : []),
   ]
 }
 
 /** Célula da tabela no computador. */
-function ArrobaCell({ a }: { a: SaleArroba }) {
+function ArrobaCell({ a, onEdit }: { a: SaleArroba; onEdit: () => void }) {
   if (a.perArroba == null && a.refs.length === 0) return null
   return (
     <div className="tabular-nums whitespace-normal min-w-56 max-w-72">
       <span className="font-medium">{soldText(a)}</span>
-      {a.refs.map(r => <span key={r.label} className="block text-xs text-muted-foreground">Goiás: {refText(r)}</span>)}
+      {a.basisDefault && a.perArroba != null && (
+        <button type="button" onClick={onEdit} className="block text-xs underline underline-offset-2 text-muted-foreground hover:text-foreground">editar carcaça ou vivo</button>
+      )}
+      {a.refs.map(r => <span key={r.label} className="block text-xs text-muted-foreground">{refText(r)}</span>)}
       {a.belowPct != null && <span className="block text-xs text-muted-foreground">{belowText(a)}</span>}
     </div>
   )
@@ -1061,7 +1065,7 @@ function ArrobaHint({ a }: { a: SaleArroba }) {
   return (
     <div className="rounded-lg border bg-muted/40 px-3 py-2 text-sm space-y-0.5">
       <p>Saiu a <span className="font-semibold tabular-nums">{soldText(a)}</span>.</p>
-      {a.refs.map(r => <p key={r.label} className="tabular-nums">Goiás hoje: {refText(r)}.</p>)}
+      {a.refs.map(r => <p key={r.label} className="tabular-nums">{refText(r)}.</p>)}
       {a.belowPct != null && <p>{belowText(a)}. Confira o motivo da venda.</p>}
       {a.refs.some(r => r.stale) && <p className="text-xs">Essa cotação tem mais de 14 dias e pode estar desatualizada.</p>}
     </div>

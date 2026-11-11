@@ -281,7 +281,8 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
     setCodeLoading(true)
     try {
       const code = await generateAnimalCode(species, farmId)
-      setForm(prev => ({ ...prev, code }))
+      // Resposta atrasada de outra espécie (trocou rápido) não sobrescreve.
+      setForm(prev => (prev.species === species ? { ...prev, code } : prev))
     } catch {
       toast.error('Erro ao gerar código')
     } finally {
@@ -289,10 +290,12 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
     }
   }, [farmId])
 
+  // O código segue a espécie: trocar Gado por Cavalo no cadastro gera EQU, não BOV (Tião, P6 item 10).
+  // Só no cadastro novo; na edição o código é do dono e não muda.
   useEffect(() => {
     if (mode === 'create') fetchCode(form.species)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [form.species])
 
   useEffect(() => {
     supabase

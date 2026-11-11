@@ -136,6 +136,11 @@ export function SettingsClient({ farm, userEmail }: { farm: Farm | null; userEma
               <Label htmlFor="area">Área (hectares)</Label>
               <Input id="area" type="number" step="0.01" min="0" value={form.area_hectares}
                 onChange={e => setForm(p => ({ ...p, area_hectares: e.target.value }))} placeholder="0,00" />
+              <p className="text-xs text-muted-foreground">
+                {Number(form.area_hectares) > 0
+                  ? `Dá ${(Number(form.area_hectares) / 4.84).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} alqueires goianos (1 alqueire = 4,84 ha).`
+                  : 'Em hectares. 1 alqueire goiano = 4,84 ha: 16 alqueires são 77,4 ha.'}
+              </p>
             </div>
             <Button type="submit" className="h-12 w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}

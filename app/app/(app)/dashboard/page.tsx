@@ -71,7 +71,7 @@ export default async function DashboardPage() {
     ifag,
   ] = await Promise.all([
     supabase.from('animals').select('id, species, sex, birth_date, breed, is_breeder, weight_arrobas, market_value, mother_id, status, entry_type, entry_date').eq('farm_id', farmId),
-    supabase.from('farms').select('milk_active').eq('id', farmId).single(),
+    supabase.from('farms').select('milk_active, area_hectares').eq('id', farmId).single(),
     supabase.from('animal_costs').select('animal_id, entry_date, sale_date, purchase_cost, health_cost').eq('farm_id', farmId),
     supabase.from('feed_stock').select('purchase_date, total_cost').eq('farm_id', farmId),
     supabase.from('animal_sales').select('animal_id, sale_price, sale_date').eq('farm_id', farmId).gte('sale_date', yearStart),
@@ -104,6 +104,14 @@ export default async function DashboardPage() {
     (monthHealth ?? []).reduce((s, r) => s + Number(r.cost || 0), 0)
 
   const milkActive = farm?.milk_active ?? false
+
+  // Custo de manter o rebanho no mês (sem compra de animal), por cabeça.
+  const monthUpkeep = monthOut - (monthPurchases ?? []).reduce((s, r) => s + Number(r.purchase_price || 0), 0)
+  const upkeepPerHead = active.length > 0 ? monthUpkeep / active.length : 0
+
+  // Lotação: animais por hectare. Referência do Inttegra: acima de 1,2 UA/ha (1 UA = 450 kg, perto de uma vaca adulta).
+  const area = Number(farm?.area_hectares ?? 0)
+  const perHa = area > 0 ? active.length / area : null
   const milkLiters = milkToday?.reduce((s, r) => s + (r.liters || 0), 0) ?? 0
 
   const sourceParts = [
@@ -184,6 +192,29 @@ export default async function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            <div className={`rounded-lg p-3 mb-2 text-sm ${perHa != null && perHa < 0.02 ? 'border border-amber-300 bg-amber-50' : 'bg-muted/40'}`}>
+              {perHa != null && perHa < 0.02 ? (
+                <p className="text-amber-800">
+                  A área cadastrada é de {area.toLocaleString('pt-BR')}&nbsp;ha, o que parece um engano.
+                  {' '}Confira em <Link href="/app/settings" className="underline underline-offset-2">Configurações</Link> (1 alqueire goiano = 4,84&nbsp;ha).
+                </p>
+              ) : perHa != null ? (
+                <>
+                  <p>
+                    <span className="font-semibold tabular-nums">{perHa.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}</span> animal por hectare
+                    <span className="text-muted-foreground tabular-nums"> ({active.length} em {area.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;ha)</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Quem lucra com gado põe mais de 1,2 vaca adulta por hectare de pasto (Inttegra).
+                    {perHa < 0.8 && ' Se a área for toda pasto, cabe mais gado sem comprar terra.'}
+                  </p>
+                </>
+              ) : (
+                <p className="text-muted-foreground">
+                  Informe a área de pasto em <Link href="/app/settings" className="underline underline-offset-2">Configurações</Link> para ver quantos animais o pasto carrega por hectare.
+                </p>
+              )}
+            </div>
             <div className="divide-y">
               {herd.groups.map(g => (
                 <Link key={g.key} href="/app/animals" className="flex items-center justify-between gap-3 py-2.5 min-h-11 hover:bg-muted/40 -mx-2 px-2 rounded-md">
@@ -213,6 +244,11 @@ export default async function DashboardPage() {
             <div className="divide-y">
               <Row label="Entrou (vendas)" value={money(monthIn)} />
               <Row label="Saiu (compras e gastos)" value={money(monthOut)} />
+              <Row
+                label="Custo por cabeça"
+                value={money(upkeepPerHead)}
+                hint={monthUpkeep > 0 ? 'Sal, ração, saúde e gastos, sem compra de animal' : 'Nada lançado. Lance sal, milho, vacina e caseiro.'}
+              />
               <Row label="Saldo do mês" value={signedMoney(monthIn - monthOut)} strong tone={tone(monthIn - monthOut)} />
               {milkActive && (
                 <div className="flex items-center justify-between py-2">

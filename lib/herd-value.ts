@@ -12,6 +12,7 @@ export type HerdAnimal = {
   birth_date?: string | null
   breed?: string | null
   is_breeder?: boolean | null
+  is_fat?: boolean | null
   weight_arrobas?: number | null
   market_value?: number | null
   mother_id?: string | null

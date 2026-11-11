@@ -54,6 +54,8 @@ export interface Animal {
   to_discard?: boolean
   mother_id?: string
   is_breeder?: boolean
+  /** Gordo, pronto para o frigorífico: valor pela arroba de carcaça. */
+  is_fat?: boolean
   created_at: string
 }
 

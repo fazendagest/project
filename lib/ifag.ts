@@ -14,10 +14,10 @@ const MODEL_ID = 1894310
 
 const MEASURES = ['Cotação Média', 'valor_min', 'valor_max', 'LegaendaCotacao']
 
-/** Só o que interessa à fazenda: gado por cabeça, porco, boi e vaca gorda, milho. */
+/** Só o que interessa à fazenda: gado por cabeça, porco, boi, novilha e vaca gorda, milho. */
 function wanted(name: string) {
   const n = normalize(name)
-  return /^(nelore|mestico) (femea|macho) \(/.test(n) || n === 'suino' || n.startsWith('boi gordo - ') || n.startsWith('vaca gorda - ') || n === 'milho'
+  return /^(nelore|mestico) (femea|macho) \(/.test(n) || n === 'suino' || n.startsWith('boi gordo - ') || n.startsWith('vaca gorda - ') || n.startsWith('novilha gorda - ') || n === 'milho'
 }
 
 function buildQuery() {
@@ -105,7 +105,7 @@ async function fetchIfag(): Promise<IfagPrices> {
 
 // Confere o painel uma vez por dia (o IFAG publica o gado toda semana; assim a cotação
 // nova aparece no máximo um dia depois). Sem custo: é uma chamada guardada em cache.
-const cachedIfag = unstable_cache(fetchIfag, ['ifag-cotacoes-v1'], { revalidate: 86_400, tags: ['ifag'] })
+const cachedIfag = unstable_cache(fetchIfag, ['ifag-cotacoes-v2'], { revalidate: 86_400, tags: ['ifag'] })
 
 /** Cotações do IFAG ou null se o painel não respondeu. Nunca quebra a tela. */
 export async function getIfagPrices(): Promise<IfagPrices | null> {

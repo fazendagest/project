@@ -167,7 +167,7 @@ function MarketHint({ ifag, animal, onUse }: {
         {animal.is_breeder
           ? 'Touro não tem preço de referência no IFAG. Use o valor de venda de touros da região.'
           : isDairyBreed(animal.breed)
-            ? 'Raça de leite: o IFAG só tem preço de gado de corte (Nelore e mestiço). Use o preço de venda da região.'
+            ? 'Raça de leite: o IFAG só tem preço de gado de corte (Nelore e mestiço). Use o preço de venda da região, ou marque Gordo se for para o frigorífico.'
             : 'Informe a data de nascimento para ver o preço de referência da região.'}
       </p>
     )
@@ -178,11 +178,18 @@ function MarketHint({ ifag, animal, onUse }: {
       {ref.perHead != null ? (
         <p>
           Preço em Goiás: <span className="font-semibold tabular-nums">{formatCurrencyCard(ref.perHead)}</span>
-          {ref.perKg != null && animal.weight_arrobas ? (
+          {ref.fat && ref.fat.carcassArrobas != null ? (
+            <span className="text-muted-foreground tabular-nums"> ({ref.fat.liveArrobas}&nbsp;@ vivas, cerca de {String(ref.fat.carcassArrobas).replace('.', ',')}&nbsp;@ de carcaça, a R$&nbsp;{ref.fat.perArroba.toFixed(2).replace('.', ',')} a arroba)</span>
+          ) : ref.perKg != null && animal.weight_arrobas ? (
             <span className="text-muted-foreground tabular-nums"> (pelo peso que você informou, {animal.weight_arrobas * 15}&nbsp;kg a R$&nbsp;{ref.perKg.toFixed(2).replace('.', ',')} o quilo)</span>
           ) : ref.min != null && ref.max != null && ref.min !== ref.max && (
             <span className="text-muted-foreground tabular-nums"> (de {formatCurrencyCard(ref.min)} a {formatCurrencyCard(ref.max)})</span>
           )}
+        </p>
+      ) : ref.fat ? (
+        <p>
+          Arroba em Goiás: <span className="font-semibold tabular-nums">R$&nbsp;{ref.fat.perArroba.toFixed(2).replace('.', ',')}</span>.
+          Informe o peso vivo para calcular o valor do animal gordo.
         </p>
       ) : (
         <p>
@@ -194,6 +201,15 @@ function MarketHint({ ifag, animal, onUse }: {
         Média do estado ({ref.label}), cotação do {source} de {formatDate(ref.quotedAt)}.
         {' '}Em Faina pode variar: se souber o preço da região, digite o seu.
       </p>
+      {ref.fat ? (
+        <p className="text-xs text-muted-foreground">
+          O frigorífico paga a arroba da carcaça, que é cerca de metade do peso vivo. Ele confirma o rendimento na hora do abate.
+        </p>
+      ) : animal.species === 'bovino' && ref.min != null && ref.max != null && ref.min !== ref.max && (
+        <p className="text-xs text-muted-foreground">
+          Animal pesado e bem cuidado para a idade vale perto do maior valor; leve ou magro, perto do menor.
+        </p>
+      )}
       {ref.stale && (
         <p className="text-xs font-medium text-amber-800">Essa cotação tem mais de 14 dias e pode estar desatualizada.</p>
       )}
@@ -240,6 +256,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag }: Ani
     to_discard: animal?.to_discard ?? false,
     mother_id: animal?.mother_id ?? '',
     is_breeder: animal?.is_breeder ?? false,
+    is_fat: animal?.is_fat ?? false,
     rental_owner: '',
     count: '1',
   })
@@ -333,6 +350,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag }: Ani
       to_discard: form.to_discard,
       mother_id: form.mother_id || null,
       is_breeder: form.species === 'bovino' && form.sex === 'M' ? form.is_breeder : false,
+      is_fat: form.species === 'bovino' ? form.is_fat : false,
     }
 
     const purchasePayload = {
@@ -496,10 +514,10 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag }: Ani
               {/* 8. Peso — só para nascimento/arrendamento; compra tem campo próprio */}
               {form.entry_type !== 'compra' && (
                 <div className="space-y-2">
-                  <Label htmlFor="weight_arrobas">Peso (@)</Label>
+                  <Label htmlFor="weight_arrobas">Peso vivo (@)</Label>
                   <Input id="weight_arrobas" type="number" step="1" min="0" value={form.weight_arrobas}
                     onChange={e => set('weight_arrobas', e.target.value)} />
-                  <p className="text-xs text-muted-foreground">Só preencha se pesou na balança ou na fita. Se não pesou, deixe vazio.</p>
+                  <p className="text-xs text-muted-foreground">Peso do animal em pé (quilos divididos por 15). Só preencha se pesou na balança ou na fita; se não pesou, deixe vazio.</p>
                 </div>
               )}
 
@@ -576,11 +594,11 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag }: Ani
                     placeholder="0,00" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="weight_arrobas_compra">Peso (@)</Label>
+                  <Label htmlFor="weight_arrobas_compra">Peso vivo (@)</Label>
                   <Input id="weight_arrobas_compra" type="number" step="1" min="0"
                     value={form.weight_arrobas}
                     onChange={e => set('weight_arrobas', e.target.value)} />
-                  <p className="text-xs text-muted-foreground">Só preencha se pesou na balança ou na fita. Se não pesou, deixe vazio.</p>
+                  <p className="text-xs text-muted-foreground">Peso do animal em pé (quilos divididos por 15). Só preencha se pesou na balança ou na fita; se não pesou, deixe vazio.</p>
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="seller_name">Vendedor</Label>
@@ -625,6 +643,20 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag }: Ani
                   </SelectContent>
                 </Select>
               </div>
+              {form.species === 'bovino' && (
+                <label className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 accent-primary"
+                    checked={form.is_fat}
+                    onChange={e => setForm(prev => ({ ...prev, is_fat: e.target.checked }))}
+                  />
+                  <span>
+                    <span className="block text-sm font-medium">Gordo, pronto para o frigorífico</span>
+                    <span className="block text-xs text-muted-foreground">Marque quando o animal estiver gordo para vender ao frigorífico. O valor passa a ser pela arroba do boi gordo (ou vaca gorda) e usa o peso vivo.</span>
+                  </span>
+                </label>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="market_value">Valor de Mercado (R$)</Label>
                 <Input id="market_value" type="text" inputMode="decimal" value={form.market_value}
@@ -639,6 +671,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag }: Ani
                     birth_date: form.birth_date,
                     breed: form.breed,
                     is_breeder: form.species === 'bovino' && form.sex === 'M' && form.is_breeder,
+                    is_fat: form.species === 'bovino' && form.is_fat,
                     weight_arrobas: form.weight_arrobas ? parseInt(form.weight_arrobas, 10) : null,
                   }}
                   onUse={v => set('market_value', formatBRL(v))}

@@ -77,7 +77,7 @@ export default async function DashboardPage() {
     { data: milkToday },
     ifag,
   ] = await Promise.all([
-    supabase.from('animals').select('id, code, name, species, sex, birth_date, breed, is_breeder, weight_arrobas, market_value, mother_id, status, entry_type, entry_date').eq('farm_id', farmId),
+    supabase.from('animals').select('id, code, name, species, sex, birth_date, breed, is_breeder, is_fat, weight_arrobas, market_value, mother_id, status, entry_type, entry_date').eq('farm_id', farmId),
     supabase.from('farms').select('milk_active, area_hectares').eq('id', farmId).single(),
     supabase.from('animal_costs').select('animal_id, entry_date, sale_date, purchase_cost, health_cost, species').eq('farm_id', farmId),
     supabase.from('feed_stock').select('purchase_date, total_cost').eq('farm_id', farmId),

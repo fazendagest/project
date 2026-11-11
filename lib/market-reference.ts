@@ -23,6 +23,8 @@ export interface MarketReference {
   max: number | null
   /** Preço do quilo vivo, só para porco. */
   perKg?: number
+  /** Animal gordo: preço da arroba de carcaça e a conta feita a partir do peso vivo. */
+  fat?: { perArroba: number; liveArrobas: number | null; carcassArrobas: number | null }
   quotedAt: string
   /** Cotação com mais de 14 dias. */
   stale: boolean
@@ -31,6 +33,13 @@ export interface MarketReference {
 export const IFAG_SOURCE_URL = 'https://ifag.org.br/'
 
 const KG_PER_ARROBA = 15
+
+/**
+ * Rendimento de carcaça usado para o animal gordo: o frigorífico paga a arroba da carcaça,
+ * que é cerca de metade do peso vivo (Corteva e Band, conferido em 11/11/2026). O frigorífico
+ * confirma o rendimento real na hora; aqui é só a referência.
+ */
+export const CARCASS_YIELD = 0.5
 
 export function normalize(s: string) {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
@@ -57,11 +66,30 @@ function find(prices: IfagPrice[], product: string) {
 }
 
 export function marketReference(
-  a: { species: string; sex: string; birth_date?: string | null; breed?: string | null; is_breeder?: boolean | null; weight_arrobas?: number | null },
+  a: { species: string; sex: string; birth_date?: string | null; breed?: string | null; is_breeder?: boolean | null; is_fat?: boolean | null; weight_arrobas?: number | null },
   data: IfagPrices | null | undefined,
   today = new Date(),
 ): MarketReference | null {
   if (!data || data.prices.length === 0) return null
+
+  // Gordo, para o frigorífico: vale a arroba de carcaça (qualquer raça), pelo peso vivo.
+  if (a.species === 'bovino' && a.is_fat) {
+    const m = a.birth_date ? monthsSince(a.birth_date, today) : null
+    const product = a.sex === 'M' ? 'Boi Gordo - À vista' : m != null && m <= 36 ? 'Novilha Gorda - À vista' : 'Vaca Gorda - À vista'
+    const p = find(data.prices, product)
+    if (!p) return null
+    const live = a.weight_arrobas || null
+    const carcass = live ? Math.round(live * CARCASS_YIELD * 10) / 10 : null
+    return {
+      label: product.replace(' - À vista', ', arroba à vista'),
+      perHead: carcass ? Math.round(carcass * p.avg) : null,
+      min: carcass ? Math.round(carcass * p.min) : null,
+      max: carcass ? Math.round(carcass * p.max) : null,
+      fat: { perArroba: p.avg, liveArrobas: live, carcassArrobas: carcass },
+      quotedAt: p.quotedAt,
+      stale: isStale(p.quotedAt, today),
+    }
+  }
 
   if (a.species === 'suino') {
     const p = find(data.prices, 'Suíno')

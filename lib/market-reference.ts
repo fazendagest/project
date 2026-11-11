@@ -85,6 +85,17 @@ function find(prices: IfagPrice[], product: string) {
   return prices.find(p => normalize(p.product) === key)
 }
 
+/**
+ * Animal PO (registro genealógico) na raça: não se compara com o garrote ou a vaca comum do IFAG, que é outro
+ * mercado (Tião, revisão do sistema, item 2). Só "PO" em maiúsculas, como palavra.
+ */
+export const isPedigree = (breed?: string | null) => !!breed && /(^|[^A-Za-z])P\.?O\.?($|[^A-Za-z])/.test(breed)
+
+/** PO ou touro: sem cotação oficial; o valor é o do dono. */
+export const NO_QUOTE_TEXT = 'PO ou touro: sem cotação oficial; o valor é o seu.'
+export const hasNoOfficialQuote = (a: { species: string; breed?: string | null; is_breeder?: boolean | null; is_fat?: boolean | null }) =>
+  a.species === 'bovino' && !a.is_fat && (!!a.is_breeder || isPedigree(a.breed))
+
 export function marketReference(
   a: { species: string; sex: string; birth_date?: string | null; breed?: string | null; is_breeder?: boolean | null; is_fat?: boolean | null; weight_arrobas?: number | null },
   data: IfagPrices | null | undefined,
@@ -132,8 +143,8 @@ export function marketReference(
     }
   }
 
-  // Touro e cavalo não têm cotação no IFAG.
-  if (a.species !== 'bovino' || a.is_breeder) return null
+  // Touro, animal PO e cavalo não têm cotação no IFAG.
+  if (a.species !== 'bovino' || a.is_breeder || isPedigree(a.breed)) return null
 
   const m = a.birth_date ? monthsSince(a.birth_date, today) : null
   const dairy = isDairyBreed(a.breed)

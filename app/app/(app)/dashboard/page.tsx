@@ -357,7 +357,7 @@ export default async function DashboardPage() {
             {herd.aboveReference > 0 && (
               <p className="text-sm font-medium text-amber-800 mt-2">
                 {herd.aboveReference} {herd.aboveReference === 1 ? 'animal está' : 'animais estão'} com valor digitado mais de 20% acima da referência de Goiás.
-                {' '}Pela referência, o rebanho daria {money(herd.totalAtReference)}.{' '}
+                {' '}{herd.aboveReference === 1 ? 'Ele vale' : 'Eles valem'} {money(herd.aboveTyped)} pelo seu valor e {money(herd.aboveAtReference)} pela referência.{' '}
                 <Link href="/app/animals" className="underline underline-offset-2">Ver na lista</Link>
               </p>
             )}

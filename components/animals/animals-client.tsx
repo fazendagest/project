@@ -30,7 +30,7 @@ const ROLE_TAG: Record<RoleKey, string> = {
 }
 import { cn } from '@/lib/utils'
 import type { Invested } from '@/lib/investment'
-import type { IfagPrices } from '@/lib/market-reference'
+import { NO_QUOTE_TEXT, type IfagPrices } from '@/lib/market-reference'
 import { animalValue, computeHerdValue, type AnimalValue } from '@/lib/herd-value'
 
 const SPECIES_FILTERS = [
@@ -186,7 +186,7 @@ export function AnimalsClient({ initialAnimals, invested, feedIncluded, missingC
       {filtered.length > 0 && herd.aboveReference > 0 && (
         <p className="text-sm text-amber-900 rounded-lg border border-amber-300 bg-amber-50 p-3 mb-3">
           {herd.aboveReference} {herd.aboveReference === 1 ? 'animal está' : 'animais estão'} com valor digitado mais de 20% acima da referência de Goiás.
-          {' '}Pela referência, o rebanho daria {formatMoney(herd.totalAtReference)}, e não {formatMoney(herd.total)}.
+          {' '}{herd.aboveReference === 1 ? 'Ele vale' : 'Eles valem'} {formatMoney(herd.aboveTyped)} pelo seu valor e {formatMoney(herd.aboveAtReference)} pela referência.
         </p>
       )}
 
@@ -263,6 +263,7 @@ export function AnimalsClient({ initialAnimals, invested, feedIncluded, missingC
                     )}
                     {a.mv.belowPct != null && <span className="block text-xs text-muted-foreground">{a.mv.belowPct}% abaixo de Goiás</span>}
                     {a.mv.fat && <span className="block text-xs text-muted-foreground">Gorda: {formatMoney(a.mv.fat.value)}</span>}
+                    {a.mv.noQuote && a.mv.source === 'digitado' && <span className="block text-xs text-muted-foreground">PO ou touro: sem cotação oficial</span>}
                   </TableCell>
                   <TableCell><Badge className={statusColor(a.status)}>{statusLabel(a.status)}</Badge></TableCell>
                 </TableRow>
@@ -322,6 +323,9 @@ function AnimalCard({ a }: { a: Row }) {
           ) : null}
           {a.mv.farFromMarket && a.mv.ifag != null && (
             <p className="text-xs font-medium text-amber-800 mt-1">Digitado {Math.round((a.mv.value! / a.mv.ifag - 1) * 100)}% acima da referência de Goiás</p>
+          )}
+          {a.mv.noQuote && a.mv.source === 'digitado' && (
+            <p className="text-xs text-muted-foreground mt-1">{NO_QUOTE_TEXT}</p>
           )}
           {a.mv.belowPct != null && (
             <p className="text-xs text-muted-foreground mt-1">Digitado {a.mv.belowPct}% abaixo de Goiás. {a.entry_type === 'nascimento' ? 'Confira se o valor está atualizado.' : 'Se é o preço que pagou, troque pelo valor de hoje.'}</p>

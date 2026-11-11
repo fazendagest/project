@@ -2,7 +2,7 @@
 // por animal ativo vale o valor digitado; sem valor digitado, o preço do IFAG.
 // Cavalos são de trabalho e ficam fora da soma. Nunca chamar isto de lucro.
 import { animalCategory, ANIMAL_GROUPS } from '@/lib/helpers'
-import { marketReference, referenceName, TYPED_ABOVE_LIMIT, TYPED_BELOW_LIMIT, type IfagPrices } from '@/lib/market-reference'
+import { marketReference, referenceName, hasNoOfficialQuote, TYPED_ABOVE_LIMIT, TYPED_BELOW_LIMIT, type IfagPrices } from '@/lib/market-reference'
 import type { Invested } from '@/lib/investment'
 
 export type HerdAnimal = {
@@ -39,6 +39,8 @@ export type AnimalValue = {
   fat: { value: number; liveArrobas: number; carcassArrobas: number; perArroba: number } | null
   /** Data da cotação do IFAG usada. */
   ifagDate: string | null
+  /** PO ou touro: sem cotação oficial, nada de comparação com o IFAG (Tião, revisão do sistema, item 2). */
+  noQuote: boolean
 }
 
 export type HerdGroup = {
@@ -64,6 +66,9 @@ export type HerdValue = {
   aboveReference: number
   /** O rebanho pela referência de Goiás onde ela existe (digitado só onde não há referência). */
   totalAtReference: number
+  /** Só os animais acima da referência: soma do digitado e soma da referência deles. */
+  aboveTyped: number
+  aboveAtReference: number
 }
 
 export function animalValue(a: HerdAnimal, ifag: IfagPrices | null): AnimalValue {
@@ -72,14 +77,15 @@ export function animalValue(a: HerdAnimal, ifag: IfagPrices | null): AnimalValue
   const ifagDate = ref?.quotedAt ?? null
   const refName = ref && ifagValue != null ? referenceName(ref) : null
   const fat = fatCow(a, ifag)
+  const noQuote = hasNoOfficialQuote(a)
   const typed = a.market_value != null && Number(a.market_value) > 0 ? Number(a.market_value) : null
   if (typed != null) {
     const far = ifagValue != null && ifagValue > 0 && typed > ifagValue * (1 + TYPED_ABOVE_LIMIT)
     const below = ifagValue != null && ifagValue > 0 && typed < ifagValue * (1 - TYPED_BELOW_LIMIT) ? Math.round((1 - typed / ifagValue) * 100) : null
-    return { value: typed, source: 'digitado', ifag: ifagValue, refName, farFromMarket: far, belowPct: below, ifagDate, fat }
+    return { value: typed, source: 'digitado', ifag: ifagValue, refName, farFromMarket: far, belowPct: below, ifagDate, fat, noQuote }
   }
-  if (ifagValue != null) return { value: ifagValue, source: ref?.estimate ? 'estimativa' : 'ifag', ifag: ifagValue, refName, farFromMarket: false, belowPct: null, ifagDate, fat }
-  return { value: null, source: 'sem_preco', ifag: null, refName: null, farFromMarket: false, belowPct: null, ifagDate: null, fat }
+  if (ifagValue != null) return { value: ifagValue, source: ref?.estimate ? 'estimativa' : 'ifag', ifag: ifagValue, refName, farFromMarket: false, belowPct: null, ifagDate, fat, noQuote }
+  return { value: null, source: 'sem_preco', ifag: null, refName: null, farFromMarket: false, belowPct: null, ifagDate: null, fat, noQuote }
 }
 
 /** Vaca (fêmea bovina com mais de 36 meses ou sem data) com peso lançado e sem "Gordo". */
@@ -99,7 +105,7 @@ export function computeHerdValue(
   const mothers = new Set(animals.map(a => a.mother_id).filter(Boolean) as string[])
   const groups = new Map<string, HerdGroup>()
   const counts: Record<ValueSource, number> = { digitado: 0, ifag: 0, estimativa: 0, sem_preco: 0 }
-  let total = 0, inv = 0, workHorses = 0, aboveReference = 0, totalAtReference = 0
+  let total = 0, inv = 0, workHorses = 0, aboveReference = 0, totalAtReference = 0, aboveTyped = 0, aboveAtReference = 0
   let ifagDate: string | null = null
 
   for (const a of animals) {
@@ -118,7 +124,11 @@ export function computeHerdValue(
     if (excluded) { workHorses++; continue }
     counts[v.source]++
     if (v.source === 'ifag' && v.ifagDate && (!ifagDate || v.ifagDate > ifagDate)) ifagDate = v.ifagDate
-    if (v.farFromMarket) aboveReference++
+    if (v.farFromMarket) {
+      aboveReference++
+      aboveTyped += v.value ?? 0
+      aboveAtReference += v.ifag ?? 0
+    }
     if (v.value != null) {
       total += v.value
       totalAtReference += v.ifag ?? v.value
@@ -137,5 +147,7 @@ export function computeHerdValue(
     workHorses,
     aboveReference,
     totalAtReference,
+    aboveTyped,
+    aboveAtReference,
   }
 }

@@ -17,6 +17,7 @@ import { DeleteAnimalButton } from '@/components/animals/delete-animal-button'
 import { computeInvested } from '@/lib/investment'
 import { getIfagPrices } from '@/lib/ifag'
 import { animalValue } from '@/lib/herd-value'
+import { NO_QUOTE_TEXT } from '@/lib/market-reference'
 
 export default async function AnimalDetailPage({ params }: { params: { id: string } }) {
   const supabase = await createClient()
@@ -151,6 +152,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
                 O valor digitado está {Math.round((mv.value / mv.ifag - 1) * 100)}% acima da referência de Goiás. Confira se esse é mesmo o preço de venda na região.
               </p>
             )}
+            {mv.noQuote && mv.source === 'digitado' && <p className="text-xs text-muted-foreground pt-1">{NO_QUOTE_TEXT}</p>}
             {mv.belowPct != null && (
               <p className="text-xs text-muted-foreground pt-1">Digitado {mv.belowPct}% abaixo de Goiás. {animal.entry_type === 'nascimento' ? 'Confira se o valor está atualizado.' : 'Se é o preço que pagou, troque pelo valor de hoje.'}</p>
             )}

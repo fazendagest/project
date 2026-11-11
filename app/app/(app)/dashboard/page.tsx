@@ -1,18 +1,46 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getFarmId } from '@/lib/farm'
 import { PageHeader } from '@/components/layout/page-header'
-import { StatCard } from '@/components/ui/stat-card'
 import { DashboardCharts } from '@/components/dashboard/dashboard-charts'
 import { UpcomingBirths } from '@/components/dashboard/upcoming-births'
 import { LowStock } from '@/components/dashboard/low-stock'
 import { MissingCostsAlert } from '@/components/dashboard/missing-costs-alert'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
-import { PlantelSummaryTable } from '@/components/financial/plantel-summary-table'
-import { Card, CardContent } from '@/components/ui/card'
-import { formatCurrencyCard } from '@/lib/helpers'
-import { buildPlantelRows } from '@/lib/plantel-utils'
-import { PawPrint, TrendingUp, DollarSign, Package, Droplet } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { formatDate } from '@/lib/helpers'
+import { computeInvested } from '@/lib/investment'
+import { computeHerdValue } from '@/lib/herd-value'
+import { getIfagPrices } from '@/lib/ifag'
+import { IFAG_SOURCE_URL } from '@/lib/market-reference'
+import { ChevronRight, Droplet } from 'lucide-react'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
+
+/** Sem centavos, que é como o fazendeiro fala de preço de animal. */
+function money(v: number) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v)
+}
+
+function signedMoney(v: number) {
+  return `${v > 0 ? '+' : ''}${money(v)}`
+}
+
+function tone(v: number): 'pos' | 'neg' | undefined {
+  return v > 0 ? 'pos' : v < 0 ? 'neg' : undefined
+}
+
+function Row({ label, value, strong, tone, hint }: { label: string; value: string; strong?: boolean; tone?: 'pos' | 'neg'; hint?: string }) {
+  const color = tone === 'pos' ? 'text-green-700' : tone === 'neg' ? 'text-red-700' : ''
+  return (
+    <div className="flex items-baseline justify-between gap-3 py-2">
+      <div className="min-w-0">
+        <p className={strong ? 'font-medium' : 'text-muted-foreground'}>{label}</p>
+        {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      </div>
+      <p className={`tabular-nums whitespace-nowrap ${strong ? 'font-semibold' : ''} ${color}`}>{value}</p>
+    </div>
+  )
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -27,149 +55,183 @@ export default async function DashboardPage() {
   const monthEnd = format(endOfMonth(now), 'yyyy-MM-dd')
   const yearStart = format(new Date(now.getFullYear(), 0, 1), 'yyyy-MM-dd')
   const todayStr = format(now, 'yyyy-MM-dd')
-
-  const monthYear = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
-  const monthYearLabel = monthYear.charAt(0).toUpperCase() + monthYear.slice(1)
+  const year = now.getFullYear()
+  const monthName = now.toLocaleDateString('pt-BR', { month: 'long' })
 
   const [
     { data: animals },
     { data: farm },
-    { data: sales },
-    { data: purchases },
-    { data: feedExpenses },
-    { data: opExpenses },
-    { data: healthExpenses },
-    { data: animalCosts },
+    { data: costs },
+    { data: feeds },
     { data: yearSales },
+    { data: monthPurchases },
+    { data: monthOpExpenses },
+    { data: monthHealth },
     { data: milkToday },
-    { count: partosAno },
+    ifag,
   ] = await Promise.all([
-    supabase.from('animals').select('id, species, status, sex, entry_type, entry_date, to_discard, market_value').eq('farm_id', farmId),
+    supabase.from('animals').select('id, species, sex, birth_date, breed, is_breeder, weight_arrobas, market_value, mother_id, status, entry_type, entry_date').eq('farm_id', farmId),
     supabase.from('farms').select('milk_active').eq('id', farmId).single(),
-    supabase.from('animal_sales').select('sale_price, sale_date').eq('farm_id', farmId).gte('sale_date', monthStart).lte('sale_date', monthEnd),
-    supabase.from('animal_purchases').select('purchase_price, purchase_date').eq('farm_id', farmId).gte('purchase_date', monthStart).lte('purchase_date', monthEnd),
-    supabase.from('feed_stock').select('total_cost, purchase_date').eq('farm_id', farmId).gte('purchase_date', monthStart).lte('purchase_date', monthEnd),
-    supabase.from('operational_expenses').select('amount, date').eq('farm_id', farmId).gte('date', monthStart).lte('date', monthEnd),
-    supabase.from('health_records').select('cost, application_date').eq('farm_id', farmId).gte('application_date', monthStart).lte('application_date', monthEnd),
-    supabase.from('animal_costs').select('animal_id, species, total_cost').eq('farm_id', farmId).eq('status', 'ativo'),
-    supabase.from('animal_sales').select('sale_price').eq('farm_id', farmId).gte('sale_date', yearStart),
+    supabase.from('animal_costs').select('animal_id, entry_date, sale_date, purchase_cost, health_cost').eq('farm_id', farmId),
+    supabase.from('feed_stock').select('purchase_date, total_cost').eq('farm_id', farmId),
+    supabase.from('animal_sales').select('animal_id, sale_price, sale_date').eq('farm_id', farmId).gte('sale_date', yearStart),
+    supabase.from('animal_purchases').select('purchase_price').eq('farm_id', farmId).gte('purchase_date', monthStart).lte('purchase_date', monthEnd),
+    supabase.from('operational_expenses').select('amount').eq('farm_id', farmId).gte('date', monthStart).lte('date', monthEnd),
+    supabase.from('health_records').select('cost').eq('farm_id', farmId).gte('application_date', monthStart).lte('application_date', monthEnd),
     supabase.from('milk_production').select('liters').eq('farm_id', farmId).eq('date', todayStr),
-    supabase.from('reproduction_records').select('*', { count: 'exact', head: true }).eq('farm_id', farmId).gte('actual_birth_date', yearStart),
+    getIfagPrices(),
   ])
 
   const allAnimals = animals ?? []
-  const activeAnimals = allAnimals.filter(a => a.status === 'ativo')
-  const plantelRows = buildPlantelRows(animalCosts ?? [], activeAnimals)
+  const active = allAnimals.filter(a => a.status === 'ativo')
+  const invested = computeInvested(costs ?? [], feeds ?? [])
+  const herd = computeHerdValue(active, invested, ifag)
+  const birthsYear = allAnimals.filter(a => a.entry_type === 'nascimento' && a.entry_date >= yearStart).length
 
-  const totalAtivos = activeAnimals.length
-  const bovinos = activeAnimals.filter(a => a.species === 'bovino').length
-  const equinos = activeAnimals.filter(a => a.species === 'equino').length
-  const suinos = activeAnimals.filter(a => a.species === 'suino').length
-  const femeas = activeAnimals.filter(a => a.sex === 'femea').length
-  const machos = activeAnimals.filter(a => a.sex === 'macho').length
+  // Vendas do ano: lucro = valor da venda menos o que foi investido no animal.
+  const sales = yearSales ?? []
+  const soldTotal = sales.reduce((s, r) => s + Number(r.sale_price || 0), 0)
+  const soldInvested = sales.reduce((s, r) => s + (invested[r.animal_id]?.total ?? 0), 0)
+  const salesWithoutCost = sales.filter(r => (invested[r.animal_id]?.total ?? 0) === 0).length
 
-  const nascimentosAno = allAnimals.filter(
-    a => a.entry_type === 'nascimento' && a.entry_date && a.entry_date >= yearStart
-  ).length
-  const descarteCount = activeAnimals.filter(a => a.to_discard).length
+  // Este mês: o que entrou e o que saiu.
+  const monthIn = sales.filter(r => r.sale_date >= monthStart && r.sale_date <= monthEnd).reduce((s, r) => s + Number(r.sale_price || 0), 0)
+  const monthFeed = (feeds ?? []).filter(f => f.purchase_date && f.purchase_date >= monthStart && f.purchase_date <= monthEnd).reduce((s, f) => s + Number(f.total_cost || 0), 0)
+  const monthOut =
+    (monthPurchases ?? []).reduce((s, r) => s + Number(r.purchase_price || 0), 0) +
+    monthFeed +
+    (monthOpExpenses ?? []).reduce((s, r) => s + Number(r.amount || 0), 0) +
+    (monthHealth ?? []).reduce((s, r) => s + Number(r.cost || 0), 0)
 
-  const revenue = sales?.reduce((s, r) => s + (r.sale_price || 0), 0) ?? 0
-  const yearRevenue = yearSales?.reduce((s, r) => s + (r.sale_price || 0), 0) ?? 0
-  const totalCosts =
-    (purchases?.reduce((s, r) => s + (r.purchase_price || 0), 0) ?? 0) +
-    (feedExpenses?.reduce((s, r) => s + (r.total_cost || 0), 0) ?? 0) +
-    (opExpenses?.reduce((s, r) => s + (r.amount || 0), 0) ?? 0) +
-    (healthExpenses?.reduce((s, r) => s + (r.cost || 0), 0) ?? 0)
-  const netProfit = revenue - totalCosts
-  const margin = revenue > 0 ? (netProfit / revenue) * 100 : 0
-
-  const milkLiters = milkToday?.reduce((s, r) => s + (r.liters || 0), 0) ?? 0
   const milkActive = farm?.milk_active ?? false
+  const milkLiters = milkToday?.reduce((s, r) => s + (r.liters || 0), 0) ?? 0
+
+  const sourceParts = [
+    herd.counts.ifag > 0 && `${herd.counts.ifag} pelo preço do IFAG${herd.ifagDate ? ` de ${formatDate(herd.ifagDate)}` : ''}`,
+    herd.counts.digitado > 0 && `${herd.counts.digitado} pelo valor que você digitou`,
+    herd.counts.sem_preco > 0 && `${herd.counts.sem_preco} sem preço (fora da soma)`,
+  ].filter(Boolean) as string[]
 
   return (
     <div>
-      <PageHeader
-        title="Dashboard"
-        description={monthYearLabel}
-      />
+      <PageHeader title="Dashboard" description="Quanto vale o rebanho e quanto você está ganhando" />
       <MissingCostsAlert farmId={farmId} />
 
-      <div className={`grid grid-cols-2 gap-4 mb-6 ${milkActive ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
-        <StatCard
-          title="Animais Ativos"
-          value={totalAtivos}
-          subtitle={`${bovinos} bov · ${equinos} equ · ${suinos} sui`}
-          subtitle2={femeas + machos > 0 ? `${femeas} fêmeas · ${machos} machos` : undefined}
-          icon={PawPrint}
-          iconColor="text-green-700"
-          iconBg="bg-green-100"
-        />
-        <StatCard
-          title="Faturamento Mês"
-          value={formatCurrencyCard(revenue)}
-          subtitle={`Acumulado ${now.getFullYear()}: ${formatCurrencyCard(yearRevenue)}`}
-          icon={DollarSign}
-          iconColor="text-blue-700"
-          iconBg="bg-blue-100"
-        />
-        <StatCard
-          title="Lucro Líquido"
-          value={formatCurrencyCard(netProfit)}
-          subtitle={`Margem: ${margin.toFixed(1)}%`}
-          valueColor={netProfit >= 0 ? 'text-green-600' : 'text-red-600'}
-          icon={TrendingUp}
-          iconColor={netProfit >= 0 ? 'text-green-700' : 'text-red-700'}
-          iconBg={netProfit >= 0 ? 'bg-green-100' : 'bg-red-100'}
-        />
-        <StatCard
-          title="Total Gastos"
-          value={formatCurrencyCard(totalCosts)}
-          valueColor="text-red-600"
-          icon={Package}
-          iconColor="text-orange-700"
-          iconBg="bg-orange-100"
-        />
-        {milkActive && (
-          <StatCard
-            title="Leite hoje"
-            value={milkToday && milkToday.length > 0 ? `${milkLiters.toFixed(1)} L` : '— L'}
-            icon={Droplet}
-            iconColor="text-cyan-700"
-            iconBg="bg-cyan-100"
-            valueColor="text-green-600"
-          />
-        )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        {/* 1. O rebanho hoje */}
+        <Card>
+          <CardHeader className="pb-0">
+            <CardTitle className="text-base">Seu rebanho hoje</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">Se vendesse hoje (estimado)</p>
+            <p className="text-3xl font-bold tabular-nums mt-1">{money(herd.total)}</p>
+            <div className="divide-y mt-3">
+              <Row label="Investido nesses animais" value={money(herd.invested)} hint="Compra, saúde e alimentação" />
+              <Row
+                label="Ganho no papel"
+                value={signedMoney(herd.paperGain)}
+                strong
+                tone={tone(herd.paperGain)}
+                hint="Só vira dinheiro quando vender"
+              />
+            </div>
+            {sourceParts.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-3">
+                {sourceParts.join(', ')}.{herd.workHorses > 0 && ` Cavalos de trabalho (${herd.workHorses}) não entram.`}
+                {herd.counts.ifag > 0 && (
+                  <> Preço do <a href={IFAG_SOURCE_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">IFAG</a>: média de Goiás, em Faina pode variar.</>
+                )}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 2. Vendas do ano: o lucro de verdade */}
+        <Card>
+          <CardHeader className="pb-0">
+            <CardTitle className="text-base">Vendas em {year}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {sales.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">Nenhuma venda registrada este ano.</p>
+            ) : (
+              <>
+                <div className="divide-y">
+                  <Row label={`Vendido (${sales.length} ${sales.length === 1 ? 'animal' : 'animais'})`} value={money(soldTotal)} />
+                  <Row label="Investido nesses animais" value={money(soldInvested)} />
+                  <Row label="Lucro" value={signedMoney(soldTotal - soldInvested)} strong tone={tone(soldTotal - soldInvested)} />
+                </div>
+                {salesWithoutCost > 0 && (
+                  <p className="text-xs text-amber-800 bg-amber-50 border border-amber-300 rounded-lg p-2.5 mt-3">
+                    {salesWithoutCost === sales.length ? 'Nenhuma' : `${salesWithoutCost} de ${sales.length}`} {salesWithoutCost === 1 && salesWithoutCost !== sales.length ? 'venda não tem' : 'dessas vendas têm'} custo lançado.
+                    {' '}O lucro real é menor do que o mostrado aqui.
+                  </p>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      {plantelRows.length > 0 && (
-        <div className="mb-6">
-          <PlantelSummaryTable rows={plantelRows} />
-        </div>
-      )}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        {/* 3. Onde está o dinheiro */}
+        <Card>
+          <CardHeader className="pb-0">
+            <CardTitle className="text-base">
+              {active.length} {active.length === 1 ? 'animal' : 'animais'}
+              {birthsYear > 0 && <span className="font-normal text-muted-foreground">, {birthsYear} {birthsYear === 1 ? 'nasceu' : 'nasceram'} em {year}</span>}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y">
+              {herd.groups.map(g => (
+                <Link key={g.key} href="/app/animals" className="flex items-center justify-between gap-3 py-2.5 min-h-11 hover:bg-muted/40 -mx-2 px-2 rounded-md">
+                  <div className="min-w-0">
+                    <p className="font-medium">{g.label} <span className="font-normal text-muted-foreground">({g.count})</span></p>
+                    <p className="text-xs text-muted-foreground">
+                      {g.excluded ? 'Trabalho, fora da soma' : g.missing > 0 ? `${g.missing} sem preço` : g.invested > 0 ? `Investido ${money(g.invested)}` : 'Sem custo lançado'}
+                    </p>
+                  </div>
+                  <span className="flex items-center gap-1 tabular-nums whitespace-nowrap">
+                    {g.excluded ? '' : money(g.value)}
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </span>
+                </Link>
+              ))}
+              {herd.groups.length === 0 && <p className="text-sm text-muted-foreground py-2">Nenhum animal cadastrado.</p>}
+            </div>
+          </CardContent>
+        </Card>
 
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        {[
-          { value: nascimentosAno, label: 'Nascimentos no ano' },
-          { value: partosAno ?? 0, label: 'Partos registrados' },
-          { value: descarteCount, label: 'Para descarte' },
-        ].map(({ value, label }) => (
-          <Card key={label}>
-            <CardContent className="py-4 text-center">
-              <p className="text-2xl font-bold">{value}</p>
-              <p className="text-xs text-muted-foreground mt-1">{label}</p>
-            </CardContent>
-          </Card>
-        ))}
+        {/* 4. Este mês */}
+        <Card>
+          <CardHeader className="pb-0">
+            <CardTitle className="text-base">Em {monthName}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y">
+              <Row label="Entrou (vendas)" value={money(monthIn)} />
+              <Row label="Saiu (compras e gastos)" value={money(monthOut)} />
+              <Row label="Saldo do mês" value={signedMoney(monthIn - monthOut)} strong tone={tone(monthIn - monthOut)} />
+              {milkActive && (
+                <div className="flex items-center justify-between py-2">
+                  <p className="text-muted-foreground flex items-center gap-1.5"><Droplet className="h-4 w-4" /> Leite hoje</p>
+                  <p className="tabular-nums">{milkToday && milkToday.length > 0 ? `${milkLiters.toFixed(1)} L` : 'sem registro'}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-        <div className="xl:col-span-2">
-          <DashboardCharts farmId={farmId} />
-        </div>
-        <div className="space-y-4">
-          <UpcomingBirths farmId={farmId} />
-          <LowStock farmId={farmId} />
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <UpcomingBirths farmId={farmId} />
+        <LowStock farmId={farmId} />
+      </div>
+
+      <div className="hidden md:block mb-4">
+        <DashboardCharts farmId={farmId} />
       </div>
 
       <RecentTransactions farmId={farmId} />

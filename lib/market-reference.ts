@@ -46,6 +46,11 @@ export function isStale(quotedAt: string, today = new Date()) {
   return (today.getTime() - d.getTime()) / 86_400_000 > 14
 }
 
+/** Gir, Girolando, Holandês, Jersey, Guzerá leiteiro e afins. */
+export function isDairyBreed(breed?: string | null) {
+  return /gir|holand|jersey|pardo[- ]su[ií]..o|leiteir/i.test(breed ?? '')
+}
+
 function find(prices: IfagPrice[], product: string) {
   const key = normalize(product)
   return prices.find(p => normalize(p.product) === key)
@@ -75,6 +80,9 @@ export function marketReference(
 
   // Touro e cavalo não têm cotação no IFAG; sem data de nascimento não dá para saber a faixa.
   if (a.species !== 'bovino' || a.is_breeder || !a.birth_date) return null
+
+  // O IFAG cota gado de corte (Nelore e mestiço). Raça leiteira tem outro preço: sem referência.
+  if (isDairyBreed(a.breed)) return null
 
   const m = monthsSince(a.birth_date, today)
   const band = m <= 12 ? '0-12 Meses' : m <= 24 ? '13-24 Meses' : m <= 36 ? '25-36 Meses' : 'Acima de 36 Meses'

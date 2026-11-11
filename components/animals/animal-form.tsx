@@ -15,7 +15,7 @@ import { Loader2, Upload, ChevronsUpDown, Check } from 'lucide-react'
 import { generateAnimalCode } from '@/lib/animal-utils'
 import { parseBRL, formatBRL, animalCategory, formatDate, formatCurrencyCard } from '@/lib/helpers'
 import { toTitleCase } from '@/lib/utils'
-import { marketReference, IFAG_SOURCE_URL, type IfagPrices } from '@/lib/market-reference'
+import { marketReference, isDairyBreed, IFAG_SOURCE_URL, type IfagPrices } from '@/lib/market-reference'
 
 const BREED_OPTIONS: Record<string, string[]> = {
   bovino: [
@@ -166,7 +166,9 @@ function MarketHint({ ifag, animal, onUse }: {
       <p className="text-xs text-muted-foreground">
         {animal.is_breeder
           ? 'Touro não tem preço de referência no IFAG. Use o valor de venda de touros da região.'
-          : 'Informe a data de nascimento para ver o preço de referência da região.'}
+          : isDairyBreed(animal.breed)
+            ? 'Raça de leite: o IFAG só tem preço de gado de corte (Nelore e mestiço). Use o preço de venda da região.'
+            : 'Informe a data de nascimento para ver o preço de referência da região.'}
       </p>
     )
   }

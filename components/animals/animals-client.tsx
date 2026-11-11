@@ -15,6 +15,8 @@ import { LayoutGrid, List, AlertTriangle, ChevronRight } from 'lucide-react'
 import { calcAge, statusLabel, statusColor, animalCategory, ANIMAL_GROUPS } from '@/lib/helpers'
 import { cn } from '@/lib/utils'
 import type { Invested } from '@/lib/investment'
+import type { IfagPrices } from '@/lib/market-reference'
+import { animalValue, computeHerdValue, type AnimalValue } from '@/lib/herd-value'
 
 const SPECIES_FILTERS = [
   { key: 'all', label: 'Todos' },
@@ -23,13 +25,14 @@ const SPECIES_FILTERS = [
   { key: 'suino', label: 'Porcos' },
 ] as const
 
-type Row = Animal & { category: string; motherName: string | null; investedTotal: number }
+type Row = Animal & { category: string; motherName: string | null; investedTotal: number; mv: AnimalValue }
 
-export function AnimalsClient({ initialAnimals, invested, feedIncluded }: {
+export function AnimalsClient({ initialAnimals, invested, feedIncluded, ifag }: {
   initialAnimals: Animal[]
   farmId: string
   invested: Record<string, Invested>
   feedIncluded: boolean
+  ifag: IfagPrices | null
 }) {
   const router = useRouter()
   const [search, setSearch] = useState('')
@@ -47,9 +50,15 @@ export function AnimalsClient({ initialAnimals, invested, feedIncluded }: {
         category: animalCategory(a, mothers.has(a.id)),
         motherName: mother ? (mother.name ?? mother.code) : null,
         investedTotal: invested[a.id]?.total ?? 0,
+        mv: animalValue(a, ifag),
       }
     })
-  }, [initialAnimals, invested])
+  }, [initialAnimals, invested, ifag])
+
+  const herd = useMemo(
+    () => computeHerdValue(initialAnimals.filter(a => a.status === 'ativo'), invested, ifag),
+    [initialAnimals, invested, ifag],
+  )
 
   const byStatus = rows.filter(a => showAll || a.status === 'ativo')
 
@@ -117,9 +126,24 @@ export function AnimalsClient({ initialAnimals, invested, feedIncluded }: {
         <p className="text-sm text-muted-foreground py-10 text-center">Nenhum animal encontrado.</p>
       )}
 
+      {filtered.length > 0 && herd.total > 0 && (
+        <Link href="/app/dashboard" className="flex items-center justify-between gap-3 rounded-lg border bg-card p-3 mb-3 min-h-11 hover:border-primary">
+          <span>
+            <span className="block text-sm text-muted-foreground">Rebanho hoje (estimado)</span>
+            <span className="block text-lg font-semibold tabular-nums">{formatMoney(herd.total)}</span>
+          </span>
+          <span className="text-right text-sm">
+            <span className="block text-muted-foreground">Ganho no papel</span>
+            <span className={cn('block font-medium tabular-nums', herd.paperGain >= 0 ? 'text-green-700' : 'text-red-700')}>
+              {herd.paperGain > 0 ? '+' : ''}{formatMoney(herd.paperGain)}
+            </span>
+          </span>
+        </Link>
+      )}
+
       {filtered.length > 0 && (
         <p className="text-xs text-muted-foreground mb-4">
-          Investido: compra + saúde{feedIncluded ? ' + sal, milho e ração divididos por cabeça (estimado)' : ''}. Mercado: o valor que o animal vale hoje, digitado no cadastro.
+          Investido: compra + saúde{feedIncluded ? ' + sal, milho e ração divididos por cabeça (estimado)' : ''}. Mercado: o valor digitado no cadastro; sem valor digitado, o preço do IFAG (média de Goiás).
         </p>
       )}
 
@@ -176,7 +200,11 @@ export function AnimalsClient({ initialAnimals, invested, feedIncluded }: {
                   <TableCell>{a.birth_date ? calcAge(a.birth_date) : 'Sem data'}</TableCell>
                   {hasMothers && <TableCell>{a.motherName ?? ''}</TableCell>}
                   <TableCell className="text-right tabular-nums">{a.investedTotal > 0 ? formatMoney(a.investedTotal) : ''}</TableCell>
-                  <TableCell className="text-right tabular-nums">{a.market_value ? formatMoney(a.market_value) : ''}</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {a.mv.value != null ? formatMoney(a.mv.value) : ''}
+                    {a.mv.source === 'ifag' && <span className="text-xs text-muted-foreground"> IFAG</span>}
+                    {a.mv.farFromMarket && <AlertTriangle className="inline h-3.5 w-3.5 ml-1 text-amber-600" aria-label="Longe do preço da região" />}
+                  </TableCell>
                   <TableCell><Badge className={statusColor(a.status)}>{statusLabel(a.status)}</Badge></TableCell>
                 </TableRow>
               ))}
@@ -210,7 +238,7 @@ function AnimalCard({ a }: { a: Row }) {
           {a.motherName && (
             <p className="text-sm text-muted-foreground">{a.sex === 'F' ? 'Filha' : 'Filho'} da {a.motherName}</p>
           )}
-          {(a.investedTotal > 0 || a.market_value) ? (
+          {(a.investedTotal > 0 || a.mv.value != null) ? (
             <dl className="mt-2 flex gap-6 text-sm">
               {a.investedTotal > 0 && (
                 <div>
@@ -218,14 +246,17 @@ function AnimalCard({ a }: { a: Row }) {
                   <dd className="font-medium tabular-nums">{formatMoney(a.investedTotal)}</dd>
                 </div>
               )}
-              {a.market_value ? (
+              {a.mv.value != null ? (
                 <div>
-                  <dt className="text-xs text-muted-foreground">Mercado</dt>
-                  <dd className="font-medium tabular-nums">{formatMoney(a.market_value)}</dd>
+                  <dt className="text-xs text-muted-foreground">{a.mv.source === 'ifag' ? 'Mercado (IFAG)' : 'Mercado'}</dt>
+                  <dd className="font-medium tabular-nums">{formatMoney(a.mv.value)}</dd>
                 </div>
               ) : null}
             </dl>
           ) : null}
+          {a.mv.farFromMarket && a.mv.ifag != null && (
+            <p className="text-xs text-amber-800 mt-1">Longe do preço da região: IFAG {formatMoney(a.mv.ifag)}</p>
+          )}
           {(a.to_discard || a.status !== 'ativo') && (
             <div className="flex gap-1 mt-1">
               {a.status !== 'ativo' && <Badge className={statusColor(a.status)}>{statusLabel(a.status)}</Badge>}

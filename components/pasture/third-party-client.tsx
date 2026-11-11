@@ -21,8 +21,8 @@ import { Pencil, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { formatDate, formatCurrency, parseBRL, formatBRL } from '@/lib/helpers'
 import {
-  DEAL_TYPES, HERD_KINDS, herdUA, isOnFarm, monthlyRent,
-  type DealType, type HerdKind, type ThirdPartyHerd,
+  DEAL_TYPES, HERD_KINDS, INPUTS_BY, herdUA, isOnFarm, monthlyRent,
+  type DealType, type HerdKind, type InputsBy, type ThirdPartyHerd,
 } from '@/lib/third-party'
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -37,6 +37,7 @@ type FormState = {
   settled_value: string
   settle_mode: 'dinheiro' | 'bezerros'
   settled_heads: string
+  inputs_by: InputsBy | ''
   herd_kind: HerdKind
   head_count: string
   entry_date: string
@@ -48,7 +49,7 @@ type FormState = {
 }
 
 const empty = (): FormState => ({
-  owner_name: '', owner_phone: '', deal_type: 'aluguel', agreed_value: '', partnership_terms: '', settled_value: '', settle_mode: 'dinheiro', settled_heads: '',
+  owner_name: '', owner_phone: '', deal_type: 'aluguel', agreed_value: '', partnership_terms: '', settled_value: '', settle_mode: 'dinheiro', settled_heads: '', inputs_by: '',
   herd_kind: 'boi', head_count: '', entry_date: today(), exit_date: '', gta_number: '',
   brucelose_tb_exam: false, exam_date: '', notes: '',
 })
@@ -62,6 +63,7 @@ const fromHerd = (h: ThirdPartyHerd): FormState => ({
   settled_value: h.settled_value != null ? formatBRL(Number(h.settled_value)) : '',
   settle_mode: h.settled_heads ? 'bezerros' : 'dinheiro',
   settled_heads: h.settled_heads ? String(h.settled_heads) : '',
+  inputs_by: h.inputs_by ?? '',
   herd_kind: h.herd_kind,
   head_count: String(h.head_count),
   entry_date: h.entry_date,
@@ -124,6 +126,7 @@ export function ThirdPartyClient({ initialHerds, farmId }: { initialHerds: Third
       partnership_terms: form.deal_type === 'parceria' ? form.partnership_terms.trim() || null : null,
       settled_value: form.deal_type === 'parceria' && form.settle_mode === 'dinheiro' ? parseBRL(form.settled_value) : null,
       settled_heads: form.deal_type === 'parceria' && form.settle_mode === 'bezerros' ? parseInt(form.settled_heads, 10) || null : null,
+      inputs_by: form.inputs_by || null,
       herd_kind: form.herd_kind,
       head_count: count,
       entry_date: form.entry_date,
@@ -212,6 +215,7 @@ export function ThirdPartyClient({ initialHerds, farmId }: { initialHerds: Third
             subtitle={`${h.head_count} ${HERD_KINDS[h.herd_kind].label.toLowerCase()}, desde ${formatDate(h.entry_date)}`}
             fields={[
               { label: DEAL_TYPES[h.deal_type].label, value: dealText(h) },
+              ...(h.inputs_by ? [{ label: 'Sal e vacina', value: INPUTS_BY[h.inputs_by] }] : []),
               ...(h.gta_number ? [{ label: 'GTA', value: h.gta_number }] : []),
               ...(h.brucelose_tb_exam ? [{ label: 'Exame', value: h.exam_date ? formatDate(h.exam_date) : 'sim, sem data' }] : []),
             ]}
@@ -240,7 +244,7 @@ export function ThirdPartyClient({ initialHerds, farmId }: { initialHerds: Third
               <TableRow key={h.id}>
                 <TableCell className="font-medium">{h.owner_name}</TableCell>
                 <TableCell className="tabular-nums">{h.head_count} {HERD_KINDS[h.herd_kind].label.toLowerCase()}</TableCell>
-                <TableCell>{dealText(h)}</TableCell>
+                <TableCell>{dealText(h)}{h.inputs_by && <span className="block text-xs text-muted-foreground">Sal e vacina: {INPUTS_BY[h.inputs_by]}</span>}</TableCell>
                 <TableCell>{formatDate(h.entry_date)}</TableCell>
                 <TableCell>{statusBadges(h)}</TableCell>
                 <TableCell className="text-right whitespace-nowrap">
@@ -285,6 +289,18 @@ export function ThirdPartyClient({ initialHerds, farmId }: { initialHerds: Third
                 ))}
               </div>
               <p className="text-xs text-muted-foreground">{DEAL_TYPES[form.deal_type].hint}</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Quem dá o sal e a vacina</Label>
+              <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Quem dá o sal e a vacina">
+                {(Object.keys(INPUTS_BY) as InputsBy[]).map(t => (
+                  <Button key={t} type="button" role="radio" aria-checked={form.inputs_by === t}
+                    variant={form.inputs_by === t ? 'default' : 'outline'} className="h-11 px-2" onClick={() => set('inputs_by', t)}>
+                    {INPUTS_BY[t]}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Se é você quem dá, esse gasto sai do que o lote rende.</p>
             </div>
             {form.deal_type === 'aluguel' ? (
               <div className="space-y-2">

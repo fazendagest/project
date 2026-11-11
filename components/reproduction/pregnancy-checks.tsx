@@ -37,12 +37,28 @@ const DAY = 86_400_000
 const addDays = (iso: string, days: number) => new Date(new Date(iso + 'T12:00:00').getTime() + days * DAY).toISOString().slice(0, 10)
 const daysBetween = (from: string, to: string) => Math.round((new Date(to + 'T12:00:00').getTime() - new Date(from + 'T12:00:00').getTime()) / DAY)
 
+/** Gestação em meses para a conta pelo toque: parto = exame + (9,5 - meses) x 30 dias (Tião, teste do P1). */
+export const GESTATION_MONTHS = 9.5
+
 /** Última cobertura feita antes do exame e há no máximo 300 dias; sem ela, não há sugestão. */
 function coverageFor(dates: string[] | undefined, exam: string) {
   return (dates ?? [])
     .filter(d => d < exam && daysBetween(d, exam) <= MAX_COVERAGE_DAYS)
     .sort()
     .at(-1)
+}
+
+/**
+ * Previsão do parto: pela cobertura lançada (cobertura + 290 dias) ou, sem ela, pelos meses de prenhez que
+ * o veterinário fala no toque (touro solto no pasto quase nunca tem cobertura lançada; Tião, teste do P1).
+ */
+function birthSuggestion(coverage: string | undefined, exam: string, months: string) {
+  if (coverage) return { date: addDays(coverage, GESTATION_DAYS), source: 'cobertura' as const }
+  const m = Number(months.replace(',', '.'))
+  if (months && Number.isFinite(m) && m > 0 && m < GESTATION_MONTHS) {
+    return { date: addDays(exam, Math.round((GESTATION_MONTHS - m) * 30)), source: 'toque' as const }
+  }
+  return null
 }
 
 /**
@@ -68,7 +84,7 @@ export function PregnancyChecks({
   const supabase = createClient()
   const router = useRouter()
   const [checks, setChecks] = useState(initialChecks)
-  const [form, setForm] = useState({ animal_id: '', exam_date: today(), result: '' as '' | 'prenhe' | 'vazia', expected_birth_date: '', notes: '' })
+  const [form, setForm] = useState({ animal_id: '', exam_date: today(), result: '' as '' | 'prenhe' | 'vazia', months: '', expected_birth_date: '', notes: '' })
   const [saving, setSaving] = useState(false)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -76,20 +92,25 @@ export function PregnancyChecks({
   const name = (a?: { code: string; name?: string | null }) => a?.name || a?.code || 'animal não informado'
   const selected = females.find(f => f.id === form.animal_id)
   const coverage = form.animal_id ? coverageFor(coverages[form.animal_id], form.exam_date) : undefined
-  const suggestedBirth = coverage ? addDays(coverage, GESTATION_DAYS) : null
+  const suggestion = birthSuggestion(coverage, form.exam_date, form.months)
+  const suggestedBirth = suggestion?.date ?? null
 
-  // Prenhe com cobertura válida: sugere o parto (cobertura + 290 dias) se o campo estiver vazio.
+  // Prenhe: sugere o parto se o campo estiver vazio ou ainda com a sugestão anterior (não apaga o que foi digitado).
   function pick(patch: Partial<typeof form>) {
     setForm(p => {
+      const prevCov = p.animal_id ? coverageFor(coverages[p.animal_id], p.exam_date) : undefined
+      const prevSug = birthSuggestion(prevCov, p.exam_date, p.months)?.date ?? ''
       const next = { ...p, ...patch }
+      if (next.expected_birth_date === prevSug) next.expected_birth_date = ''
       const cov = next.animal_id ? coverageFor(coverages[next.animal_id], next.exam_date) : undefined
-      if (next.result === 'prenhe' && !next.expected_birth_date && cov) next.expected_birth_date = addDays(cov, GESTATION_DAYS)
+      const sug = birthSuggestion(cov, next.exam_date, next.months)
+      if (next.result === 'prenhe' && !next.expected_birth_date && sug) next.expected_birth_date = sug.date
       return next
     })
   }
 
   function reset() {
-    setForm({ animal_id: '', exam_date: today(), result: '', expected_birth_date: '', notes: '' })
+    setForm({ animal_id: '', exam_date: today(), result: '', months: '', expected_birth_date: '', notes: '' })
   }
 
   async function save(e: React.FormEvent) {
@@ -103,7 +124,7 @@ export function PregnancyChecks({
       exam_date: form.exam_date,
       result: form.result,
       expected_birth_date: form.result === 'prenhe' && form.expected_birth_date ? form.expected_birth_date : null,
-      notes: form.notes || null,
+      notes: [form.result === 'prenhe' && form.months ? `${form.months} meses no toque` : '', form.notes].filter(Boolean).join('. ') || null,
     }).select('*, animal:animal_id(code, name)').single()
     setSaving(false)
     if (error) return toast.error('Erro: ' + error.message)
@@ -199,7 +220,7 @@ export function PregnancyChecks({
             <div className="space-y-2">
               <Label htmlFor="exam_date">Data do exame</Label>
               <Input id="exam_date" type="date" value={form.exam_date} max={today()} required
-                onChange={e => pick({ exam_date: e.target.value, expected_birth_date: form.expected_birth_date === suggestedBirth ? '' : form.expected_birth_date })} />
+                onChange={e => pick({ exam_date: e.target.value })} />
             </div>
             <div className="space-y-2">
               <Label>Resultado *</Label>
@@ -219,13 +240,24 @@ export function PregnancyChecks({
                 ))}
               </div>
             </div>
+            {form.result === 'prenhe' && !coverage && (
+              <div className="space-y-2">
+                <Label htmlFor="months">Meses de prenhez (o veterinário fala no toque)</Label>
+                <Input id="months" inputMode="decimal" placeholder="Ex.: 4" value={form.months}
+                  onChange={e => pick({ months: e.target.value.replace(/[^0-9,.]/g, '').slice(0, 4) })} />
+              </div>
+            )}
             {form.result === 'prenhe' && (
               <div className="space-y-2">
                 <Label htmlFor="expected_birth_date">Previsão do parto (se o veterinário disse)</Label>
                 <Input id="expected_birth_date" type="date" value={form.expected_birth_date} min={form.exam_date}
                   onChange={e => setForm(p => ({ ...p, expected_birth_date: e.target.value }))} />
-                {suggestedBirth && form.expected_birth_date === suggestedBirth && (
-                  <p className="text-xs text-muted-foreground">Sugestão: cobertura de {formatDate(coverage!)} mais {GESTATION_DAYS} dias (estimativa). Troque se o veterinário disse outra data.</p>
+                {suggestion && form.expected_birth_date === suggestedBirth && (
+                  <p className="text-xs text-muted-foreground">
+                    {suggestion.source === 'cobertura'
+                      ? `Sugestão: cobertura de ${formatDate(coverage!)} mais ${GESTATION_DAYS} dias (estimativa). Troque se o veterinário disse outra data.`
+                      : 'Estimativa pelo toque; troque se o veterinário disse outra data.'}
+                  </p>
                 )}
               </div>
             )}

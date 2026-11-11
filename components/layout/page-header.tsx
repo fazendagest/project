@@ -25,7 +25,7 @@ function BackLink({ back, className }: { back: { href: string; label: string }; 
 export function PageHeader({ title, description, actions, actionsDesktopOnly, back }: PageHeaderProps) {
   return (
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5 md:mb-6">
-      <div className="min-h-9 flex flex-col justify-center pl-12 md:pl-0">
+      <div className="min-h-9 flex flex-col justify-center">
         {back && <BackLink back={back} className="hidden md:inline-flex mb-1 -ml-1" />}
         {/* No celular o título fica na mesma linha do botão do menu */}
         <h1 className="text-xl md:text-3xl font-bold text-foreground leading-tight">{title}</h1>

@@ -47,7 +47,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {impersonatedFarmName && (
           <ImpersonationBanner farmName={impersonatedFarmName} />
         )}
-        <div className="flex-1 pt-4 px-4 pb-4 md:p-6 lg:p-8">
+        <div className="flex-1 pt-20 px-4 pb-4 md:p-6 lg:p-8">
           {children}
         </div>
         {!isAdmin && <WhatsNew />}

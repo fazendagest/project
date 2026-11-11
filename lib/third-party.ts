@@ -7,6 +7,13 @@ import { UA } from './investment'
 
 export type DealType = 'aluguel' | 'parceria'
 export type HerdKind = 'vaca' | 'boi' | 'novilha' | 'bezerro'
+export type InputsBy = 'dono' | 'eu' | 'dividido'
+
+export const INPUTS_BY: Record<InputsBy, string> = {
+  dono: 'Dono do gado',
+  eu: 'Eu',
+  dividido: 'Dividido',
+}
 
 export type ThirdPartyHerd = {
   id: string
@@ -19,6 +26,8 @@ export type ThirdPartyHerd = {
   settled_value?: number | null
   /** Parceria acertada em bezerros (Tião, revisão do P3): não é dinheiro, fica fora do caixa. */
   settled_heads?: number | null
+  /** Quem dá o sal e a vacina do lote (Tião, teste do P3): define se o aluguel dá lucro de verdade. */
+  inputs_by?: InputsBy | null
   herd_kind: HerdKind
   head_count: number
   entry_date: string

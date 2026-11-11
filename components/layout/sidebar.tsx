@@ -183,15 +183,19 @@ export function Sidebar({ isAdmin = false, milkActive = false }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile toggle */}
-      <Button
-        variant="outline"
-        size="icon"
-        className="fixed top-4 left-4 z-50 md:hidden"
-        onClick={() => setOpen(v => !v)}
-      >
-        {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </Button>
+      {/* Mobile: faixa fixa e opaca com o botão do menu, para o conteúdo não passar por baixo dele (Tião, teste do P3). */}
+      <div className="fixed inset-x-0 top-0 z-50 flex h-16 items-center border-b bg-background px-4 md:hidden">
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-11 w-11"
+          aria-label={open ? 'Fechar menu' : 'Abrir menu'}
+          onClick={() => setOpen(v => !v)}
+        >
+          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </Button>
+        <span className="ml-3 font-semibold">FazendaGest</span>
+      </div>
 
       {/* Mobile overlay */}
       {open && (

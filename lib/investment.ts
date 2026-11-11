@@ -79,6 +79,26 @@ export function animalUA(a: UaAnimal | undefined, date: string, hasOffspring = f
   return UA.bovinoJovem
 }
 
+/** Grupo do animal na conta da lotação, para mostrar ao dono de onde vem o total de UA (Tião, teste do P3). */
+export type UaGroup = 'vacas' | 'novilhas' | 'bezerros' | 'touros' | 'bois' | 'cavalos' | 'outros'
+export const UA_GROUP_LABELS: Record<UaGroup, [string, string]> = {
+  vacas: ['vaca', 'vacas'],
+  novilhas: ['novilha', 'novilhas'],
+  bezerros: ['bezerro', 'bezerros'],
+  touros: ['touro', 'touros'],
+  bois: ['boi ou garrote', 'bois e garrotes'],
+  cavalos: ['cavalo', 'cavalos'],
+  outros: ['outro', 'outros'],
+}
+export function uaGroup(a: UaAnimal, date: string, hasOffspring = false): UaGroup {
+  if (a.species === 'equino') return 'cavalos'
+  if (a.species !== 'bovino') return 'outros'
+  const m = a.birth_date ? monthsAt(a.birth_date, date) : null
+  if (m != null && m <= 12) return 'bezerros'
+  if (a.sex === 'F') return hasOffspring || m == null || m >= 36 ? 'vacas' : 'novilhas'
+  return a.is_breeder ? 'touros' : 'bois'
+}
+
 /** Despesa geral da fazenda (caseiro, diesel, energia, limpeza de pasto...). */
 export type GeneralExpense = ExpenseLike
 

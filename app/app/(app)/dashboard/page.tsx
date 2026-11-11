@@ -9,7 +9,7 @@ import { PendingTasks, type PendingTask } from '@/components/dashboard/pending-t
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/lib/helpers'
-import { computeInvested, monthlyReturn, animalUA, BANK_MONTHLY, OUTSIDE_HERD_CATEGORY, FUNRURAL_RATE } from '@/lib/investment'
+import { computeInvested, monthlyReturn, animalUA, uaGroup, UA_GROUP_LABELS, type UaGroup, BANK_MONTHLY, OUTSIDE_HERD_CATEGORY, FUNRURAL_RATE } from '@/lib/investment'
 import { expandExpenses, sumExpensesInRange } from '@/lib/fixed-expenses'
 import { computeHerdValue } from '@/lib/herd-value'
 import { getIfagPrices } from '@/lib/ifag'
@@ -206,7 +206,21 @@ export default async function DashboardPage() {
   /** Acima disso o pasto pode faltar na seca (estimativa conservadora para pasto sem adubação, Tião). */
   const DRY_SEASON_ALERT_UA_HA = 1.0
   const mothersSet = new Set(allAnimals.map(a => a.mother_id).filter(Boolean) as string[])
-  const ownUA = active.filter(a => a.species !== 'suino').reduce((s, a) => s + animalUA(a, todayStr, mothersSet.has(a.id)), 0)
+  const grazing = active.filter(a => a.species !== 'suino')
+  const ownUA = grazing.reduce((s, a) => s + animalUA(a, todayStr, mothersSet.has(a.id)), 0)
+  // Soma por grupo, para o dono entender o número (Tião, teste do P3).
+  const uaByGroup = new Map<UaGroup, { heads: number; ua: number }>()
+  for (const a of grazing) {
+    const g = uaGroup(a, todayStr, mothersSet.has(a.id))
+    const cur = uaByGroup.get(g) ?? { heads: 0, ua: 0 }
+    uaByGroup.set(g, { heads: cur.heads + 1, ua: cur.ua + animalUA(a, todayStr, mothersSet.has(a.id)) })
+  }
+  const uaParts = (Object.keys(UA_GROUP_LABELS) as UaGroup[])
+    .filter(g => uaByGroup.has(g))
+    .map(g => {
+      const v = uaByGroup.get(g)!
+      return `${v.heads}\u00a0${UA_GROUP_LABELS[g][v.heads === 1 ? 0 : 1]} ${v.ua.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}\u00a0UA`
+    })
   const thirdOnFarm = herdsThird.filter(h => isOnFarm(h, todayStr))
   const thirdUA = thirdOnFarm.reduce((s, h) => s + herdUA(h), 0)
   const thirdHeads = thirdOnFarm.reduce((s, h) => s + h.head_count, 0)
@@ -403,13 +417,6 @@ export default async function DashboardPage() {
                     tone={missingCosts.length > 0 && yearResult > 0 ? undefined : tone(yearResult)}
                     warn={missingCosts.length > 0 && yearResult > 0 ? `Pode ser menor: falta lançar ${missingCosts.join(' e ')}.` : undefined}
                   />
-                  {herd.total > 0 && (
-                    <Row
-                      label="Valor do rebanho hoje"
-                      hint="Se vendesse, pela média de Goiás ou o valor que você digitou. Fica fora da conta: mostra que o dinheiro virou gado."
-                      value={money(herd.total)}
-                    />
-                  )}
                   <Row label="Vendas" value={money(soldTotal)} />
                   {soldTotal > 0 && <Row label="Funrural (estimado, 1,63% das vendas)" value={`-${money(yearFunrural)}`} />}
                   {yearRent > 0 && <Row label="Aluguel de pasto e parceria" hint="Gado de terceiros" value={money(yearRent)} />}
@@ -420,6 +427,15 @@ export default async function DashboardPage() {
                     value={yearCosts > 0 ? `-${money(yearCosts)}` : money(0)}
                   />
                 </div>
+                {herd.total > 0 && (
+                  <div className="border-t mt-1">
+                    <Row
+                      label="Valor do rebanho hoje"
+                      hint="Fora da conta. Se vendesse, pela média de Goiás ou o valor que você digitou: mostra que o dinheiro virou gado."
+                      value={money(herd.total)}
+                    />
+                  </div>
+                )}
                 {yearCalvesReceived > 0 && (
                   <p className="text-sm mt-2">
                     Recebeu {yearCalvesReceived} {yearCalvesReceived === 1 ? 'bezerro' : 'bezerros'} na parceria
@@ -468,7 +484,7 @@ export default async function DashboardPage() {
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground tabular-nums mt-1">
-                    Seu gado: {ownUA.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;UA.
+                    Seu gado: {ownUA.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;UA{uaParts.length > 0 ? ` (${uaParts.join('; ')})` : ''}.
                     {' '}De terceiros: {thirdHeads > 0 ? <>{thirdUA.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;UA ({thirdHeads} {thirdHeads === 1 ? 'cabeça' : 'cabeças'})</> : 'nenhum'}.
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">

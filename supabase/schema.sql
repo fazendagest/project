@@ -170,7 +170,7 @@ create index if not exists idx_sales_date on animal_sales(sale_date);
 create table if not exists operational_expenses (
   id uuid primary key default uuid_generate_v4(),
   farm_id uuid references farms(id) on delete cascade not null,
-  category text not null check (category in ('mao_de_obra','energia','manutencao','transporte','equipamento','veterinario','outro')),
+  category text not null check (category in ('mao_de_obra','energia','manutencao','transporte','equipamento','veterinario','outro','fora_do_gado')),
   date date not null default current_date,
   amount numeric(12,2) not null,
   description text not null,

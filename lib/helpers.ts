@@ -109,6 +109,7 @@ export function expenseCategoryLabel(cat: string): string {
     equipamento: 'Equipamento',
     veterinario: 'Veterinário',
     outro: 'Outro',
+    fora_do_gado: 'Fora dos animais (galinha, lavoura, casa)',
   }
   return map[cat] ?? cat
 }

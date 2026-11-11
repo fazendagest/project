@@ -14,6 +14,7 @@ export type ExpenseCategory =
   | 'equipamento'
   | 'veterinario'
   | 'outro'
+  | 'fora_do_gado'
 
 export interface Farm {
   id: string

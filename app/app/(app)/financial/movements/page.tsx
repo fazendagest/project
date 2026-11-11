@@ -18,7 +18,7 @@ export default async function MovementsPage() {
     supabase.from('animals').select('id, code, name, species, sex, birth_date, is_breeder').eq('farm_id', farmId).eq('status', 'ativo').order('code'),
     supabase.from('animal_costs').select('animal_id, entry_date, sale_date, purchase_cost, health_cost').eq('farm_id', farmId),
   ])
-  const invested = computeInvested(costs ?? [], feedStock ?? [])
+  const invested = computeInvested(costs ?? [], feedStock ?? [], expenses ?? [])
 
   return (
     <div>

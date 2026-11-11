@@ -69,6 +69,7 @@ export default async function DashboardPage() {
     { data: farm },
     { data: costs },
     { data: feeds },
+    { data: allExpenses },
     { data: yearSales },
     { data: monthPurchases },
     { data: monthOpExpenses },
@@ -80,6 +81,7 @@ export default async function DashboardPage() {
     supabase.from('farms').select('milk_active, area_hectares').eq('id', farmId).single(),
     supabase.from('animal_costs').select('animal_id, entry_date, sale_date, purchase_cost, health_cost').eq('farm_id', farmId),
     supabase.from('feed_stock').select('purchase_date, total_cost').eq('farm_id', farmId),
+    supabase.from('operational_expenses').select('date, amount, category').eq('farm_id', farmId),
     supabase.from('animal_sales').select('animal_id, sale_price, sale_date').eq('farm_id', farmId).gte('sale_date', yearStart),
     supabase.from('animal_purchases').select('purchase_price').eq('farm_id', farmId).gte('purchase_date', monthStart).lte('purchase_date', monthEnd),
     supabase.from('operational_expenses').select('amount').eq('farm_id', farmId).gte('date', monthStart).lte('date', monthEnd),
@@ -90,7 +92,7 @@ export default async function DashboardPage() {
 
   const allAnimals = animals ?? []
   const active = allAnimals.filter(a => a.status === 'ativo')
-  const invested = computeInvested(costs ?? [], feeds ?? [])
+  const invested = computeInvested(costs ?? [], feeds ?? [], allExpenses ?? [])
   const herd = computeHerdValue(active, invested, ifag)
   const birthsYear = allAnimals.filter(a => a.entry_type === 'nascimento' && a.entry_date >= yearStart).length
 
@@ -187,7 +189,7 @@ export default async function DashboardPage() {
             <p className="text-sm text-muted-foreground">Se vendesse hoje (estimado)</p>
             <p className="text-3xl font-bold tabular-nums mt-1">{money(herd.total)}</p>
             <div className="divide-y mt-3">
-              <Row label="Investido nesses animais" value={money(herd.invested)} hint="Compra, saúde e alimentação" />
+              <Row label="Investido nesses animais" value={money(herd.invested)} hint="Compra, saúde, alimentação e despesas da fazenda" />
               <Row
                 label="Ganho no papel"
                 value={signedMoney(herd.paperGain)}

@@ -15,26 +15,40 @@ export type CostRow = {
 
 export type FeedPurchase = { purchase_date: string | null; total_cost: number | null }
 
-export type Invested = { purchase: number; health: number; feed: number; total: number }
+/** Despesa geral da fazenda (caseiro, diesel, energia, limpeza de pasto...). */
+export type GeneralExpense = { date: string | null; amount: number | null; category: string | null }
 
-export function computeInvested(costs: CostRow[], feeds: FeedPurchase[]): Record<string, Invested> {
+/** Categoria de despesa que não é dos animais cadastrados (galinha, lavoura para vender, casa): fica fora do custo deles. */
+export const OUTSIDE_HERD_CATEGORY = 'fora_do_gado'
+
+export type Invested = { purchase: number; health: number; feed: number; general: number; total: number }
+
+/**
+ * Despesas gerais (decisão de 11/11/2026, Henrique: "o que você tem certeza que é melhor"): o caseiro cuida
+ * de toda a fazenda, então cada despesa se divide por cabeça entre os animais presentes na data, igual à
+ * alimentação. O que for "Fora do gado" (galinha, lavoura, casa) não entra.
+ */
+export function computeInvested(costs: CostRow[], feeds: FeedPurchase[], expenses: GeneralExpense[] = []): Record<string, Invested> {
   const result: Record<string, Invested> = {}
   for (const c of costs) {
     const purchase = Number(c.purchase_cost ?? 0)
     const health = Number(c.health_cost ?? 0)
-    result[c.animal_id] = { purchase, health, feed: 0, total: purchase + health }
+    result[c.animal_id] = { purchase, health, feed: 0, general: 0, total: purchase + health }
   }
-  for (const f of feeds) {
-    const amount = Number(f.total_cost ?? 0)
-    if (!f.purchase_date || amount <= 0) continue
-    const d = f.purchase_date
-    const present = costs.filter(c => c.entry_date <= d && (!c.sale_date || c.sale_date >= d))
-    if (present.length === 0) continue
+  const spread = (date: string | null, amount: number, field: 'feed' | 'general') => {
+    if (!date || amount <= 0) return
+    const present = costs.filter(c => c.entry_date <= date && (!c.sale_date || c.sale_date >= date))
+    if (present.length === 0) return
     const share = amount / present.length
     for (const c of present) {
-      result[c.animal_id].feed += share
+      result[c.animal_id][field] += share
       result[c.animal_id].total += share
     }
+  }
+  for (const f of feeds) spread(f.purchase_date, Number(f.total_cost ?? 0), 'feed')
+  for (const e of expenses) {
+    if (e.category === OUTSIDE_HERD_CATEGORY) continue
+    spread(e.date, Number(e.amount ?? 0), 'general')
   }
   return result
 }

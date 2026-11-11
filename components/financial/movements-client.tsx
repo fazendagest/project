@@ -468,11 +468,16 @@ export function ExpensesClient({
               <Select value={expForm.category} onValueChange={v => v && setExpForm(p => ({ ...p, category: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {['mao_de_obra','energia','manutencao','transporte','equipamento','veterinario','outro'].map(c => (
+                  {['mao_de_obra','energia','manutencao','transporte','equipamento','veterinario','outro','fora_do_gado'].map(c => (
                     <SelectItem key={c} value={c}>{expenseCategoryLabel(c)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                {expForm.category === 'fora_do_gado'
+                  ? 'Não entra no custo dos animais. Ex.: poleiro das galinhas, lavoura para vender, gasto da casa.'
+                  : 'Entra no custo dos animais, dividido por cabeça. Ex.: caseiro, diesel do trator, energia, limpeza de pasto.'}
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -670,7 +675,7 @@ export function ExpensesClient({
               <Select value={expEditForm.category} onValueChange={v => v && setExpEditForm(p => ({ ...p, category: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {['mao_de_obra','energia','manutencao','transporte','equipamento','veterinario','outro'].map(c => (
+                  {['mao_de_obra','energia','manutencao','transporte','equipamento','veterinario','outro','fora_do_gado'].map(c => (
                     <SelectItem key={c} value={c}>{expenseCategoryLabel(c)}</SelectItem>
                   ))}
                 </SelectContent>

@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { DashboardCharts } from '@/components/dashboard/dashboard-charts'
 import { UpcomingBirths } from '@/components/dashboard/upcoming-births'
 import { LowStock } from '@/components/dashboard/low-stock'
-import { MissingCostsAlert } from '@/components/dashboard/missing-costs-alert'
+import { PendingTasks, type PendingTask } from '@/components/dashboard/pending-tasks'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/lib/helpers'
@@ -14,7 +14,7 @@ import { computeHerdValue } from '@/lib/herd-value'
 import { getIfagPrices } from '@/lib/ifag'
 import { IFAG_SOURCE_URL } from '@/lib/market-reference'
 import { ChevronRight, Droplet } from 'lucide-react'
-import { format, startOfMonth, endOfMonth } from 'date-fns'
+import { format, startOfMonth, endOfMonth, differenceInMonths, parseISO } from 'date-fns'
 
 /** Sem centavos, que é como o fazendeiro fala de preço de animal. */
 function money(v: number) {
@@ -70,7 +70,7 @@ export default async function DashboardPage() {
     { data: milkToday },
     ifag,
   ] = await Promise.all([
-    supabase.from('animals').select('id, species, sex, birth_date, breed, is_breeder, weight_arrobas, market_value, mother_id, status, entry_type, entry_date').eq('farm_id', farmId),
+    supabase.from('animals').select('id, code, name, species, sex, birth_date, breed, is_breeder, weight_arrobas, market_value, mother_id, status, entry_type, entry_date').eq('farm_id', farmId),
     supabase.from('farms').select('milk_active, area_hectares').eq('id', farmId).single(),
     supabase.from('animal_costs').select('animal_id, entry_date, sale_date, purchase_cost, health_cost').eq('farm_id', farmId),
     supabase.from('feed_stock').select('purchase_date, total_cost').eq('farm_id', farmId),
@@ -105,6 +105,21 @@ export default async function DashboardPage() {
 
   const milkActive = farm?.milk_active ?? false
 
+  // O que falta completar (decisão de 11/11/2026, opção A): cada item some quando é resolvido.
+  const nameOf = (a: { name?: string | null; code: string }) => a.name || a.code
+  const monthsOld = (d?: string | null) => (d ? differenceInMonths(now, parseISO(d)) : null)
+  const tasks: PendingTask[] = []
+  const anyFeed = (feeds ?? []).some(f => Number(f.total_cost ?? 0) > 0)
+  if (!anyFeed && active.some(a => a.species !== 'equino')) {
+    tasks.push({
+      key: 'custo-alimentacao',
+      title: 'Lançar o que você compra de sal, milho e ração',
+      detail: 'Até hoje nenhuma compra foi lançada. Sem isso, o lucro mostrado é maior do que o real.',
+      href: '/app/feeding',
+      action: 'Lançar compra',
+    })
+  }
+
   // Custo de manter o rebanho no mês (sem compra de animal), por cabeça.
   const monthUpkeep = monthOut - (monthPurchases ?? []).reduce((s, r) => s + Number(r.purchase_price || 0), 0)
   const upkeepPerHead = active.length > 0 ? monthUpkeep / active.length : 0
@@ -112,6 +127,35 @@ export default async function DashboardPage() {
   // Lotação: animais por hectare. Referência do Inttegra: acima de 1,2 UA/ha (1 UA = 450 kg, perto de uma vaca adulta).
   const area = Number(farm?.area_hectares ?? 0)
   const perHa = area > 0 ? active.length / area : null
+  if (area <= 0 || (perHa != null && perHa < 0.02)) {
+    tasks.push({
+      key: 'area-pasto',
+      title: area > 0 ? `Corrigir a área de pasto (está ${area.toLocaleString('pt-BR')} ha)` : 'Informar a área de pasto',
+      detail: 'Em hectares. 1 alqueire goiano = 4,84 ha. Serve para saber quanto gado ainda cabe no pasto.',
+      href: '/app/settings',
+      action: 'Corrigir em Configurações',
+    })
+  }
+  const calvesNoMother = active.filter(a => a.species === 'bovino' && !a.mother_id && (monthsOld(a.birth_date) ?? 99) < 12)
+  if (calvesNoMother.length > 0) {
+    tasks.push({
+      key: 'maes-bezerros',
+      title: calvesNoMother.length === 1 ? `Escolher a mãe de ${nameOf(calvesNoMother[0])}` : `Escolher a mãe de ${calvesNoMother.length} bezerros`,
+      detail: calvesNoMother.length > 1 ? calvesNoMother.map(nameOf).join(', ') : 'Assim o sistema sabe quais vacas estão parindo.',
+      href: `/app/animals/${calvesNoMother[0].id}/edit`,
+      action: calvesNoMother.length > 1 ? `Começar por ${nameOf(calvesNoMother[0])}` : 'Escolher a mãe',
+    })
+  }
+  for (const m of active.filter(a => a.species === 'bovino' && a.sex === 'M' && !a.is_breeder && (monthsOld(a.birth_date) ?? 99) >= 12)) {
+    tasks.push({
+      key: `touro-${m.id}`,
+      title: `${nameOf(m)} é touro ou boi?`,
+      detail: 'Touro é o macho inteiro, que cobre as vacas. Boi é castrado, para engorda e venda.',
+      href: `/app/animals/${m.id}/edit`,
+      action: 'É touro: marcar',
+      dismissLabel: 'É boi, está certo',
+    })
+  }
   const milkLiters = milkToday?.reduce((s, r) => s + (r.liters || 0), 0) ?? 0
 
   const sourceParts = [
@@ -123,7 +167,7 @@ export default async function DashboardPage() {
   return (
     <div>
       <PageHeader title="Dashboard" description="Quanto vale o rebanho e quanto você está ganhando" />
-      <MissingCostsAlert farmId={farmId} />
+      <PendingTasks tasks={tasks} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         {/* 1. O rebanho hoje */}

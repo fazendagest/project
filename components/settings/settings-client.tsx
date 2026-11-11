@@ -133,7 +133,7 @@ export function SettingsClient({ farm, userEmail }: { farm: Farm | null; userEma
                 placeholder="Cidade, Estado" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="area">Área (hectares)</Label>
+              <Label htmlFor="area">Área de pasto (hectares)</Label>
               <Input id="area" type="number" step="0.01" min="0" value={form.area_hectares}
                 onChange={e => setForm(p => ({ ...p, area_hectares: e.target.value }))} placeholder="0,00" />
               <p className="text-xs text-muted-foreground">

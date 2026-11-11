@@ -90,6 +90,25 @@ export function healthTypeLabel(type: string): string {
   return map[type] ?? type
 }
 
+/** Motivo da venda (pedido do Tião, 11/11/2026). */
+export const SALE_REASONS: Record<string, string> = {
+  bezerro_desmamado: 'Bezerro desmamado',
+  magro: 'Garrote ou boi magro',
+  gordo: 'Gordo para o frigorífico',
+  descarte: 'Descarte (vazia, velha ou com problema)',
+  outro: 'Outro',
+}
+
+/** Causa da morte (pedido do Tião, 11/11/2026). */
+export const DEATH_CAUSES: Record<string, string> = {
+  doenca: 'Doença',
+  parto: 'Parto',
+  bicho: 'Cobra ou bicho',
+  acidente: 'Acidente',
+  clima: 'Clima (raio, seca, frio)',
+  desconhecida: 'Não sei',
+}
+
 export function reproStatusLabel(status: string): string {
   const map: Record<string, string> = {
     coberta: 'Coberta',

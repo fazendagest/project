@@ -56,6 +56,8 @@ export interface Animal {
   is_breeder?: boolean
   /** Gordo, pronto para o frigorífico: valor pela arroba de carcaça. */
   is_fat?: boolean
+  death_date?: string | null
+  death_cause?: DeathCause | null
   created_at: string
 }
 
@@ -142,9 +144,27 @@ export interface AnimalSale {
   weight_kg?: number
   price_per_kg?: number
   sale_type: SaleType
+  /** Motivo da venda (lista em SALE_REASONS, lib/helpers.ts). */
+  sale_reason?: SaleReason | null
   notes?: string
   created_at: string
   animal?: Animal
+}
+
+export type SaleReason = 'bezerro_desmamado' | 'magro' | 'gordo' | 'descarte' | 'outro'
+export type DeathCause = 'doenca' | 'parto' | 'bicho' | 'acidente' | 'clima' | 'desconhecida'
+
+/** Diagnóstico de gestação (toque ou ultrassom) de vaca ou novilha. */
+export interface PregnancyCheck {
+  id: string
+  farm_id: string
+  animal_id: string
+  exam_date: string
+  result: 'prenhe' | 'vazia'
+  expected_birth_date?: string | null
+  notes?: string | null
+  created_at: string
+  animal?: Pick<Animal, 'code' | 'name'>
 }
 
 export interface OperationalExpense {

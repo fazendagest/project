@@ -21,7 +21,7 @@ import { DataCard } from '@/components/ui/data-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { CardList, RecordCard } from '@/components/ui/record-card'
 import { MobileActionBar } from '@/components/layout/page-header'
-import { formatDate, formatCurrency, formatNumber, expenseCategoryLabel, healthTypeLabel, parseBRL, formatBRL, animalCategory } from '@/lib/helpers'
+import { formatDate, formatCurrency, formatNumber, expenseCategoryLabel, healthTypeLabel, parseBRL, formatBRL, animalCategory, SALE_REASONS } from '@/lib/helpers'
 import type { Invested } from '@/lib/investment'
 import Link from 'next/link'
 import { monthOf, sameDayIn, fixedDates, sumExpensesInRange, todaySP, monthLabelPt } from '@/lib/fixed-expenses'
@@ -77,7 +77,7 @@ export function ExpensesClient({
   const [expForm, setExpForm] = useState({ category: 'mao_de_obra', date: today, amount: '', description: '', notes: '', fixed: false, since: monthOf(today) })
   const [stopConfirm, setStopConfirm] = useState<OperationalExpense | null>(null)
   const [stopping, setStopping] = useState(false)
-  const [saleForm, setSaleForm] = useState({ animal_ids: [] as string[], buyer_name: '', sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', notes: '' })
+  const [saleForm, setSaleForm] = useState({ animal_ids: [] as string[], buyer_name: '', sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', sale_reason: '', notes: '' })
   const [purchaseForm, setPurchaseForm] = useState({
     seller_name: '',
     purchase_date: today,
@@ -85,7 +85,7 @@ export function ExpensesClient({
     weight_kg: '',
     notes: '',
   })
-  const [saleEditForm, setSaleEditForm] = useState({ sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', buyer_name: '', sale_type: 'venda' })
+  const [saleEditForm, setSaleEditForm] = useState({ sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', buyer_name: '', sale_type: 'venda', sale_reason: '' })
   const [expEditForm, setExpEditForm] = useState({ category: 'mao_de_obra', date: today, amount: '', description: '' })
 
   const editingPurchase = purchaseDialog ? purchases.find(p => p.id === purchaseDialog) : null
@@ -111,6 +111,7 @@ export function ExpensesClient({
       price_per_kg: s.price_per_kg ? formatBRL(s.price_per_kg) : '',
       buyer_name: s.buyer_name ?? '',
       sale_type: s.sale_type,
+      sale_reason: s.sale_reason ?? '',
     })
     setSaleEditDialog(s.id)
   }
@@ -173,7 +174,7 @@ export function ExpensesClient({
   }
 
   function openNewSale() {
-    setSaleForm({ animal_ids: [], buyer_name: '', sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', notes: '' })
+    setSaleForm({ animal_ids: [], buyer_name: '', sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', sale_reason: '', notes: '' })
     setSaleDialog(true)
   }
 
@@ -195,6 +196,7 @@ export function ExpensesClient({
       weight_kg: saleForm.weight_kg ? parseInt(saleForm.weight_kg, 10) : null,
       price_per_kg: parseBRL(saleForm.price_per_kg),
       sale_type: saleForm.sale_type,
+      sale_reason: saleForm.sale_reason || null,
       notes: saleForm.notes || null,
     }))
     const { data, error } = await supabase.from('animal_sales').insert(rows).select('*, animal:animal_id(code, name)')
@@ -242,6 +244,7 @@ export function ExpensesClient({
       price_per_kg: parseBRL(saleEditForm.price_per_kg),
       buyer_name: saleEditForm.buyer_name || null,
       sale_type: saleEditForm.sale_type,
+      sale_reason: saleEditForm.sale_reason || null,
     }).eq('id', saleEditDialog).eq('farm_id', farmId).select('*, animal:animal_id(code, name)').single()
     if (error) toast.error('Erro: ' + error.message)
     else {
@@ -378,6 +381,7 @@ export function ExpensesClient({
                 amountClassName="text-green-700"
                 fields={[
                   { label: 'Tipo', value: <span className="capitalize">{s.sale_type}</span> },
+                  ...(s.sale_reason ? [{ label: 'Motivo', value: SALE_REASONS[s.sale_reason] ?? s.sale_reason }] : []),
                   ...(s.weight_kg != null ? [{ label: 'Peso', value: `${s.weight_kg}\u00a0@` }] : []),
                   ...(invested[s.animal_id]?.total ? [{ label: 'Lucro', value: <span className={s.sale_price - invested[s.animal_id].total >= 0 ? 'text-green-700' : 'text-red-700'}>{formatCurrency(s.sale_price - invested[s.animal_id].total)}</span> }] : []),
                 ]}
@@ -413,7 +417,10 @@ export function ExpensesClient({
                       </div>
                     </TableCell>
                     <TableCell>{s.buyer_name ?? '—'}</TableCell>
-                    <TableCell><Badge variant="outline" className="capitalize">{s.sale_type}</Badge></TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize">{s.sale_type}</Badge>
+                      {s.sale_reason && <span className="block text-xs text-muted-foreground mt-0.5">{SALE_REASONS[s.sale_reason] ?? s.sale_reason}</span>}
+                    </TableCell>
                     <TableCell>{s.weight_kg != null ? `${s.weight_kg} @` : '—'}</TableCell>
                     <TableCell className="font-semibold text-green-600">{formatCurrency(s.sale_price)}</TableCell>
                     <TableCell><div className="flex justify-end gap-1"><Button size="icon" variant="ghost" onClick={() => openEditSale(s)}><Pencil className="h-4 w-4" /></Button><Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDelConfirm({ type: 'sale', id: s.id })}><Trash2 className="h-4 w-4" /></Button></div></TableCell>
@@ -734,6 +741,30 @@ export function ExpensesClient({
                   placeholder="0,00" />
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label>Motivo da venda</Label>
+              <Select value={saleForm.sale_reason} onValueChange={v => setSaleForm(p => ({ ...p, sale_reason: String(v ?? '') }))}>
+                <SelectTrigger><SelectValue>{saleForm.sale_reason ? SALE_REASONS[saleForm.sale_reason] : 'Escolha o motivo'}</SelectValue></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(SALE_REASONS).map(([k, label]) => <SelectItem key={k} value={k}>{label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            {saleForm.animal_ids.length > 0 && (parseBRL(saleForm.sale_price) ?? 0) > 0 && (() => {
+              // Vaca vendida por menos do que custou na compra (pedido do Tião): avisa antes de salvar.
+              const each = (parseBRL(saleForm.sale_price) ?? 0) / saleForm.animal_ids.length
+              const below = saleForm.animal_ids
+                .map(id => initialAnimals.find(a => a.id === id))
+                .filter((a): a is NonNullable<typeof a> => !!a && a.species === 'bovino' && a.sex === 'F' && (invested[a.id]?.purchase ?? 0) > each)
+              if (below.length === 0) return null
+              return (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                  {below.map(a => `${a.name ?? a.code}: comprada por ${formatCurrency(invested[a.id].purchase)}`).join('; ')}.
+                  {' '}Está saindo por menos do que custou na compra.{saleForm.sale_reason !== 'descarte' && ' Se é vaca vazia, velha ou com problema, marque o motivo Descarte.'}
+                </div>
+              )
+            })()}
             {saleForm.animal_ids.length > 0 && (parseBRL(saleForm.sale_price) ?? 0) > 0 && (() => {
               const total = parseBRL(saleForm.sale_price) ?? 0
               const cost = saleForm.animal_ids.reduce((sum, id) => sum + (invested[id]?.total ?? 0), 0)
@@ -808,6 +839,15 @@ export function ExpensesClient({
                   onBlur={() => { const n = parseBRL(saleEditForm.price_per_kg); if (n !== null) setSaleEditForm(p => ({ ...p, price_per_kg: formatBRL(n) })) }}
                   placeholder="0,00" />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Motivo da venda</Label>
+              <Select value={saleEditForm.sale_reason} onValueChange={v => setSaleEditForm(p => ({ ...p, sale_reason: String(v ?? '') }))}>
+                <SelectTrigger><SelectValue>{saleEditForm.sale_reason ? SALE_REASONS[saleEditForm.sale_reason] : 'Escolha o motivo'}</SelectValue></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(SALE_REASONS).map(([k, label]) => <SelectItem key={k} value={k}>{label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Comprador</Label>

@@ -10,7 +10,7 @@ import Link from 'next/link'
 import { Pencil } from 'lucide-react'
 import {
   calcAge, formatDate, formatCurrency,
-  statusLabel, statusColor, healthTypeLabel, animalCategory
+  statusLabel, statusColor, healthTypeLabel, animalCategory, DEATH_CAUSES, SALE_REASONS
 } from '@/lib/helpers'
 import Image from 'next/image'
 import { DeleteAnimalButton } from '@/components/animals/delete-animal-button'
@@ -31,6 +31,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
     { data: farmCosts },
     { data: feeds },
     { data: expenses },
+    { data: lastChecks },
   ] = await Promise.all([
     supabase.from('animals').select('*').eq('id', params.id).eq('farm_id', farmId).single(),
     supabase.from('health_records').select('*').eq('animal_id', params.id).order('application_date', { ascending: false }),
@@ -41,6 +42,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
     supabase.from('animal_costs').select('animal_id, entry_date, sale_date, purchase_cost, health_cost, species').eq('farm_id', farmId),
     supabase.from('feed_stock').select('purchase_date, total_cost').eq('farm_id', farmId),
     supabase.from('operational_expenses').select('*').eq('farm_id', farmId),
+    supabase.from('pregnancy_checks').select('exam_date, result, expected_birth_date').eq('animal_id', params.id).eq('farm_id', farmId).order('exam_date', { ascending: false }).limit(1),
   ])
 
   if (!animal) notFound()
@@ -98,6 +100,15 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
             {(animal as any).weight_arrobas != null && (
               <Row label="Peso" value={`${(animal as any).weight_arrobas} @`} />
             )}
+            {animal.status === 'morto' && (animal.death_date || animal.death_cause) && (
+              <Row label="Morte" value={[animal.death_date ? formatDate(animal.death_date) : null, animal.death_cause ? DEATH_CAUSES[animal.death_cause] ?? animal.death_cause : null].filter(Boolean).join(', ')} />
+            )}
+            {lastChecks?.[0] && (
+              <Row
+                label="Último diagnóstico"
+                value={`${lastChecks[0].result === 'prenhe' ? 'Prenhe' : 'Vazia'} em ${formatDate(lastChecks[0].exam_date)}${lastChecks[0].result === 'prenhe' && lastChecks[0].expected_birth_date ? `, parto previsto ${formatDate(lastChecks[0].expected_birth_date)}` : ''}`}
+              />
+            )}
             <div className="flex justify-between py-1 border-b last:border-0">
               <span className="text-muted-foreground">Status</span>
               <Badge className={statusColor(animal.status)}>{statusLabel(animal.status)}</Badge>
@@ -118,6 +129,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
                 <Row label="Preço de Venda" value={formatCurrency(sale.sale_price)} />
                 <Row label="Lucro" value={formatCurrency(profit)} bold color={profit && profit >= 0 ? 'text-green-600' : 'text-red-600'} />
                 <Row label="Data de Venda" value={formatDate(sale.sale_date)} />
+                {sale.sale_reason && <Row label="Motivo" value={SALE_REASONS[sale.sale_reason] ?? sale.sale_reason} />}
               </>
             )}
             {animal.market_value && (

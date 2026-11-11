@@ -1,17 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { getFarmId } from '@/lib/farm'
-import { PageHeader, MobileActionBar } from '@/components/layout/page-header'
+import { PageHeader } from '@/components/layout/page-header'
 import { ReproductionClient } from '@/components/reproduction/reproduction-client'
-import { Button } from '@/components/ui/button'
-import Link from 'next/link'
-import { Plus } from 'lucide-react'
+import { ReproductionTabs } from '@/components/reproduction/reproduction-tabs'
+import { differenceInMonths, parseISO } from 'date-fns'
 
 export default async function ReproductionPage() {
   const supabase = await createClient()
   const farmId = await getFarmId()
   if (!farmId) return null
 
-  const [{ data: records }, { data: females }, { data: males }] = await Promise.all([
+  const [{ data: records }, { data: females }, { data: males }, { data: checks }] = await Promise.all([
     supabase
       .from('reproduction_records')
       .select('*, female:female_id(code, name, species), male:male_id(code, name)')
@@ -19,7 +18,7 @@ export default async function ReproductionPage() {
       .order('coverage_date', { ascending: false }),
     supabase
       .from('animals')
-      .select('id, code, name, species')
+      .select('id, code, name, species, birth_date')
       .eq('farm_id', farmId)
       .eq('sex', 'F')
       .eq('status', 'ativo')
@@ -31,31 +30,31 @@ export default async function ReproductionPage() {
       .eq('sex', 'M')
       .eq('status', 'ativo')
       .order('code'),
+    supabase
+      .from('pregnancy_checks')
+      .select('*, animal:animal_id(code, name)')
+      .eq('farm_id', farmId)
+      .order('exam_date', { ascending: false }),
   ])
 
+  // Diagnóstico: vacas e novilhas de gado com 1 ano ou mais (sem data de nascimento entra, para não esconder vaca antiga).
+  const now = new Date()
+  const checkFemales = (females ?? [])
+    .filter(f => f.species === 'bovino' && (!f.birth_date || differenceInMonths(now, parseISO(f.birth_date)) >= 12))
+    .map(f => ({ id: f.id, code: f.code, name: f.name }))
+    .sort((a, b) => (a.name || a.code).localeCompare(b.name || b.code, 'pt-BR'))
+
   return (
-    <div className="pb-24 md:pb-0">
-      <PageHeader
-        title="Reprodução"
-        description="Coberturas, gestações e partos"
-        actionsDesktopOnly
-        actions={
-          <Link href="/app/reproduction/new">
-            <Button className="h-10 gap-2"><Plus className="h-4 w-4" /> Nova Cobertura</Button>
-          </Link>
-        }
-      />
-      <ReproductionClient
-        initialRecords={records ?? []}
-        females={females ?? []}
-        males={males ?? []}
-        farmId={farmId}
-      />
-      <MobileActionBar>
-        <Link href="/app/reproduction/new" className="block">
-          <Button className="h-12 w-full gap-2 text-base"><Plus className="h-5 w-5" /> Nova cobertura</Button>
-        </Link>
-      </MobileActionBar>
+    <div>
+      <PageHeader title="Reprodução" description="Diagnóstico de gestação, coberturas e partos" />
+      <ReproductionTabs checks={checks ?? []} checkFemales={checkFemales} farmId={farmId}>
+        <ReproductionClient
+          initialRecords={records ?? []}
+          females={females ?? []}
+          males={males ?? []}
+          farmId={farmId}
+        />
+      </ReproductionTabs>
     </div>
   )
 }

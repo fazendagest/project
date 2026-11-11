@@ -13,7 +13,7 @@ import { FormActions } from '@/components/ui/form-actions'
 import { toast } from 'sonner'
 import { Loader2, Upload, ChevronsUpDown, Check } from 'lucide-react'
 import { generateAnimalCode } from '@/lib/animal-utils'
-import { parseBRL, formatBRL, animalCategory, formatDate, formatCurrencyCard } from '@/lib/helpers'
+import { parseBRL, formatBRL, animalCategory, formatDate, formatCurrencyCard, DEATH_CAUSES } from '@/lib/helpers'
 import { toTitleCase } from '@/lib/utils'
 import { marketReference, isDairyBreed, IFAG_SOURCE_URL, type IfagPrices } from '@/lib/market-reference'
 
@@ -250,6 +250,8 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag }: Ani
     entry_date: animal?.entry_date ?? new Date().toISOString().slice(0, 10),
     entry_type: animal?.entry_type ?? 'compra',
     status: animal?.status ?? 'ativo',
+    death_date: animal?.death_date ?? '',
+    death_cause: animal?.death_cause ?? '',
     notes: animal?.notes ?? '',
     market_value: animal?.market_value != null ? formatBRL(animal.market_value) : '',
     weight_arrobas: animal?.weight_arrobas != null ? String(animal.weight_arrobas) : '',
@@ -343,6 +345,8 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag }: Ani
       entry_date: form.entry_date,
       entry_type: form.entry_type,
       status: form.status,
+      death_date: form.status === 'morto' ? form.death_date || null : null,
+      death_cause: form.status === 'morto' ? form.death_cause || null : null,
       notes: form.notes || null,
       photo_url: photoUrl || null,
       market_value: parseBRL(form.market_value),
@@ -643,6 +647,25 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag }: Ani
                   </SelectContent>
                 </Select>
               </div>
+              {form.status === 'morto' && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="death_date">Data da morte</Label>
+                    <Input id="death_date" type="date" value={form.death_date} max={new Date().toISOString().slice(0, 10)}
+                      onChange={e => set('death_date', e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Causa da morte</Label>
+                    <Select value={form.death_cause} onValueChange={v => set('death_cause', v ? String(v) : '')}>
+                      <SelectTrigger><SelectValue>{form.death_cause ? DEATH_CAUSES[form.death_cause] : 'Escolha a causa'}</SelectValue></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(DEATH_CAUSES).map(([k, label]) => <SelectItem key={k} value={k}>{label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Saber do que morreu ajuda a evitar a próxima perda.</p>
+                  </div>
+                </>
+              )}
               {form.species === 'bovino' && (
                 <label className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer sm:col-span-2">
                   <input

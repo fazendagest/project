@@ -76,6 +76,7 @@ export default async function DashboardPage() {
     { data: monthPurchases },
     { data: monthHealth },
     { data: milkToday },
+    { data: pregnancyChecks },
     ifag,
   ] = await Promise.all([
     supabase.from('animals').select('id, code, name, species, sex, birth_date, breed, is_breeder, is_fat, weight_arrobas, market_value, mother_id, status, entry_type, entry_date').eq('farm_id', farmId),
@@ -87,6 +88,7 @@ export default async function DashboardPage() {
     supabase.from('animal_purchases').select('purchase_price').eq('farm_id', farmId).gte('purchase_date', monthStart).lte('purchase_date', monthEnd),
     supabase.from('health_records').select('cost').eq('farm_id', farmId).gte('application_date', monthStart).lte('application_date', monthEnd),
     supabase.from('milk_production').select('liters').eq('farm_id', farmId).eq('date', todayStr),
+    supabase.from('pregnancy_checks').select('animal_id, exam_date, result').eq('farm_id', farmId).gte('exam_date', format(subDays(now, 365), 'yyyy-MM-dd')),
     getIfagPrices(),
   ])
 
@@ -198,6 +200,18 @@ export default async function DashboardPage() {
       dismissLabel: 'É boi, está certo',
     })
   }
+  // Prenhez (pedido do Tião, 11/11/2026): último diagnóstico de cada vaca ou novilha ativa nos últimos 12 meses.
+  const cowsAndHeifers = active.filter(a => a.species === 'bovino' && a.sex === 'F' && (monthsOld(a.birth_date) ?? 99) >= 12)
+  const lastCheck = new Map<string, { exam_date: string; result: string }>()
+  for (const c of pregnancyChecks ?? []) {
+    const prev = lastCheck.get(c.animal_id)
+    if (!prev || c.exam_date > prev.exam_date) lastCheck.set(c.animal_id, c)
+  }
+  const examined = cowsAndHeifers.filter(a => lastCheck.has(a.id))
+  const pregnant = examined.filter(a => lastCheck.get(a.id)!.result === 'prenhe')
+  const empty = examined.filter(a => lastCheck.get(a.id)!.result === 'vazia')
+  const pregnancyRate = examined.length > 0 ? pregnant.length / examined.length : null
+
   const milkLiters = milkToday?.reduce((s, r) => s + (r.liters || 0), 0) ?? 0
 
   const horses = herd.groups.find(g => g.key === 'cavalos' && g.count > 0)
@@ -378,7 +392,48 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        {/* 5. Prenhez das vacas */}
+        <Card>
+          <CardHeader className="pb-0">
+            <CardTitle className="text-base">Prenhez das vacas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {pregnancyRate == null ? (
+              <p className="text-sm text-muted-foreground">
+                Nenhuma vaca ou novilha examinada nos últimos 12 meses. Peça ao veterinário o toque ou o ultrassom e lance o resultado em{' '}
+                <Link href="/app/reproduction" className="underline underline-offset-2">Reprodução</Link>.
+              </p>
+            ) : (
+              <>
+                <p className="text-3xl font-bold tabular-nums">{Math.round(pregnancyRate * 100)}%</p>
+                <p className="text-sm text-muted-foreground">
+                  {pregnant.length} prenhe{pregnant.length === 1 ? '' : 's'} de {examined.length} examinada{examined.length === 1 ? '' : 's'}
+                  {cowsAndHeifers.length > examined.length && `, ${cowsAndHeifers.length - examined.length} sem exame`}
+                </p>
+                {empty.length > 0 && (
+                  <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3">
+                    <p className="text-sm font-medium text-amber-900">Vazias: candidatas a venda ({empty.length})</p>
+                    <p className="text-xs text-amber-900 mb-1">Vaca vazia come o pasto sem dar bezerro.</p>
+                    <ul className="divide-y divide-amber-200">
+                      {empty.map(a => (
+                        <li key={a.id}>
+                          <Link href={`/app/animals/${a.id}`} className="flex items-center justify-between gap-3 py-2 min-h-11 text-sm hover:underline">
+                            <span>{nameOf(a)} <span className="text-xs text-amber-900/80">vazia em {formatDate(lastCheck.get(a.id)!.exam_date)}</span></span>
+                            <ChevronRight className="h-4 w-4 shrink-0" />
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
         <UpcomingBirths farmId={farmId} />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         <LowStock farmId={farmId} />
       </div>
 

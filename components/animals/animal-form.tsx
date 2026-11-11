@@ -13,8 +13,9 @@ import { FormActions } from '@/components/ui/form-actions'
 import { toast } from 'sonner'
 import { Loader2, Upload, ChevronsUpDown, Check } from 'lucide-react'
 import { generateAnimalCode } from '@/lib/animal-utils'
-import { parseBRL, formatBRL, animalCategory } from '@/lib/helpers'
+import { parseBRL, formatBRL, animalCategory, formatDate, formatCurrencyCard } from '@/lib/helpers'
 import { toTitleCase } from '@/lib/utils'
+import { marketReference, IFAG_SOURCE_URL, type IfagPrices } from '@/lib/market-reference'
 
 const BREED_OPTIONS: Record<string, string[]> = {
   bovino: [
@@ -147,14 +148,71 @@ function BreedCombobox({ value, onChange, options }: {
   )
 }
 
+/** Preço de referência do IFAG (média de Goiás) logo abaixo do campo Valor de mercado. */
+function MarketHint({ ifag, animal, onUse }: {
+  ifag?: IfagPrices | null
+  animal: Parameters<typeof marketReference>[0]
+  onUse: (value: number) => void
+}) {
+  if (!ifag) return null
+  const ref = marketReference(animal, ifag)
+  const source = (
+    <a href={IFAG_SOURCE_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">IFAG</a>
+  )
+
+  if (!ref) {
+    if (animal.species !== 'bovino') return null
+    return (
+      <p className="text-xs text-muted-foreground">
+        {animal.is_breeder
+          ? 'Touro não tem preço de referência no IFAG. Use o valor de venda de touros da região.'
+          : 'Informe a data de nascimento para ver o preço de referência da região.'}
+      </p>
+    )
+  }
+
+  return (
+    <div className={`rounded-lg border p-3 text-sm space-y-2 ${ref.stale ? 'border-amber-300 bg-amber-50' : 'bg-muted/40'}`}>
+      {ref.perHead != null ? (
+        <p>
+          Preço em Goiás: <span className="font-semibold tabular-nums">{formatCurrencyCard(ref.perHead)}</span>
+          {ref.perKg != null && animal.weight_arrobas ? (
+            <span className="text-muted-foreground tabular-nums"> ({animal.weight_arrobas * 15}&nbsp;kg a R$&nbsp;{ref.perKg.toFixed(2).replace('.', ',')} o quilo)</span>
+          ) : ref.min != null && ref.max != null && ref.min !== ref.max && (
+            <span className="text-muted-foreground tabular-nums"> (de {formatCurrencyCard(ref.min)} a {formatCurrencyCard(ref.max)})</span>
+          )}
+        </p>
+      ) : (
+        <p>
+          Porco em Goiás: <span className="font-semibold tabular-nums">R$&nbsp;{ref.perKg?.toFixed(2).replace('.', ',')}</span> o quilo vivo.
+          Informe o peso para calcular o valor.
+        </p>
+      )}
+      <p className="text-xs text-muted-foreground">
+        Média do estado ({ref.label}), cotação do {source} de {formatDate(ref.quotedAt)}.
+        {' '}Em Faina pode variar: se souber o preço da região, digite o seu.
+      </p>
+      {ref.stale && (
+        <p className="text-xs font-medium text-amber-800">Essa cotação tem mais de 14 dias e pode estar desatualizada.</p>
+      )}
+      {ref.perHead != null && (
+        <Button type="button" variant="outline" size="sm" className="h-11 md:h-9 w-full sm:w-auto" onClick={() => onUse(ref.perHead!)}>
+          Usar {formatCurrencyCard(ref.perHead)}
+        </Button>
+      )}
+    </div>
+  )
+}
+
 interface AnimalFormProps {
   farmId: string
   animal?: Animal
   existingPurchase?: { id: string; purchase_price: number; weight_kg?: number; seller_name?: string; weight_arrobas?: number }
   mode: 'create' | 'edit'
+  ifag?: IfagPrices | null
 }
 
-export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFormProps) {
+export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag }: AnimalFormProps) {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
@@ -565,6 +623,18 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                   onChange={e => set('market_value', e.target.value)}
                   onBlur={handleMarketValueBlur}
                   placeholder="8.000,00" />
+                <MarketHint
+                  ifag={ifag}
+                  animal={{
+                    species: form.species,
+                    sex: form.sex,
+                    birth_date: form.birth_date,
+                    breed: form.breed,
+                    is_breeder: form.species === 'bovino' && form.sex === 'M' && form.is_breeder,
+                    weight_arrobas: form.weight_arrobas ? parseInt(form.weight_arrobas, 10) : null,
+                  }}
+                  onUse={v => set('market_value', formatBRL(v))}
+                />
               </div>
               <div className="sm:col-span-2 flex items-center justify-between rounded-lg border p-3">
                 <div>

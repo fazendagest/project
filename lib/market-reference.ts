@@ -1,0 +1,94 @@
+// Preço de referência de mercado (IFAG, média do estado de Goiás) para um animal.
+// Arquivo sem dependência de servidor: usado no formulário (cliente) e nas telas (servidor).
+
+export interface IfagPrice {
+  product: string // nome como o IFAG publica, ex.: "Mestiço Macho (0-12 Meses)"
+  avg: number
+  min: number
+  max: number
+  quotedAt: string // AAAA-MM-DD
+}
+
+export interface IfagPrices {
+  prices: IfagPrice[]
+  fetchedAt: string // ISO
+}
+
+export interface MarketReference {
+  /** Linha do IFAG usada, para o fazendeiro saber de onde veio. */
+  label: string
+  /** Valor por cabeça (R$). Null quando o preço é por kg e o animal não tem peso. */
+  perHead: number | null
+  min: number | null
+  max: number | null
+  /** Preço do quilo vivo, só para porco. */
+  perKg?: number
+  quotedAt: string
+  /** Cotação com mais de 14 dias. */
+  stale: boolean
+}
+
+export const IFAG_SOURCE_URL = 'https://ifag.org.br/'
+
+const KG_PER_ARROBA = 15
+
+export function normalize(s: string) {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+}
+
+function monthsSince(date: string, today = new Date()) {
+  const d = new Date(date + 'T12:00:00')
+  return (today.getFullYear() - d.getFullYear()) * 12 + (today.getMonth() - d.getMonth()) - (today.getDate() < d.getDate() ? 1 : 0)
+}
+
+export function isStale(quotedAt: string, today = new Date()) {
+  const d = new Date(quotedAt + 'T12:00:00')
+  return (today.getTime() - d.getTime()) / 86_400_000 > 14
+}
+
+function find(prices: IfagPrice[], product: string) {
+  const key = normalize(product)
+  return prices.find(p => normalize(p.product) === key)
+}
+
+export function marketReference(
+  a: { species: string; sex: string; birth_date?: string | null; breed?: string | null; is_breeder?: boolean | null; weight_arrobas?: number | null },
+  data: IfagPrices | null | undefined,
+  today = new Date(),
+): MarketReference | null {
+  if (!data || data.prices.length === 0) return null
+
+  if (a.species === 'suino') {
+    const p = find(data.prices, 'Suíno')
+    if (!p) return null
+    const kg = a.weight_arrobas ? a.weight_arrobas * KG_PER_ARROBA : null
+    return {
+      label: 'Suíno, quilo vivo',
+      perHead: kg ? Math.round(kg * p.avg) : null,
+      min: kg ? Math.round(kg * p.min) : null,
+      max: kg ? Math.round(kg * p.max) : null,
+      perKg: p.avg,
+      quotedAt: p.quotedAt,
+      stale: isStale(p.quotedAt, today),
+    }
+  }
+
+  // Touro e cavalo não têm cotação no IFAG; sem data de nascimento não dá para saber a faixa.
+  if (a.species !== 'bovino' || a.is_breeder || !a.birth_date) return null
+
+  const m = monthsSince(a.birth_date, today)
+  const band = m <= 12 ? '0-12 Meses' : m <= 24 ? '13-24 Meses' : m <= 36 ? '25-36 Meses' : 'Acima de 36 Meses'
+  const breed = /nelore/i.test(a.breed ?? '') ? 'Nelore' : 'Mestiço'
+  const sex = a.sex === 'F' ? 'Fêmea' : 'Macho'
+  const product = `${breed} ${sex} (${band})`
+  const p = find(data.prices, product)
+  if (!p) return null
+  return {
+    label: product,
+    perHead: Math.round(p.avg),
+    min: Math.round(p.min),
+    max: Math.round(p.max),
+    quotedAt: p.quotedAt,
+    stale: isStale(p.quotedAt, today),
+  }
+}

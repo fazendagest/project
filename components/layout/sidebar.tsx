@@ -22,12 +22,14 @@ import {
   ChevronRight,
   Shield,
   Handshake,
+  BookOpen,
 } from 'lucide-react'
 import { CowIcon } from '@/components/icons/cow-icon'
 import { Button } from '@/components/ui/button'
 
 const navItems = [
   { href: '/app/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/app/guide', label: 'Guia da cria', icon: BookOpen },
   { href: '/app/animals', label: 'Animais', icon: PawPrint },
   { href: '/app/health', label: 'Saúde', icon: Heart },
   { href: '/app/reproduction', label: 'Reprodução', icon: Baby },

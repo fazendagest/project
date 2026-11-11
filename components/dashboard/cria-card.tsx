@@ -1,5 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { CRIA_TARGETS, FIRST_CALVING_TARGET, PREGNANCY_LOSS_TARGET, type CriaCost, type CriaIndex, type CriaIndicators, type OpenHeifer } from '@/lib/cria'
+import Link from 'next/link'
+import { NUMBERS_SECTION_ID } from '@/lib/guia-da-cria'
 import { cn } from '@/lib/utils'
 
 const pct = (v: number) => `${Math.round(v * 100)}%`
@@ -60,7 +62,13 @@ export function CriaCard({ cria, prenhez, cost, firstCalf, loss }: {
   return (
     <Card className="mb-4">
       <CardHeader className="pb-0">
-        <CardTitle className="text-base">Cria: como está e a meta</CardTitle>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <CardTitle className="text-base">Cria: como está e a meta</CardTitle>
+          {/* Guia da cria, seção dos números (Tião, P9). */}
+          <Link href={`/app/guide?abrir=${NUMBERS_SECTION_ID}#${NUMBERS_SECTION_ID}`} className="inline-flex min-h-[44px] items-center text-sm font-medium text-primary underline underline-offset-2 md:min-h-0">
+            Entenda estes números
+          </Link>
+        </div>
         <p className="text-xs text-muted-foreground">Desmame e kg contam os bezerros que já passaram dos 7 meses; vaca exposta é a vaca ou novilha (20 meses ou mais) que estava na fazenda na época da cobertura.</p>
       </CardHeader>
       <CardContent>

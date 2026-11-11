@@ -42,7 +42,7 @@ const BREED_OPTIONS: Record<string, string[]> = {
   suino: ['Duroc', 'Landrace', 'Large White', 'Mestiço', 'Pietrain', 'Outro'],
 }
 
-type Female = { id: string; code: string; name?: string; species: string; birth_date?: string | null }
+type Female = { id: string; code: string; name?: string; species: string; birth_date?: string | null; status?: string }
 
 /** Como o fazendeiro chama cada espécie e cada sexo. O sexo continua gravado (M/F). */
 const SPECIES_CHOICES: { key: Species; label: string; female: string; male: string }[] = [
@@ -270,10 +270,9 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag }: Ani
   useEffect(() => {
     supabase
       .from('animals')
-      .select('id, code, name, species, birth_date')
+      .select('id, code, name, species, birth_date, status')
       .eq('farm_id', farmId)
       .eq('sex', 'F')
-      .eq('status', 'ativo')
       .order('code')
       .then(({ data }) => { if (data) setFemales(data) })
   }, [farmId])
@@ -517,11 +516,16 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag }: Ani
                   <SelectTrigger><SelectValue placeholder="Selecionar mãe" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Não informar</SelectItem>
-                    {females.filter(f => f.species === form.species && f.id !== animal?.id && !isTooYoungToBeMother(f)).map(f => (
-                      <SelectItem key={f.id} value={f.id}>
-                        {f.name ? `${f.name} (${f.code})` : f.code}
-                      </SelectItem>
-                    ))}
+                    {/* A mãe pode ter sido vendida ou ter morrido depois do parto: aparece no fim, marcada */}
+                    {females
+                      .filter(f => f.species === form.species && f.id !== animal?.id && !isTooYoungToBeMother(f))
+                      .sort((a, b) => Number(a.status !== 'ativo') - Number(b.status !== 'ativo'))
+                      .map(f => (
+                        <SelectItem key={f.id} value={f.id}>
+                          {f.name ? `${f.name} (${f.code})` : f.code}
+                          {f.status && f.status !== 'ativo' ? `, ${f.status === 'vendido' ? 'vendida' : f.status === 'abatido' ? 'abatida' : 'morta'}` : ''}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>

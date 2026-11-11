@@ -141,7 +141,7 @@ export default async function DashboardPage() {
     tasks.push({
       key: `maes-bezerros-${calvesNoMother.map(a => a.id).sort().join('-')}`,
       title: calvesNoMother.length === 1 ? `Escolher a mãe de ${nameOf(calvesNoMother[0])}` : `Escolher a mãe de ${calvesNoMother.length} bezerros`,
-      detail: `${calvesNoMother.length > 1 ? calvesNoMother.map(nameOf).join(', ') + '. ' : ''}Se ${calvesNoMother.length > 1 ? 'algum foi comprado já bezerro, a mãe não está aqui: no cadastro dele, troque "Tipo de Entrada" para Compra' : 'foi comprado já bezerro, a mãe não está aqui: no cadastro, troque "Tipo de Entrada" para Compra'}.`,
+      detail: `${calvesNoMother.length > 1 ? calvesNoMother.map(nameOf).join(', ') + '. ' : ''}Se nasceu aqui, escolha a mãe: vale também vaca já vendida ou morta. Se ${calvesNoMother.length > 1 ? 'algum foi comprado já bezerro, a mãe não está aqui: no cadastro dele, troque "Tipo de Entrada" para Compra' : 'foi comprado já bezerro, a mãe não está aqui: no cadastro, troque "Tipo de Entrada" para Compra'}.`,
       href: `/app/animals/${calvesNoMother[0].id}/edit`,
       action: calvesNoMother.length > 1 ? `Começar por ${nameOf(calvesNoMother[0])}` : 'Escolher a mãe',
       dismissLabel: calvesNoMother.length > 1 ? 'Foram comprados, sem mãe aqui' : 'Foi comprado, sem mãe aqui',

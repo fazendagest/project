@@ -111,7 +111,7 @@ export default async function DashboardPage() {
     // Declaração de Rebanho marcada como feita (P7). Consulta à parte: sem a coluna, o painel continua de pé.
     supabase.from('farms').select('herd_declarations').eq('id', farmId).maybeSingle(),
     // Todas as vendas: data de saída da vaca e peso do bezerro vendido na desmama (P4).
-    supabase.from('animal_sales').select('animal_id, sale_date, weight_kg, arroba_basis').eq('farm_id', farmId),
+    supabase.from('animal_sales').select('animal_id, sale_date, weight_kg, arroba_basis, buyer_name, price_per_kg').eq('farm_id', farmId),
     getIfagPrices(),
   ])
 

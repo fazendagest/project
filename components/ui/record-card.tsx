@@ -57,8 +57,8 @@ export function RecordCard({ title, titleNote, subtitle, amount, amountClassName
       </div>
       {fields && fields.length > 0 && (
         <dl className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm">
-          {fields.map(f => (
-            <div key={f.label}>
+          {fields.map((f, i) => (
+            <div key={`${i}-${f.label}`}>
               <dt className="text-xs text-muted-foreground">{f.label}</dt>
               <dd className="font-medium tabular-nums">{f.value}</dd>
             </div>

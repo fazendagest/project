@@ -59,7 +59,11 @@ export const UA = {
   kgPorUa: 450,
 } as const
 
-const KG_PER_ARROBA = 15
+/**
+ * Arroba do comércio (Tião, 11/11/2026, opção a): o fazendeiro fala "vaca de 12 @" pelo peso vivo ÷ 30, que é o
+ * mesmo que a arroba de carcaça com 50% de rendimento. Peso vivo (kg) = @ × 30. Vale para o gado.
+ */
+export const LIVE_KG_PER_TRADE_ARROBA = 30
 
 function monthsAt(birth: string, date: string) {
   const b = new Date(birth + 'T12:00:00')
@@ -70,7 +74,7 @@ function monthsAt(birth: string, date: string) {
 /** Tamanho do animal em UA numa data. Com peso lançado, vale o peso ÷ 450 kg. */
 export function animalUA(a: UaAnimal | undefined, date: string, hasOffspring = false): number {
   if (!a || a.species !== 'bovino') return UA.outro
-  if (a.weight_arrobas && a.weight_arrobas > 0) return (a.weight_arrobas * KG_PER_ARROBA) / UA.kgPorUa
+  if (a.weight_arrobas && a.weight_arrobas > 0) return (a.weight_arrobas * LIVE_KG_PER_TRADE_ARROBA) / UA.kgPorUa
   const m = a.birth_date ? monthsAt(a.birth_date, date) : null
   if (m != null && m < 0) return 0 // ainda não tinha nascido
   if (m != null && m <= 12) return UA.bezerro

@@ -1,6 +1,8 @@
 // Preço de referência de mercado (IFAG, média do estado de Goiás) para um animal.
 // Arquivo sem dependência de servidor: usado no formulário (cliente) e nas telas (servidor).
 
+import { LIVE_KG_PER_TRADE_ARROBA } from './investment'
+
 export interface IfagPrice {
   product: string // nome como o IFAG publica, ex.: "Mestiço Macho (0-12 Meses)"
   avg: number
@@ -24,7 +26,7 @@ export interface MarketReference {
   /** Preço do quilo vivo, só para porco. */
   perKg?: number
   /** Animal gordo: preço da arroba de carcaça e a conta feita a partir do peso vivo. */
-  fat?: { perArroba: number; liveArrobas: number | null; carcassArrobas: number | null; yieldPct: number }
+  fat?: { perArroba: number; liveArrobas: number | null; liveKg: number | null; carcassArrobas: number | null; yieldPct: number }
   quotedAt: string
   /** Cotação com mais de 14 dias. */
   stale: boolean
@@ -80,14 +82,16 @@ export function marketReference(
     const p = find(data.prices, product)
     if (!p) return null
     const yieldPct = CARCASS_YIELD[kind]
+    // Peso em @ do comércio (peso vivo ÷ 30); carcaça = peso vivo × rendimento ÷ 15 (Tião, 11/11/2026).
     const live = a.weight_arrobas || null
-    const carcass = live ? Math.round(live * yieldPct * 10) / 10 : null
+    const liveKg = live ? live * LIVE_KG_PER_TRADE_ARROBA : null
+    const carcass = liveKg ? Math.round((liveKg * yieldPct / KG_PER_ARROBA) * 10) / 10 : null
     return {
       label: product.replace(' - À vista', ', arroba à vista'),
       perHead: carcass ? Math.round(carcass * p.avg) : null,
       min: carcass ? Math.round(carcass * p.min) : null,
       max: carcass ? Math.round(carcass * p.max) : null,
-      fat: { perArroba: p.avg, liveArrobas: live, carcassArrobas: carcass, yieldPct },
+      fat: { perArroba: p.avg, liveArrobas: live, liveKg, carcassArrobas: carcass, yieldPct },
       quotedAt: p.quotedAt,
       stale: isStale(p.quotedAt, today),
     }

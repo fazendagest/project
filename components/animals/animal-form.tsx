@@ -179,7 +179,7 @@ function MarketHint({ ifag, animal, onUse }: {
         <p>
           Média de Goiás (IFAG): <span className="font-semibold tabular-nums">{formatCurrencyCard(ref.perHead)}</span>
           {ref.fat && ref.fat.carcassArrobas != null ? (
-            <span className="text-muted-foreground tabular-nums"> ({ref.fat.liveArrobas}&nbsp;@ vivas, cerca de {String(ref.fat.carcassArrobas).replace('.', ',')}&nbsp;@ de carcaça, a R$&nbsp;{ref.fat.perArroba.toFixed(2).replace('.', ',')} a arroba)</span>
+            <span className="text-muted-foreground tabular-nums"> ({ref.fat.liveArrobas}&nbsp;@ do comércio, {ref.fat.liveKg}&nbsp;kg vivos, cerca de {String(ref.fat.carcassArrobas).replace('.', ',')}&nbsp;@ de carcaça, a R$&nbsp;{ref.fat.perArroba.toFixed(2).replace('.', ',')} a arroba)</span>
           ) : ref.perKg != null && animal.weight_arrobas ? (
             <span className="text-muted-foreground tabular-nums"> (pelo peso que você informou, {animal.weight_arrobas * 15}&nbsp;kg a R$&nbsp;{ref.perKg.toFixed(2).replace('.', ',')} o quilo)</span>
           ) : ref.min != null && ref.max != null && ref.min !== ref.max && (
@@ -189,7 +189,7 @@ function MarketHint({ ifag, animal, onUse }: {
       ) : ref.fat ? (
         <p>
           Arroba, média de Goiás (IFAG): <span className="font-semibold tabular-nums">R$&nbsp;{ref.fat.perArroba.toFixed(2).replace('.', ',')}</span>.
-          Informe o peso vivo para calcular o valor do animal gordo.
+          Informe o peso em @ para calcular o valor do animal gordo.
         </p>
       ) : (
         <p>
@@ -521,10 +521,10 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
               {/* 8. Peso — só para nascimento/arrendamento; compra tem campo próprio */}
               {form.entry_type !== 'compra' && (
                 <div className="space-y-2">
-                  <Label htmlFor="weight_arrobas">Peso vivo (@)</Label>
+                  <Label htmlFor="weight_arrobas">{form.species === 'suino' ? 'Peso vivo (@)' : 'Peso em @ (peso vivo ÷ 30)'}</Label>
                   <Input id="weight_arrobas" type="number" step="1" min="0" value={form.weight_arrobas}
                     onChange={e => set('weight_arrobas', e.target.value)} />
-                  <p className="text-xs text-muted-foreground">Peso do animal em pé (quilos divididos por 15). Só preencha se pesou na balança ou na fita; se não pesou, deixe vazio.</p>
+                  <p className="text-xs text-muted-foreground">{form.species === 'suino' ? 'Peso do porco em pé (quilos divididos por 15).' : 'Arroba do comércio. Se pesou na balança, divida os quilos por 30.'} Só preencha se pesou na balança ou na fita; se não pesou, deixe vazio.</p>
                 </div>
               )}
 
@@ -601,11 +601,11 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
                     placeholder="0,00" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="weight_arrobas_compra">Peso vivo (@)</Label>
+                  <Label htmlFor="weight_arrobas_compra">{form.species === 'suino' ? 'Peso vivo (@)' : 'Peso em @ (peso vivo ÷ 30)'}</Label>
                   <Input id="weight_arrobas_compra" type="number" step="1" min="0"
                     value={form.weight_arrobas}
                     onChange={e => set('weight_arrobas', e.target.value)} />
-                  <p className="text-xs text-muted-foreground">Peso do animal em pé (quilos divididos por 15). Só preencha se pesou na balança ou na fita; se não pesou, deixe vazio.</p>
+                  <p className="text-xs text-muted-foreground">{form.species === 'suino' ? 'Peso do porco em pé (quilos divididos por 15).' : 'Arroba do comércio. Se pesou na balança, divida os quilos por 30.'} Só preencha se pesou na balança ou na fita; se não pesou, deixe vazio.</p>
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="seller_name">Vendedor</Label>

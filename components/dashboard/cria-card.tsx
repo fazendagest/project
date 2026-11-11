@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { CRIA_TARGETS, FIRST_CALVING_TARGET, type CriaCost, type CriaIndex, type CriaIndicators, type OpenHeifer } from '@/lib/cria'
+import { CRIA_TARGETS, FIRST_CALVING_TARGET, PREGNANCY_LOSS_TARGET, type CriaCost, type CriaIndex, type CriaIndicators, type OpenHeifer } from '@/lib/cria'
 import { cn } from '@/lib/utils'
 
 const pct = (v: number) => `${Math.round(v * 100)}%`
@@ -14,9 +14,11 @@ const MAX_NAMES = 8
 const names = (list: OpenHeifer[]) =>
   list.slice(0, MAX_NAMES).map(h => `${h.label} (${h.months} meses)`).join(', ') + (list.length > MAX_NAMES ? ` e mais ${list.length - MAX_NAMES}` : '')
 
-export function CriaCard({ cria, prenhez, cost, firstCalf }: {
+export function CriaCard({ cria, prenhez, cost, firstCalf, loss }: {
   cria: CriaIndicators
   prenhez: CriaIndex
+  /** Perda entre prenhez e parto; null esconde a linha (sem diagnóstico prenhe lançado). */
+  loss: CriaIndex | null
   cost: CriaCost
   firstCalf: { index: CriaIndex; openHeifers: OpenHeifer[] }
 }) {
@@ -25,6 +27,8 @@ export function CriaCard({ cria, prenhez, cost, firstCalf }: {
     { label: 'Taxa de desmame', index: cria.desmame, show: pct, target: CRIA_TARGETS.desmame.text },
     { label: 'Kg desmamado por vaca exposta', index: cria.kg, show: v => `${num(v)} kg`, target: CRIA_TARGETS.kg.text },
     { label: 'Prenhez', index: prenhez, show: pct, target: CRIA_TARGETS.prenhez.text },
+    // P8 item 3: só aparece com diagnóstico prenhe lançado.
+    ...(loss ? [{ label: 'Perda entre prenhez e parto', index: loss, show: pct, target: PREGNANCY_LOSS_TARGET.text }] : []),
     {
       label: 'Mortalidade de bezerros',
       index: cria.mortalidade,

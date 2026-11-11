@@ -17,7 +17,7 @@ import { computeInvested, monthlyReturn, animalUA, uaGroup, UA_GROUP_LABELS, typ
 import { expandExpenses, sumExpensesInRange } from '@/lib/fixed-expenses'
 import { computeHerdValue } from '@/lib/herd-value'
 import { getIfagPrices } from '@/lib/ifag'
-import { criaIndicators, criaCost, firstCalving, CRIA_TARGETS } from '@/lib/cria'
+import { criaIndicators, criaCost, firstCalving, pregnancyLoss, CRIA_TARGETS } from '@/lib/cria'
 import { CriaCard } from '@/components/dashboard/cria-card'
 import { IFAG_SOURCE_URL, marketReference } from '@/lib/market-reference'
 import { incomeInRange, isOnFarm, herdUA, type ThirdPartyHerd } from '@/lib/third-party'
@@ -92,6 +92,7 @@ export default async function DashboardPage() {
     { data: declRow },
     { data: allSales },
     ifag,
+    { data: pregnantChecks },
   ] = await Promise.all([
     supabase.from('animals').select('id, code, name, species, sex, birth_date, breed, is_breeder, is_fat, weight_arrobas, market_value, mother_id, status, entry_type, entry_date, death_date, death_cause, weaned_at, weaning_weight_kg').eq('farm_id', farmId),
     supabase.from('farms').select('milk_active, area_hectares, pasture_hectares').eq('id', farmId).single(),
@@ -113,6 +114,8 @@ export default async function DashboardPage() {
     // Todas as vendas: data de saída da vaca e peso do bezerro vendido na desmama (P4).
     supabase.from('animal_sales').select('animal_id, sale_date, weight_kg, arroba_basis, buyer_name, price_per_kg').eq('farm_id', farmId),
     getIfagPrices(),
+    // Todos os diagnósticos prenhes, para a perda entre prenhez e parto (P8 item 3).
+    supabase.from('pregnancy_checks').select('animal_id, exam_date, result').eq('farm_id', farmId).eq('result', 'prenhe'),
   ])
 
   const allAnimals = animals ?? []
@@ -289,6 +292,11 @@ export default async function DashboardPage() {
   const cria = criaIndicators(allAnimals, allSales ?? [], todayStr)
   // Idade ao primeiro parto e novilhas passadas da idade (Tião, P8 item 2).
   const firstCalf = firstCalving({ animals: allAnimals, calvings, calved, covered, checked: new Set(lastCheck.keys()), today: todayStr })
+  // Perda entre prenhez e parto (Tião, P8 item 3): saída da vaca por venda ou morte.
+  const exitDate = new Map<string, string>()
+  for (const s of allSales ?? []) exitDate.set(s.animal_id, s.sale_date)
+  for (const a of allAnimals) if (a.status === 'morto' && a.death_date) exitDate.set(a.id, a.death_date)
+  const loss = pregnancyLoss({ checks: pregnantChecks ?? [], calvings, exitDate, today: todayStr })
   // Custo por vaca e por bezerro desmamado nos últimos 12 meses (Tião, P8 item 1).
   const costFrom = format(subDays(now, 365), 'yyyy-MM-dd')
   const bovineIds = new Set(allAnimals.filter(a => a.species === 'bovino').map(a => a.id))
@@ -579,6 +587,7 @@ export default async function DashboardPage() {
         cria={cria}
         cost={cost}
         firstCalf={firstCalf}
+        loss={loss}
         prenhez={pregnancyRate == null
           ? { value: null, missing: 'Nenhuma vaca ou novilha examinada nos últimos 12 meses. Lance o toque ou o ultrassom em Reprodução.' }
           : {

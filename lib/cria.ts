@@ -307,3 +307,47 @@ export function firstCalving(args: {
     .sort((x, y) => y.months - x.months)
   return { index, openHeifers }
 }
+
+/**
+ * Perda entre prenhez e parto (Tião, P8 item 3): das vacas diagnosticadas prenhes, quantas não pariram em até
+ * 10 meses do exame. Meta até 5%. Só entram exames com 10 meses ou mais; vaca vendida ou morta antes do parto
+ * sai da conta [Ravi: não dá para saber se perderia; a morta com o bezerro dentro aparece na mortalidade da vaca].
+ * Sem diagnóstico prenhe lançado, a linha não aparece (null).
+ */
+export const PREGNANCY_LOSS_TARGET = { target: 0.05, text: 'até 5%' }
+const LOSS_WINDOW_MONTHS = 10
+
+export function pregnancyLoss(args: {
+  checks: { animal_id: string; exam_date: string; result: string }[]
+  calvings: Map<string, string[]>
+  exitDate: Map<string, string>
+  today: string
+}): CriaIndex | null {
+  const { checks, calvings, exitDate, today } = args
+  const pregnant = checks.filter(c => c.result === 'prenhe')
+  if (pregnant.length === 0) return null
+  const ready = pregnant.filter(c => monthsBetween(c.exam_date, today) >= LOSS_WINDOW_MONTHS)
+  if (ready.length === 0) {
+    const first = pregnant.map(c => addMonths(c.exam_date, LOSS_WINDOW_MONTHS)).sort()[0]
+    return { value: null, missing: `Os diagnósticos ainda não completaram 10 meses. A conta sai a partir de ${fmtBr(first)}.` }
+  }
+  let lost = 0
+  let counted = 0
+  for (const c of ready) {
+    const limit = addMonths(c.exam_date, LOSS_WINDOW_MONTHS)
+    const calvedInTime = (calvings.get(c.animal_id) ?? []).some(d => d > c.exam_date && d <= limit)
+    if (calvedInTime) { counted++; continue }
+    const out = exitDate.get(c.animal_id)
+    if (out && out <= limit) continue
+    counted++
+    lost++
+  }
+  if (counted === 0) return { value: null, missing: 'As vacas diagnosticadas prenhes saíram antes do parto: sem conta ainda.' }
+  return {
+    value: lost / counted,
+    detail: `${lost} de ${counted} ${counted === 1 ? 'prenhe' : 'prenhes'} sem parto lançado em 10 meses do exame`,
+    belowTarget: lost / counted > PREGNANCY_LOSS_TARGET.target,
+    caveat: lost > 0 ? 'Confira se o parto dessas vacas foi lançado (filho com a mãe ou parto em Reprodução) antes de concluir que perdeu.' : undefined,
+    caveatTag: 'confira',
+  }
+}

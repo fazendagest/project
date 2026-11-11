@@ -198,7 +198,7 @@ export default async function DashboardPage() {
   const upkeepPerHead = active.length > 0 ? monthUpkeep / active.length : 0
 
   // Lotação em UA por hectare (Tião, P3): gado próprio pelo tamanho (UA), cavalo 1 UA (também come pasto),
-  // porco fora (não pasta) e o gado de terceiros que está no pasto hoje. Referência do Inttegra: acima de 1,2 UA/ha.
+  // porco fora (não pasta) e o gado de terceiros que está no pasto hoje. Referência do Inttegra: 1,2 UA/ha com pasto adubado; sem adubo, até 1,0.
   // Lotação por hectare de PASTO (Tião, revisão do P3); sem a área de pasto, usa a fazenda toda e avisa.
   const pastureArea = Number(farm?.pasture_hectares ?? 0)
   const usingTotalArea = pastureArea <= 0
@@ -403,6 +403,13 @@ export default async function DashboardPage() {
                     tone={missingCosts.length > 0 && yearResult > 0 ? undefined : tone(yearResult)}
                     warn={missingCosts.length > 0 && yearResult > 0 ? `Pode ser menor: falta lançar ${missingCosts.join(' e ')}.` : undefined}
                   />
+                  {herd.total > 0 && (
+                    <Row
+                      label="Valor do rebanho hoje"
+                      hint="Se vendesse, pela média de Goiás ou o valor que você digitou. Fica fora da conta: mostra que o dinheiro virou gado."
+                      value={money(herd.total)}
+                    />
+                  )}
                   <Row label="Vendas" value={money(soldTotal)} />
                   {soldTotal > 0 && <Row label="Funrural (estimado, 1,63% das vendas)" value={`-${money(yearFunrural)}`} />}
                   {yearRent > 0 && <Row label="Aluguel de pasto e parceria" hint="Gado de terceiros" value={money(yearRent)} />}
@@ -465,8 +472,8 @@ export default async function DashboardPage() {
                     {' '}De terceiros: {thirdHeads > 0 ? <>{thirdUA.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;UA ({thirdHeads} {thirdHeads === 1 ? 'cabeça' : 'cabeças'})</> : 'nenhum'}.
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    1 UA é um animal de 450&nbsp;kg, perto de uma vaca adulta. Quem lucra com gado põe mais de 1,2&nbsp;UA por hectare de pasto (Inttegra).
-                    {perHa < 0.8 && ' Pelo número, ainda cabe mais gado no pasto sem comprar terra.'}
+                    1 UA é um animal de 450&nbsp;kg, perto de uma vaca adulta. Fazendas de cria bem manejadas, com pasto adubado, chegam a 1,2&nbsp;UA por hectare (Inttegra). Sem adubação, o seguro é até 1,0.
+                    {perHa < 0.8 && ' Pelo número, cabe mais gado no pasto. Confira com o técnico se o capim está bom antes de receber mais.'}
                   </p>
                 </>
               ) : (

@@ -9,6 +9,8 @@ import { getIfagPrices } from '@/lib/ifag'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
+import { HerdAlertsCard } from '@/components/animals/herd-alerts-card'
+import { herdAlerts } from '@/lib/herd-alerts'
 
 export default async function AnimalsPage() {
   const supabase = await createClient()
@@ -45,6 +47,7 @@ export default async function AnimalsPage() {
         }
       />
       <MissingCostsAlert farmId={farmId} />
+      <HerdAlertsCard {...herdAlerts(animals ?? [], today)} />
       <AnimalsClient initialAnimals={animals ?? []} farmId={farmId} invested={invested} feedIncluded={feedIncluded} missingCosts={missingCosts} ifag={ifag} />
       <MobileActionBar>
         <Link href="/app/animals/new" className="block">

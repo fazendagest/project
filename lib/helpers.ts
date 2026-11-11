@@ -153,3 +153,40 @@ export function last12Months(): string[] {
   }
   return months
 }
+
+/**
+ * Categoria do animal como o fazendeiro fala (vaca, boi, bezerra, novilha, égua...).
+ * Sai da espécie, do sexo e da idade; sem data de nascimento, assume adulto.
+ * Fêmea de gado: novilha até 3 anos, a não ser que já tenha cria cadastrada.
+ */
+export function animalCategory(
+  a: { species: string; sex: string; birth_date?: string | null },
+  hasOffspring = false,
+): string {
+  const months = a.birth_date ? differenceInMonths(new Date(), parseISO(a.birth_date)) : null
+  const female = a.sex === 'F'
+  if (a.species === 'bovino') {
+    if (months !== null && months < 12) return female ? 'Bezerra' : 'Bezerro'
+    if (female) return months !== null && months < 36 && !hasOffspring ? 'Novilha' : 'Vaca'
+    return months !== null && months < 24 ? 'Garrote' : 'Boi'
+  }
+  if (a.species === 'equino') {
+    if (months !== null && months < 24) return female ? 'Potra' : 'Potro'
+    return female ? 'Égua' : 'Cavalo'
+  }
+  if (a.species === 'suino') {
+    if (months !== null && months < 6) return female ? 'Leitoa' : 'Leitão'
+    return female ? 'Porca' : 'Porco'
+  }
+  return speciesLabel(a.species)
+}
+
+/** Grupos da lista de animais, na ordem em que aparecem. */
+export const ANIMAL_GROUPS: { key: string; label: string; hint?: string; match: (cat: string) => boolean }[] = [
+  { key: 'vacas', label: 'Vacas', match: c => c === 'Vaca' },
+  { key: 'novilhas', label: 'Novilhas', hint: 'Passa a vaca aos 3 anos ou quando tiver a primeira cria cadastrada.', match: c => c === 'Novilha' },
+  { key: 'bezerros', label: 'Bezerros', hint: 'Com 1 ano, a bezerra passa a novilha e o bezerro a garrote.', match: c => c === 'Bezerra' || c === 'Bezerro' },
+  { key: 'bois', label: 'Bois e garrotes', hint: 'O garrote passa a boi aos 2 anos.', match: c => c === 'Boi' || c === 'Garrote' },
+  { key: 'cavalos', label: 'Cavalos', match: c => ['Cavalo', 'Égua', 'Potro', 'Potra'].includes(c) },
+  { key: 'porcos', label: 'Porcos', match: c => ['Porco', 'Porca', 'Leitão', 'Leitoa'].includes(c) },
+]

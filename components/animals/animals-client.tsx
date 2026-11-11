@@ -1,224 +1,222 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import type { Animal } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { SearchInput } from '@/components/ui/search-input'
-import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Card, CardContent } from '@/components/ui/card'
 import { DataCard } from '@/components/ui/data-card'
 import { EmptyState } from '@/components/ui/empty-state'
-import { toast } from 'sonner'
 import Link from 'next/link'
-import { Eye, Pencil, Trash2, LayoutGrid, List, AlertTriangle } from 'lucide-react'
-import { calcAge, formatDate, speciesLabel, statusLabel, statusColor, sexLabel } from '@/lib/helpers'
 import Image from 'next/image'
+import { LayoutGrid, List, AlertTriangle, ChevronRight } from 'lucide-react'
+import { calcAge, statusLabel, statusColor, animalCategory, ANIMAL_GROUPS } from '@/lib/helpers'
+import { cn } from '@/lib/utils'
 
-const PAGE_SIZE = 20
+const SPECIES_FILTERS = [
+  { key: 'all', label: 'Todos' },
+  { key: 'bovino', label: 'Gado' },
+  { key: 'equino', label: 'Cavalos' },
+  { key: 'suino', label: 'Porcos' },
+] as const
 
-export function AnimalsClient({ initialAnimals, farmId }: { initialAnimals: Animal[], farmId: string }) {
+type Row = Animal & { category: string; motherName: string | null }
+
+export function AnimalsClient({ initialAnimals }: { initialAnimals: Animal[], farmId: string }) {
   const router = useRouter()
-  const supabase = createClient()
-  const [animals, setAnimals] = useState(initialAnimals)
   const [search, setSearch] = useState('')
-  const [species, setSpecies] = useState('all')
+  const [species, setSpecies] = useState<string>('all')
   const [showAll, setShowAll] = useState(false)
   const [view, setView] = useState<'grid' | 'table'>('table')
-  const [page, setPage] = useState(1)
-  const [deleting, setDeleting] = useState<string | null>(null)
-  const [confirmId, setConfirmId] = useState<string | null>(null)
 
-  const filtered = animals.filter(a => {
-    const q = search.toLowerCase()
-    const matchSearch = !q || a.code.toLowerCase().includes(q) || (a.name ?? '').toLowerCase().includes(q)
+  const rows: Row[] = useMemo(() => {
+    const byId = new Map(initialAnimals.map(a => [a.id, a]))
+    const mothers = new Set(initialAnimals.map(a => a.mother_id).filter(Boolean))
+    return initialAnimals.map(a => {
+      const mother = a.mother_id ? byId.get(a.mother_id) : undefined
+      return {
+        ...a,
+        category: animalCategory(a, mothers.has(a.id)),
+        motherName: mother ? (mother.name ?? mother.code) : null,
+      }
+    })
+  }, [initialAnimals])
+
+  const byStatus = rows.filter(a => showAll || a.status === 'ativo')
+
+  const filtered = byStatus.filter(a => {
+    const q = search.trim().toLowerCase()
+    const matchSearch = !q
+      || a.code.toLowerCase().includes(q)
+      || (a.name ?? '').toLowerCase().includes(q)
+      || a.category.toLowerCase().includes(q)
+      || (a.breed ?? '').toLowerCase().includes(q)
     const matchSpecies = species === 'all' || a.species === species
-    const matchStatus = showAll || a.status === 'ativo'
-    return matchSearch && matchSpecies && matchStatus
+    return matchSearch && matchSpecies
   })
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const groups = ANIMAL_GROUPS
+    .map(g => ({ ...g, items: filtered.filter(a => g.match(a.category)) }))
+    .filter(g => g.items.length > 0)
 
-  async function handleDelete(id: string) {
-    setDeleting(id)
-    const { error } = await supabase.from('animals').delete().eq('id', id)
-    if (error) {
-      toast.error('Erro ao excluir animal')
-    } else {
-      setAnimals(prev => prev.filter(a => a.id !== id))
-      toast.success('Animal excluído')
-      router.refresh()
-    }
-    setDeleting(null)
-    setConfirmId(null)
-  }
+  const hasMothers = rows.some(a => a.motherName)
+
+  const countBySpecies = (key: string) => key === 'all' ? byStatus.length : byStatus.filter(a => a.species === key).length
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <SearchInput value={search} onChange={v => { setSearch(v); setPage(1) }} placeholder="Buscar por código ou nome..." />
-        <Select value={species} onValueChange={v => { if (v) { setSpecies(v); setPage(1) } }}>
-          <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Espécie" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas</SelectItem>
-            <SelectItem value="bovino">Bovino</SelectItem>
-            <SelectItem value="equino">Equino</SelectItem>
-            <SelectItem value="suino">Suíno</SelectItem>
-          </SelectContent>
-        </Select>
-        <div className="flex gap-1 rounded-lg border p-1 h-9 self-start">
-          <Button
-            type="button"
-            variant={!showAll ? 'default' : 'ghost'}
-            size="sm"
-            className="h-7 px-3 text-xs"
-            onClick={() => { setShowAll(false); setPage(1) }}
-          >
-            Ativos
-          </Button>
-          <Button
-            type="button"
-            variant={showAll ? 'default' : 'ghost'}
-            size="sm"
-            className="h-7 px-3 text-xs"
-            onClick={() => { setShowAll(true); setPage(1) }}
-          >
-            Todos
-          </Button>
-        </div>
-        <div className="flex gap-1">
-          <Button variant={view === 'table' ? 'default' : 'outline'} size="icon" onClick={() => setView('table')}><List className="h-4 w-4" /></Button>
-          <Button variant={view === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => setView('grid')}><LayoutGrid className="h-4 w-4" /></Button>
+      {/* Filtros: 12 px entre cada peça, 24 px até a lista */}
+      <div className="flex flex-col gap-3 mb-6">
+        <SearchInput value={search} onChange={setSearch} placeholder="Buscar por nome, código ou raça" />
+
+        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+          <div className="flex flex-wrap gap-2">
+            {SPECIES_FILTERS.filter(f => f.key === 'all' || countBySpecies(f.key) > 0).map(f => (
+              <Button
+                key={f.key}
+                type="button"
+                variant={species === f.key ? 'default' : 'outline'}
+                className="h-11 md:h-9 px-4 rounded-full"
+                aria-pressed={species === f.key}
+                onClick={() => setSpecies(f.key)}
+              >
+                {f.label} <span className="tabular-nums">{countBySpecies(f.key)}</span>
+              </Button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-4 md:ml-auto">
+            {/* Área de toque de 44 px sem empurrar o espaço visual (padding e margem negativos) */}
+            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none py-2.5 -my-2.5">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-primary"
+                checked={showAll}
+                onChange={e => setShowAll(e.target.checked)}
+              />
+              Mostrar vendidos e mortos
+            </label>
+            <div className="hidden md:flex gap-1">
+              <Button variant={view === 'table' ? 'default' : 'outline'} size="icon" aria-label="Ver em tabela" onClick={() => setView('table')}><List className="h-4 w-4" /></Button>
+              <Button variant={view === 'grid' ? 'default' : 'outline'} size="icon" aria-label="Ver em cartões" onClick={() => setView('grid')}><LayoutGrid className="h-4 w-4" /></Button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <p className="text-sm text-muted-foreground mb-3">{filtered.length} animal(is) encontrado(s)</p>
+      {filtered.length === 0 && (
+        <p className="text-sm text-muted-foreground py-10 text-center">Nenhum animal encontrado.</p>
+      )}
 
-      {view === 'table' ? (
-        <DataCard>
+      {/* Cartões agrupados: sempre no celular; no computador quando escolhido */}
+      <div className={cn('space-y-6', view === 'table' && 'md:hidden')}>
+        {groups.map(g => (
+          <section key={g.key}>
+            <div className="mb-2">
+              <h2 className="text-sm font-semibold text-foreground">
+                {g.label} <span className="font-normal text-muted-foreground tabular-nums">({g.items.length})</span>
+              </h2>
+              {g.hint && <p className="text-xs text-muted-foreground mt-0.5">{g.hint}</p>}
+            </div>
+            <ul className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2">
+              {g.items.map(a => <AnimalCard key={a.id} a={a} />)}
+            </ul>
+          </section>
+        ))}
+      </div>
+
+      {/* Tabela: só no computador */}
+      {view === 'table' && filtered.length > 0 && (
+        <DataCard className="hidden md:block">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Código</TableHead>
                 <TableHead>Nome</TableHead>
-                <TableHead>Espécie</TableHead>
+                <TableHead>Categoria</TableHead>
                 <TableHead>Raça</TableHead>
-                <TableHead>Sexo</TableHead>
                 <TableHead>Idade</TableHead>
+                {hasMothers && <TableHead>Mãe</TableHead>}
+                <TableHead className="text-right">Valor de mercado</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paged.length === 0 && <EmptyState colSpan={8} message="Nenhum animal encontrado" />}
-              {paged.map(a => (
-                <TableRow key={a.id} className={a.status !== 'ativo' ? 'opacity-50' : ''}>
-                  <TableCell className="font-mono font-semibold">{a.code}</TableCell>
+              {filtered.length === 0 && <EmptyState colSpan={7} message="Nenhum animal encontrado" />}
+              {filtered.map(a => (
+                <TableRow
+                  key={a.id}
+                  className="cursor-pointer"
+                  onClick={() => router.push(`/app/animals/${a.id}`)}
+                >
                   <TableCell>
-                    <span className="flex items-center gap-1">
-                      {a.name ?? '—'}
-                      {a.to_discard && (
-                      <span title="Marcado para descarte">
-                        <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" aria-label="Marcado para descarte" />
-                      </span>
-                    )}
-                    </span>
+                    <Link href={`/app/animals/${a.id}`} className="flex items-center gap-2 font-medium hover:underline" onClick={e => e.stopPropagation()}>
+                      {a.name ?? 'Sem nome'}
+                      <span className="font-mono text-xs text-muted-foreground">{a.code}</span>
+                      {a.to_discard && <AlertTriangle className="h-3.5 w-3.5 text-amber-600" aria-label="Marcado para descarte" />}
+                    </Link>
                   </TableCell>
-                  <TableCell>{speciesLabel(a.species)}</TableCell>
-                  <TableCell>{a.breed ?? '—'}</TableCell>
-                  <TableCell>{sexLabel(a.sex)}</TableCell>
-                  <TableCell>{a.birth_date ? calcAge(a.birth_date) : '—'}</TableCell>
-                  <TableCell>
-                    <Badge className={statusColor(a.status)}>{statusLabel(a.status)}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1">
-                      <Link href={`/app/animals/${a.id}`}>
-                        <Button size="icon" variant="ghost"><Eye className="h-4 w-4" /></Button>
-                      </Link>
-                      <Link href={`/app/animals/${a.id}/edit`}>
-                        <Button size="icon" variant="ghost"><Pencil className="h-4 w-4" /></Button>
-                      </Link>
-                      <Button size="icon" variant="ghost" className="text-destructive" onClick={() => setConfirmId(a.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+                  <TableCell>{a.category}</TableCell>
+                  <TableCell>{a.breed ?? 'Não informada'}</TableCell>
+                  <TableCell>{a.birth_date ? calcAge(a.birth_date) : 'Sem data'}</TableCell>
+                  {hasMothers && <TableCell>{a.motherName ?? ''}</TableCell>}
+                  <TableCell className="text-right tabular-nums">{a.market_value ? formatMoney(a.market_value) : ''}</TableCell>
+                  <TableCell><Badge className={statusColor(a.status)}>{statusLabel(a.status)}</Badge></TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </DataCard>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {paged.map(a => (
-            <Card key={a.id} className={`overflow-hidden hover:shadow-md transition-shadow ${a.status !== 'ativo' ? 'opacity-60' : ''}`}>
-              <div className="relative h-40 bg-muted">
-                {a.photo_url ? (
-                  <Image src={a.photo_url} alt={a.code} fill className="object-cover" />
-                ) : (
-                  <div className="h-full flex items-center justify-center text-4xl">
-                    {a.species === 'bovino' ? '🐄' : a.species === 'equino' ? '🐴' : '🐷'}
-                  </div>
-                )}
-                <Badge className={`absolute top-2 right-2 ${statusColor(a.status)}`}>
-                  {statusLabel(a.status)}
-                </Badge>
-              </div>
-              <CardContent className="pt-3 pb-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-mono font-bold text-primary">{a.code}</p>
-                    <p className="font-semibold flex items-center gap-1">
-                      {a.name ?? '(sem nome)'}
-                      {a.to_discard && (
-                      <span title="Marcado para descarte">
-                        <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" aria-label="Marcado para descarte" />
-                      </span>
-                    )}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{speciesLabel(a.species)} · {a.breed ?? 'S/R'} · {sexLabel(a.sex)}</p>
-                    <p className="text-xs text-muted-foreground">{a.birth_date ? calcAge(a.birth_date) : 'Idade desconhecida'}</p>
-                  </div>
-                </div>
-                <div className="flex gap-1 mt-3">
-                  <Link href={`/app/animals/${a.id}`} className="flex-1">
-                    <Button size="sm" variant="outline" className="w-full"><Eye className="h-3 w-3 mr-1" /> Ver</Button>
-                  </Link>
-                  <Link href={`/app/animals/${a.id}/edit`}>
-                    <Button size="sm" variant="outline"><Pencil className="h-3 w-3" /></Button>
-                  </Link>
-                  <Button size="sm" variant="outline" className="text-destructive" onClick={() => setConfirmId(a.id)}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
       )}
-
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-2 mt-4">
-          <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Anterior</Button>
-          <span className="flex items-center text-sm px-2">{page} / {totalPages}</span>
-          <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Próxima</Button>
-        </div>
-      )}
-
-      <ConfirmDialog
-        open={!!confirmId}
-        onOpenChange={o => !o && setConfirmId(null)}
-        title="Excluir Animal"
-        description="Tem certeza? Esta ação não pode ser desfeita e apagará todos os registros vinculados."
-        onConfirm={async () => { if (confirmId) await handleDelete(confirmId) }}
-        loading={deleting === confirmId}
-      />
     </div>
   )
+}
+
+function AnimalCard({ a }: { a: Row }) {
+  const details = [a.category, a.breed, a.birth_date ? calcAge(a.birth_date) : null].filter(Boolean).join(', ')
+  return (
+    <li>
+      <Link
+        href={`/app/animals/${a.id}`}
+        className="flex items-center gap-3 rounded-lg border bg-card p-3 min-h-[64px] hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
+      >
+        {a.photo_url && (
+          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md bg-muted">
+            <Image src={a.photo_url} alt="" fill className="object-cover" sizes="48px" />
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2">
+            <p className="min-w-0 flex-1 truncate font-semibold text-foreground">
+              {a.name ?? 'Sem nome'}{' '}
+              <span className="font-mono text-xs font-normal text-muted-foreground">{a.code}</span>
+            </p>
+            {a.market_value ? (
+              <span className="shrink-0 text-right leading-tight">
+                <span className="block text-sm font-medium tabular-nums whitespace-nowrap">{formatMoney(a.market_value)}</span>
+                <span className="block text-xs text-muted-foreground">valor de mercado</span>
+              </span>
+            ) : null}
+          </div>
+          <p className="text-sm text-muted-foreground">{details}</p>
+          {a.motherName && (
+            <p className="text-sm text-muted-foreground">{a.sex === 'F' ? 'Filha' : 'Filho'} da {a.motherName}</p>
+          )}
+          {(a.to_discard || a.status !== 'ativo') && (
+            <div className="flex gap-1 mt-1">
+              {a.status !== 'ativo' && <Badge className={statusColor(a.status)}>{statusLabel(a.status)}</Badge>}
+              {a.to_discard && <Badge className="bg-amber-100 text-amber-900">Descarte</Badge>}
+            </div>
+          )}
+        </div>
+        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
+      </Link>
+    </li>
+  )
+}
+
+/** Valor sem centavos, que é como o fazendeiro fala de preço de animal. */
+function formatMoney(v: number) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v)
 }

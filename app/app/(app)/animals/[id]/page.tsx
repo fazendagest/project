@@ -13,6 +13,7 @@ import {
   statusLabel, statusColor, sexLabel, healthTypeLabel
 } from '@/lib/helpers'
 import Image from 'next/image'
+import { DeleteAnimalButton } from '@/components/animals/delete-animal-button'
 
 export default async function AnimalDetailPage({ params }: { params: { id: string } }) {
   const supabase = await createClient()
@@ -45,9 +46,12 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
         title={animal.code + (animal.name ? ` · ${animal.name}` : '')}
         description={`${speciesLabel(animal.species)} · Cadastrado em ${formatDate(animal.entry_date)}`}
         actions={
-          <Link href={`/app/animals/${animal.id}/edit`}>
-            <Button className="gap-2"><Pencil className="h-4 w-4" /> Editar</Button>
-          </Link>
+          <>
+            <DeleteAnimalButton animalId={animal.id} />
+            <Link href={`/app/animals/${animal.id}/edit`}>
+              <Button className="gap-2"><Pencil className="h-4 w-4" /> Editar</Button>
+            </Link>
+          </>
         }
       />
 

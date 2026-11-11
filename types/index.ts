@@ -152,7 +152,7 @@ export interface AnimalSale {
 }
 
 export type SaleReason = 'bezerro_desmamado' | 'magro' | 'gordo' | 'descarte' | 'outro'
-export type DeathCause = 'doenca' | 'parto' | 'bicho' | 'acidente' | 'clima' | 'desconhecida'
+export type DeathCause = 'doenca' | 'parto' | 'bicho' | 'acidente' | 'clima' | 'planta' | 'sumiu' | 'desconhecida'
 
 /** Diagnóstico de gestação (toque ou ultrassom) de vaca ou novilha. */
 export interface PregnancyCheck {

@@ -29,6 +29,10 @@ const resultLabel = { prenhe: 'Prenhe', vazia: 'Vazia' } as const
 
 const today = () => new Date().toISOString().slice(0, 10)
 
+/** Gestação média de vaca de corte, para sugerir a previsão do parto (estimativa do Tião, 11/11/2026). */
+export const GESTATION_DAYS = 290
+const addDays = (iso: string, days: number) => new Date(new Date(iso + 'T12:00:00').getTime() + days * 86_400_000).toISOString().slice(0, 10)
+
 /**
  * Diagnóstico de gestação (pedido do Tião, 11/11/2026): o veterinário confirma por toque ou ultrassom
  * se a vaca ou a novilha está prenhe. A vazia é candidata a venda; o Dashboard mostra a taxa de prenhez.
@@ -36,12 +40,15 @@ const today = () => new Date().toISOString().slice(0, 10)
 export function PregnancyChecks({
   initialChecks,
   females,
+  lastCoverage = {},
   farmId,
   open,
   onOpenChange,
 }: {
   initialChecks: (PregnancyCheck & { animal?: { code: string; name?: string | null } })[]
   females: CheckFemale[]
+  /** Última cobertura ou inseminação de cada fêmea (id → AAAA-MM-DD), para sugerir o parto. */
+  lastCoverage?: Record<string, string>
   farmId: string
   open: boolean
   onOpenChange: (o: boolean) => void
@@ -56,6 +63,18 @@ export function PregnancyChecks({
 
   const name = (a?: { code: string; name?: string | null }) => a?.name || a?.code || 'animal não informado'
   const selected = females.find(f => f.id === form.animal_id)
+  const coverage = form.animal_id ? lastCoverage[form.animal_id] : undefined
+  const suggestedBirth = coverage ? addDays(coverage, GESTATION_DAYS) : null
+
+  // Prenhe com cobertura lançada: sugere o parto (cobertura + 290 dias) se o campo estiver vazio.
+  function pick(patch: Partial<typeof form>) {
+    setForm(p => {
+      const next = { ...p, ...patch }
+      const cov = next.animal_id ? lastCoverage[next.animal_id] : undefined
+      if (next.result === 'prenhe' && !next.expected_birth_date && cov) next.expected_birth_date = addDays(cov, GESTATION_DAYS)
+      return next
+    })
+  }
 
   function reset() {
     setForm({ animal_id: '', exam_date: today(), result: '', expected_birth_date: '', notes: '' })
@@ -157,7 +176,7 @@ export function PregnancyChecks({
           <form onSubmit={save} className="space-y-4 py-2">
             <div className="space-y-2">
               <Label>Vaca ou novilha *</Label>
-              <Select value={form.animal_id} onValueChange={v => setForm(p => ({ ...p, animal_id: String(v ?? '') }))}>
+              <Select value={form.animal_id} onValueChange={v => pick({ animal_id: String(v ?? ''), expected_birth_date: '' })}>
                 <SelectTrigger><SelectValue>{selected ? `${selected.name || selected.code}${selected.name ? ` (${selected.code})` : ''}` : 'Escolha'}</SelectValue></SelectTrigger>
                 <SelectContent>
                   {females.map(f => <SelectItem key={f.id} value={f.id}>{f.name || f.code}{f.name ? ` (${f.code})` : ''}</SelectItem>)}
@@ -181,7 +200,7 @@ export function PregnancyChecks({
                     aria-checked={form.result === r}
                     variant={form.result === r ? 'default' : 'outline'}
                     className={cn('h-11')}
-                    onClick={() => setForm(p => ({ ...p, result: r }))}
+                    onClick={() => pick({ result: r })}
                   >
                     {resultLabel[r]}
                   </Button>
@@ -193,6 +212,9 @@ export function PregnancyChecks({
                 <Label htmlFor="expected_birth_date">Previsão do parto (se o veterinário disse)</Label>
                 <Input id="expected_birth_date" type="date" value={form.expected_birth_date} min={form.exam_date}
                   onChange={e => setForm(p => ({ ...p, expected_birth_date: e.target.value }))} />
+                {suggestedBirth && form.expected_birth_date === suggestedBirth && (
+                  <p className="text-xs text-muted-foreground">Sugestão: cobertura de {formatDate(coverage!)} mais {GESTATION_DAYS} dias (estimativa). Troque se o veterinário disse outra data.</p>
+                )}
               </div>
             )}
             {form.result === 'vazia' && (

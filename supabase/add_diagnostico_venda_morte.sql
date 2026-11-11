@@ -38,6 +38,6 @@ alter table public.animal_sales add column if not exists sale_reason text
 
 alter table public.animals add column if not exists death_date date;
 alter table public.animals add column if not exists death_cause text
-  check (death_cause in ('doenca','parto','bicho','acidente','clima','desconhecida'));
+  check (death_cause in ('doenca','parto','bicho','acidente','clima','planta','sumiu','desconhecida'));
 
 notify pgrst, 'reload schema';

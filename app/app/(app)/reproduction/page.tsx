@@ -44,10 +44,16 @@ export default async function ReproductionPage() {
     .map(f => ({ id: f.id, code: f.code, name: f.name }))
     .sort((a, b) => (a.name || a.code).localeCompare(b.name || b.code, 'pt-BR'))
 
+  // Última cobertura de cada fêmea: o diagnóstico sugere o parto a partir dela.
+  const lastCoverage: Record<string, string> = {}
+  for (const r of records ?? []) {
+    if (!lastCoverage[r.female_id] || r.coverage_date > lastCoverage[r.female_id]) lastCoverage[r.female_id] = r.coverage_date
+  }
+
   return (
     <div>
       <PageHeader title="Reprodução" description="Diagnóstico de gestação, coberturas e partos" />
-      <ReproductionTabs checks={checks ?? []} checkFemales={checkFemales} farmId={farmId}>
+      <ReproductionTabs checks={checks ?? []} checkFemales={checkFemales} lastCoverage={lastCoverage} farmId={farmId}>
         <ReproductionClient
           initialRecords={records ?? []}
           females={females ?? []}

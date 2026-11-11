@@ -11,7 +11,16 @@ export type CostRow = {
   sale_date?: string | null
   purchase_cost: number | null
   health_cost: number | null
+  /** Espécie: cavalo (equino) é animal de trabalho e não recebe parte das despesas. */
+  species?: string | null
 }
+
+/**
+ * Cavalo é de trabalho: o gasto de mantê-lo (ração e despesas) vai para os outros animais, porque ele
+ * trabalha para eles. A compra dele fica com ele e aparece à parte no Dashboard.
+ * Decisão de 11/11/2026 (Henrique seguiu a recomendação, opção A).
+ */
+export const isWorkAnimal = (c: { species?: string | null }) => c.species === 'equino'
 
 export type FeedPurchase = { purchase_date: string | null; total_cost: number | null }
 
@@ -37,7 +46,7 @@ export function computeInvested(costs: CostRow[], feeds: FeedPurchase[], expense
   }
   const spread = (date: string | null, amount: number, field: 'feed' | 'general') => {
     if (!date || amount <= 0) return
-    const present = costs.filter(c => c.entry_date <= date && (!c.sale_date || c.sale_date >= date))
+    const present = costs.filter(c => !isWorkAnimal(c) && c.entry_date <= date && (!c.sale_date || c.sale_date >= date))
     if (present.length === 0) return
     const share = amount / present.length
     for (const c of present) {

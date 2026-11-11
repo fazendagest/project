@@ -80,7 +80,7 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase.from('animals').select('id, code, name, species, sex, birth_date, breed, is_breeder, weight_arrobas, market_value, mother_id, status, entry_type, entry_date').eq('farm_id', farmId),
     supabase.from('farms').select('milk_active, area_hectares').eq('id', farmId).single(),
-    supabase.from('animal_costs').select('animal_id, entry_date, sale_date, purchase_cost, health_cost').eq('farm_id', farmId),
+    supabase.from('animal_costs').select('animal_id, entry_date, sale_date, purchase_cost, health_cost, species').eq('farm_id', farmId),
     supabase.from('feed_stock').select('purchase_date, total_cost').eq('farm_id', farmId),
     supabase.from('operational_expenses').select('*').eq('farm_id', farmId),
     supabase.from('animal_sales').select('animal_id, sale_price, sale_date').eq('farm_id', farmId).gte('sale_date', yearStart),
@@ -152,6 +152,19 @@ export default async function DashboardPage() {
     })
   }
 
+  // Animal que entrou por compra sem preço: o investido e o lucro dele ficam errados.
+  const costById = new Map((costs ?? []).map(c => [c.animal_id, c]))
+  const boughtNoPrice = active.filter(a => a.entry_type === 'compra' && Number(costById.get(a.id)?.purchase_cost ?? 0) === 0)
+  if (boughtNoPrice.length > 0) {
+    tasks.push({
+      key: `compra-sem-preco-${boughtNoPrice.map(a => a.id).sort().join('-')}`,
+      title: boughtNoPrice.length === 1 ? `Informar quanto pagou em ${nameOf(boughtNoPrice[0])}` : `Informar quanto pagou em ${boughtNoPrice.length} animais`,
+      detail: `${boughtNoPrice.map(nameOf).join(', ')}: entrou como compra, mas sem preço. Em Financeiro, aba Compras, toque no lápis do animal.`,
+      href: '/app/financial/movements',
+      action: 'Abrir Compras',
+    })
+  }
+
   // Custo de manter o rebanho no mês (sem compra de animal), por cabeça.
   const monthUpkeep = monthOut - (monthPurchases ?? []).reduce((s, r) => s + Number(r.purchase_price || 0), 0)
   const upkeepPerHead = active.length > 0 ? monthUpkeep / active.length : 0
@@ -191,6 +204,7 @@ export default async function DashboardPage() {
   }
   const milkLiters = milkToday?.reduce((s, r) => s + (r.liters || 0), 0) ?? 0
 
+  const horses = herd.groups.find(g => g.key === 'cavalos' && g.count > 0)
   const sourceParts = [
     herd.counts.ifag > 0 && `${herd.counts.ifag} pelo preço do IFAG${herd.ifagDate ? ` de ${formatDate(herd.ifagDate)}` : ''}`,
     herd.counts.digitado > 0 && `${herd.counts.digitado} pelo valor que você digitou`,
@@ -220,10 +234,17 @@ export default async function DashboardPage() {
                 tone={tone(herd.paperGain)}
                 hint="Só vira dinheiro quando vender"
               />
+              {horses && (
+                <Row
+                  label={`Cavalos de trabalho (${horses.count})`}
+                  value={money(horses.value)}
+                  hint={`Investido ${money(horses.invested)}.${horses.missing > 0 ? ` ${horses.missing} sem valor.` : ''} Fora da soma: são para trabalhar, não para vender.`}
+                />
+              )}
             </div>
             {sourceParts.length > 0 && (
               <p className="text-xs text-muted-foreground mt-3">
-                {sourceParts.join(', ')}.{herd.workHorses > 0 && ` Cavalos de trabalho (${herd.workHorses}) não entram.`}
+                {sourceParts.join(', ')}.
                 {herd.counts.ifag > 0 && (
                   <> Preço do <a href={IFAG_SOURCE_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">IFAG</a>: média de Goiás, em Faina pode variar.</>
                 )}

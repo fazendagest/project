@@ -13,6 +13,37 @@ import { toast } from 'sonner'
 import { Loader2, Leaf, Download, Milk } from 'lucide-react'
 import { toTitleCase } from '@/lib/utils'
 
+type AreaUnit = 'alq' | 'ha'
+const HA_PER_ALQ = 4.84
+const AREA_UNITS: Record<AreaUnit, { label: string; plural: string }> = {
+  alq: { label: 'Alqueires', plural: 'alqueires goianos' },
+  ha: { label: 'Hectares', plural: 'hectares' },
+}
+const parseArea = (v: string) => {
+  // Com vírgula, o ponto é de milhar (1.234,5); sem vírgula, o ponto é a casa decimal (77.44).
+  const t = v.trim()
+  const n = Number(t.includes(',') ? t.replace(/\./g, '').replace(',', '.') : t)
+  return v.trim() && Number.isFinite(n) && n > 0 ? n : null
+}
+/** Valor digitado na unidade escolhida para hectares (o que vai para o banco). */
+const toHectares = (v: string, unit: AreaUnit) => {
+  const n = parseArea(v)
+  return n == null ? null : Math.round((unit === 'alq' ? n * HA_PER_ALQ : n) * 100) / 100
+}
+/** Hectares do banco para o texto do campo na unidade escolhida. */
+const toUnit = (ha: number | string | null | undefined, unit: AreaUnit) => {
+  if (ha == null || ha === '' || !(Number(ha) > 0)) return ''
+  const n = unit === 'alq' ? Number(ha) / HA_PER_ALQ : Number(ha)
+  return n.toLocaleString('pt-BR', { maximumFractionDigits: 2, useGrouping: false })
+}
+/** A conta na outra unidade, ao lado do campo. */
+const otherUnitText = (v: string, unit: AreaUnit) => {
+  const ha = toHectares(v, unit)
+  if (ha == null) return ''
+  const fmt = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 1 })
+  return unit === 'alq' ? `Dá ${fmt(ha)} hectares.` : `Dá ${fmt(ha / HA_PER_ALQ)} alqueires goianos.`
+}
+
 export function SettingsClient({ farm, userEmail }: { farm: Farm | null; userEmail: string }) {
   const supabase = createClient()
   const router = useRouter()
@@ -20,12 +51,24 @@ export function SettingsClient({ farm, userEmail }: { farm: Farm | null; userEma
   const [exporting, setExporting] = useState(false)
   const [milkActive, setMilkActive] = useState(farm?.milk_active ?? false)
   const [milkLoading, setMilkLoading] = useState(false)
+  // Área em alqueire goiano (como o fazendeiro pensa) ou hectare; grava sempre em hectares (Tião, revisão, item 4).
+  const [unit, setUnit] = useState<AreaUnit>('alq')
   const [form, setForm] = useState({
     name: farm?.name ?? 'Minha Fazenda',
     location: farm?.location ?? '',
-    area_hectares: farm?.area_hectares?.toString() ?? '',
-    pasture_hectares: farm?.pasture_hectares?.toString() ?? '',
+    area_hectares: toUnit(farm?.area_hectares, 'alq'),
+    pasture_hectares: toUnit(farm?.pasture_hectares, 'alq'),
   })
+
+  function changeUnit(next: AreaUnit) {
+    if (next === unit) return
+    setForm(p => ({
+      ...p,
+      area_hectares: toUnit(toHectares(p.area_hectares, unit), next),
+      pasture_hectares: toUnit(toHectares(p.pasture_hectares, unit), next),
+    }))
+    setUnit(next)
+  }
 
   async function handleMilkToggle(checked: boolean) {
     if (!farm) return
@@ -103,8 +146,8 @@ export function SettingsClient({ farm, userEmail }: { farm: Farm | null; userEma
     const { error } = await supabase.from('farms').update({
       name: form.name,
       location: form.location || null,
-      area_hectares: form.area_hectares ? parseFloat(form.area_hectares) : null,
-      pasture_hectares: form.pasture_hectares ? parseFloat(form.pasture_hectares) : null,
+      area_hectares: toHectares(form.area_hectares, unit),
+      pasture_hectares: toHectares(form.pasture_hectares, unit),
     }).eq('id', farm.id)
     if (error) toast.error('Erro ao salvar: ' + error.message)
     else toast.success('Configurações salvas!')
@@ -135,22 +178,30 @@ export function SettingsClient({ farm, userEmail }: { farm: Farm | null; userEma
                 placeholder="Cidade, Estado" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="area">Área total da fazenda (hectares)</Label>
-              <Input id="area" type="number" step="0.01" min="0" value={form.area_hectares}
-                onChange={e => setForm(p => ({ ...p, area_hectares: e.target.value }))} placeholder="0,00" />
-              <p className="text-xs text-muted-foreground">
-                {Number(form.area_hectares) > 0
-                  ? `Dá ${(Number(form.area_hectares) / 4.84).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} alqueires goianos (1 alqueire = 4,84 ha).`
-                  : 'Em hectares. 1 alqueire goiano = 4,84 ha: 16 alqueires são 77,4 ha.'}
-              </p>
+              <Label>Medir a área em</Label>
+              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Medir a área em">
+                {(Object.keys(AREA_UNITS) as AreaUnit[]).map(u => (
+                  <Button key={u} type="button" role="radio" aria-checked={unit === u}
+                    variant={unit === u ? 'default' : 'outline'} onClick={() => changeUnit(u)}>
+                    {AREA_UNITS[u].label}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">1 alqueire goiano = 4,84 hectares.</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="pasture">Área de pasto (hectares)</Label>
-              <Input id="pasture" type="number" step="0.01" min="0" value={form.pasture_hectares}
-                onChange={e => setForm(p => ({ ...p, pasture_hectares: e.target.value }))} placeholder="0,00" />
+              <Label htmlFor="area">Área total da fazenda ({AREA_UNITS[unit].plural})</Label>
+              <Input id="area" type="text" inputMode="decimal" value={form.area_hectares}
+                onChange={e => setForm(p => ({ ...p, area_hectares: e.target.value }))} placeholder="0" />
+              <p className="text-xs text-muted-foreground">{otherUnitText(form.area_hectares, unit)}</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pasture">Área de pasto ({AREA_UNITS[unit].plural})</Label>
+              <Input id="pasture" type="text" inputMode="decimal" value={form.pasture_hectares}
+                onChange={e => setForm(p => ({ ...p, pasture_hectares: e.target.value }))} placeholder="0" />
               <p className="text-xs text-muted-foreground">
                 Só o que é pasto, sem lavoura, mata e sede. Serve para saber quanto gado o pasto aguenta.
-                {Number(form.pasture_hectares) > 0 && ` Dá ${(Number(form.pasture_hectares) / 4.84).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} alqueires goianos.`}
+                {' '}{otherUnitText(form.pasture_hectares, unit)}
               </p>
             </div>
             <Button type="submit" className="h-12 w-full" disabled={loading}>

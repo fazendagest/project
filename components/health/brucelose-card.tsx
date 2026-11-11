@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 import type { BruceloseItem } from '@/lib/brucelose'
 
 const age = (m: number) => (m >= 24 ? `${Math.floor(m / 12)} anos` : `${m} ${m === 1 ? 'mês' : 'meses'}`)
@@ -20,9 +21,32 @@ function Names({ items }: { items: BruceloseItem[] }) {
   )
 }
 
-/** Aviso da vacina de brucelose (Tião, P6): some quando não há fêmea pendente. */
-export function BruceloseCard({ due, late, bought = [] }: { due: BruceloseItem[]; late: BruceloseItem[]; bought?: BruceloseItem[] }) {
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+
+/**
+ * Aviso da vacina de brucelose (Tião, P6): some quando não há fêmea pendente.
+ * summary: no Dashboard só as contagens e o link; os nomes ficam em Saúde (Tião, revisão do sistema, item 1).
+ */
+export function BruceloseCard({ due, late, bought = [], summary = false }: { due: BruceloseItem[]; late: BruceloseItem[]; bought?: BruceloseItem[]; summary?: boolean }) {
   if (due.length === 0 && late.length === 0 && bought.length === 0) return null
+  if (summary) {
+    const parts = [
+      due.length > 0 && `${plural(due.length, 'bezerra', 'bezerras')} para vacinar agora`,
+      late.length > 0 && `${plural(late.length, 'bezerra passou', 'bezerras passaram')} da idade`,
+      bought.length > 0 && `${plural(bought.length, 'comprada', 'compradas')} sem atestado`,
+    ].filter(Boolean) as string[]
+    return (
+      <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex-1">
+          <p className="font-semibold text-base">Vacina de brucelose (obrigatória em Goiás)</p>
+          <p className="mt-1">{parts.join(', ')}.</p>
+        </div>
+        <Link href="/app/health" className="sm:flex-none">
+          <Button className="h-11 md:h-9 w-full">Ver em Saúde</Button>
+        </Link>
+      </div>
+    )
+  }
   return (
     <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 mb-4">
       <p className="font-semibold text-base">Vacina de brucelose (obrigatória em Goiás)</p>

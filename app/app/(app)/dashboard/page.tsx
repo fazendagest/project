@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { DashboardCharts } from '@/components/dashboard/dashboard-charts'
 import { UpcomingBirths } from '@/components/dashboard/upcoming-births'
 import { LowStock } from '@/components/dashboard/low-stock'
-import { PendingTasks, type PendingTask } from '@/components/dashboard/pending-tasks'
+import type { PendingTask } from '@/components/dashboard/pending-tasks'
 import { BruceloseCard } from '@/components/health/brucelose-card'
 import { DineuvanCard } from '@/components/dashboard/dineuvan-card'
 import { dineuvanTodo } from '@/lib/dineuvan-todo'
@@ -288,7 +288,7 @@ export default async function DashboardPage() {
   // Índices da cria com a meta da fazenda (Tião, P4).
   const cria = criaIndicators(allAnimals, allSales ?? [], todayStr)
 
-  // Para ver com o Dineuvan (P7): o que só o dono resolve.
+  // O que só você resolve (P7; título trocado na revisão do Tião): o que só o dono resolve.
   const declaredPeriods = ((declRow as { herd_declarations?: string[] | null } | null)?.herd_declarations) ?? []
   const animalById = new Map(allAnimals.map(a => [a.id, a]))
   const todo = dineuvanTodo({
@@ -315,9 +315,10 @@ export default async function DashboardPage() {
   return (
     <div>
       <PageHeader title="Dashboard" description="Quanto vale o rebanho e quanto você está ganhando" />
-      <BruceloseCard {...bruceloseStatus(allAnimals, bruceloseRecords ?? [], todayStr)} />
-      <DineuvanCard items={todo} farmId={farmId} declaredPeriods={declaredPeriods} />
-      <PendingTasks tasks={tasks} />
+      {/* Brucelose curta no topo (obrigação legal); os nomes ficam em Saúde. */}
+      <BruceloseCard {...bruceloseStatus(allAnimals, bruceloseRecords ?? [], todayStr)} summary />
+      {/* Uma lista só do que o dono resolve (Tião, revisão do sistema, item 1): custos que faltam primeiro. */}
+      <DineuvanCard items={[...tasks.map(t => ({ ...t, detail: t.detail ?? '' })), ...todo]} farmId={farmId} declaredPeriods={declaredPeriods} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         {/* 1. O rebanho hoje */}

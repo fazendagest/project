@@ -20,7 +20,7 @@ function readDismissed(): string[] {
   }
 }
 
-/** "Para ver com o Dineuvan" (P7): o que só o dono resolve. Cada item sai sozinho quando o dado é lançado. */
+/** "O que só você resolve" (P7; junta "Falta completar" desde a revisão do Tião, item 1): o que só o dono resolve. Cada item sai sozinho quando o dado é lançado. */
 export function DineuvanCard({ items, farmId, declaredPeriods }: { items: TodoItem[]; farmId: string; declaredPeriods: string[] }) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
@@ -51,8 +51,8 @@ export function DineuvanCard({ items, farmId, declaredPeriods }: { items: TodoIt
 
   return (
     <section className="rounded-xl border border-amber-300 bg-amber-50 p-4 mb-4" aria-labelledby="dineuvan-titulo">
-      <h2 id="dineuvan-titulo" className="font-semibold text-amber-900">Para ver com o Dineuvan ({visible.length})</h2>
-      <p className="text-sm text-amber-900 mt-1">O que só o dono resolve. Cada item sai sozinho quando é lançado.</p>
+      <h2 id="dineuvan-titulo" className="font-semibold text-amber-900">O que só você resolve ({visible.length})</h2>
+      <p className="text-sm text-amber-900 mt-1">Sem isso, os números da fazenda ficam no achismo. Cada item sai sozinho quando é lançado.</p>
       <ul className="mt-3 space-y-2">
         {visible.map(t => {
           const external = t.href.startsWith('http')
@@ -64,7 +64,7 @@ export function DineuvanCard({ items, farmId, declaredPeriods }: { items: TodoIt
           return (
             <li key={t.key} className="rounded-lg border border-amber-200 bg-background p-3">
               <p className="font-medium">{t.title}</p>
-              <p className="text-sm text-muted-foreground mt-0.5">{t.detail}</p>
+              {t.detail && <p className="text-sm text-muted-foreground mt-0.5">{t.detail}</p>}
               <div className="flex flex-col sm:flex-row gap-2 mt-2">
                 {external ? (
                   <a href={t.href} target="_blank" rel="noopener noreferrer" className="sm:flex-none">{button}</a>

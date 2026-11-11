@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -9,13 +9,32 @@ import { Button } from '@/components/ui/button'
 import { createClient } from '@/lib/supabase/client'
 import type { TodoItem } from '@/lib/dineuvan-todo'
 
+/** Mesma lista de respostas "está certo assim" de "Falta completar" (components/dashboard/pending-tasks.tsx). */
+const DISMISSED_KEY = 'fazendagest-pendencias-dispensadas'
+
+function readDismissed(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(DISMISSED_KEY) ?? '[]')
+  } catch {
+    return []
+  }
+}
+
 /** "Para ver com o Dineuvan" (P7): o que só o dono resolve. Cada item sai sozinho quando o dado é lançado. */
 export function DineuvanCard({ items, farmId, declaredPeriods }: { items: TodoItem[]; farmId: string; declaredPeriods: string[] }) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState<string[]>([])
-  const visible = items.filter(i => !i.declarationPeriod || !done.includes(i.declarationPeriod))
+  const [dismissed, setDismissed] = useState<string[]>([])
+  useEffect(() => setDismissed(readDismissed()), [])
+  const visible = items.filter(i => !dismissed.includes(i.key) && (!i.declarationPeriod || !done.includes(i.declarationPeriod)))
   if (visible.length === 0) return null
+
+  function dismiss(key: string) {
+    const next = [...dismissed, key]
+    setDismissed(next)
+    try { localStorage.setItem(DISMISSED_KEY, JSON.stringify(next)) } catch { /* sem armazenamento: some só nesta visita */ }
+  }
 
   async function markDeclared(period: string) {
     setSaving(true)
@@ -55,6 +74,11 @@ export function DineuvanCard({ items, farmId, declaredPeriods }: { items: TodoIt
                 {t.declarationPeriod && (
                   <Button type="button" variant="outline" className="h-11 md:h-9" disabled={saving} onClick={() => markDeclared(t.declarationPeriod!)}>
                     Já fiz
+                  </Button>
+                )}
+                {t.dismissLabel && (
+                  <Button type="button" variant="outline" className="h-11 md:h-9" onClick={() => dismiss(t.key)}>
+                    {t.dismissLabel}
                   </Button>
                 )}
               </div>

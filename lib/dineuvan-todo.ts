@@ -12,6 +12,7 @@ export type TodoAnimal = {
   birth_date?: string | null
   breed?: string | null
   is_breeder?: boolean | null
+  is_fat?: boolean | null
   status: string
 }
 
@@ -21,6 +22,8 @@ export type TodoItem = {
   detail: string
   href: string
   action: string
+  /** Resposta "está certo assim", guardada neste aparelho (mesma lista de "Falta completar"). */
+  dismissLabel?: string
   /** Declaração de Rebanho: período ('2026-11') que o botão "Já fiz" grava. */
   declarationPeriod?: string
 }
@@ -41,10 +44,18 @@ function names(list: { name?: string | null; code: string }[]) {
   return list.length > MAX_NAMES ? `${shown} e mais ${list.length - MAX_NAMES}` : shown
 }
 
-/** Declaração de Rebanho no SIDAGO: campanhas de maio e de novembro (prazo no último dia do mês). */
-export function declarationPeriod(today: string) {
-  const month = today.slice(5, 7)
-  return month === '05' || month === '11' ? today.slice(0, 7) : null
+/**
+ * Declaração de Rebanho no SIDAGO: campanhas de maio (prazo 31/05) e de novembro (prazo 30/11).
+ * Sem o "Já fiz", o aviso fica até 31/07 e 31/01, porque a Agrodefesa costuma prorrogar
+ * e o gado sem declaração fica preso (Tião, auditoria do 111e298).
+ */
+export function declarationPeriod(today: string): { period: string; deadline: string; late: boolean } | null {
+  const year = Number(today.slice(0, 4))
+  const month = Number(today.slice(5, 7))
+  if (month >= 5 && month <= 7) return { period: `${year}-05`, deadline: '31/05', late: month > 5 }
+  if (month === 11 || month === 12) return { period: `${year}-11`, deadline: '30/11', late: month === 12 }
+  if (month === 1) return { period: `${year - 1}-11`, deadline: '30/11', late: true }
+  return null
 }
 
 export function dineuvanTodo(input: {
@@ -80,7 +91,7 @@ export function dineuvanTodo(input: {
   const bulls = active.filter(a => a.species === 'bovino' && a.sex === 'M' && a.is_breeder && (monthsOld(a.birth_date, today) ?? 99) >= MIN_MONTHS && !examined.has(a.id))
   if (bulls.length > 0) {
     items.push({
-      key: 'androlologico',
+      key: 'andrologico',
       title: `Exame do touro: ${names(bulls)}`,
       detail: 'Antes de soltar com as vacas, exame andrológico com o veterinário. Depois, lance em Saúde, tipo Consulta, com o nome "Exame andrológico".',
       href: '/app/health',
@@ -88,15 +99,30 @@ export function dineuvanTodo(input: {
     })
   }
 
+  // 2b. Touro ou boi? Macho com 18 meses ou mais, sem "É touro" e sem "Gordo" (boi de engorda).
+  for (const m of active.filter(a => a.species === 'bovino' && a.sex === 'M' && !a.is_breeder && !a.is_fat && (monthsOld(a.birth_date, today) ?? 99) >= MIN_MONTHS)) {
+    items.push({
+      // Mesma chave da lista antiga: quem já respondeu "É boi" não vê de novo.
+      key: `touro-${m.id}`,
+      title: `${nameOf(m)} é touro ou boi?`,
+      detail: `O ${nameOf(m)} vai cobrir as vacas? Se sim, marque "É touro" e faça o exame andrológico antes da estação.`,
+      href: `/app/animals/${m.id}/edit`,
+      action: 'É touro: marcar',
+      dismissLabel: 'É boi, está certo',
+    })
+  }
+
   // 3. Declaração de Rebanho no SIDAGO (maio e novembro).
-  const period = declarationPeriod(today)
-  if (period && !input.declaredPeriods.includes(period)) {
-    const last = period.endsWith('-05') ? '31/05' : '30/11'
+  const decl = declarationPeriod(today)
+  if (decl && !input.declaredPeriods.includes(decl.period)) {
+    const { period, deadline, late } = decl
     items.push({
       key: `declaracao-${period}`,
-      title: `Declaração de Rebanho no SIDAGO, até ${last}`,
+      title: late ? 'Declaração de Rebanho no SIDAGO: passou do prazo' : `Declaração de Rebanho no SIDAGO, até ${deadline}`,
       // [V] Portaria Agrodefesa 173/2026: 2ª etapa de 1º a 30/11/2026, pela internet no SIDAGO ou numa unidade da Agrodefesa.
-      detail: 'Sem ela não sai GTA. Declare o gado que tem hoje pela internet, no SIDAGO, ou numa unidade da Agrodefesa.',
+      detail: late
+        ? `O prazo era ${deadline}. Confira no SIDAGO se a Agrodefesa prorrogou; sem a declaração, não sai GTA.`
+        : 'Sem ela não sai GTA. Declare o gado que tem hoje pela internet, no SIDAGO, ou numa unidade da Agrodefesa.',
       href: 'https://sidago.agrodefesa.go.gov.br/',
       action: 'Abrir o SIDAGO',
       declarationPeriod: period,

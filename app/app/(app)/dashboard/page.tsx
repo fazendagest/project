@@ -241,16 +241,7 @@ export default async function DashboardPage() {
       dismissLabel: calvesNoMother.length > 1 ? 'Foram comprados, sem mãe aqui' : 'Foi comprado, sem mãe aqui',
     })
   }
-  for (const m of active.filter(a => a.species === 'bovino' && a.sex === 'M' && !a.is_breeder && (monthsOld(a.birth_date) ?? 99) >= 12)) {
-    tasks.push({
-      key: `touro-${m.id}`,
-      title: `${nameOf(m)} é touro ou boi?`,
-      detail: 'Touro é o macho inteiro, que cobre as vacas. Boi é castrado, para engorda e venda.',
-      href: `/app/animals/${m.id}/edit`,
-      action: 'É touro: marcar',
-      dismissLabel: 'É boi, está certo',
-    })
-  }
+  // "Touro ou boi?" foi para o cartão "Para ver com o Dineuvan" (Tião, auditoria do 111e298).
   // Prenhez (pedido do Tião, 11/11/2026): último diagnóstico de cada vaca ou novilha ativa nos últimos 12 meses.
   const lastCheck = new Map<string, { exam_date: string; result: string }>()
   for (const c of pregnancyChecks ?? []) {

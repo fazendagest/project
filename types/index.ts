@@ -70,6 +70,8 @@ export interface HealthRecord {
   type: HealthType
   product_name: string
   dose?: string
+  /** Nº do atestado da vacina de brucelose no SIDAGO (Tião, P6). */
+  sidago_certificate?: string | null
   application_date: string
   next_due_date?: string
   applied_by?: string

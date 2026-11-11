@@ -5,13 +5,16 @@ import { HealthClient } from '@/components/health/health-client'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
+import { BruceloseCard } from '@/components/health/brucelose-card'
+import { bruceloseStatus } from '@/lib/brucelose'
+import { todaySP } from '@/lib/fixed-expenses'
 
 export default async function HealthPage() {
   const supabase = await createClient()
   const farmId = await getFarmId()
   if (!farmId) return null
 
-  const [{ data: records }, { data: animals }] = await Promise.all([
+  const [{ data: records }, { data: animals }, { data: females }] = await Promise.all([
     supabase
       .from('health_records')
       .select('*, animal:animal_id(code, name, species)')
@@ -23,7 +26,15 @@ export default async function HealthPage() {
       .eq('farm_id', farmId)
       .eq('status', 'ativo')
       .order('code'),
+    supabase
+      .from('animals')
+      .select('id, code, name, species, sex, birth_date, status, entry_type')
+      .eq('farm_id', farmId)
+      .eq('species', 'bovino')
+      .eq('sex', 'F')
+      .eq('status', 'ativo'),
   ])
+  const brucelose = bruceloseStatus(females ?? [], records ?? [], todaySP())
 
   return (
     <div className="pb-24 md:pb-0">
@@ -37,6 +48,7 @@ export default async function HealthPage() {
           </Link>
         }
       />
+      <BruceloseCard due={brucelose.due} late={brucelose.late} />
       <HealthClient initialRecords={records ?? []} animals={animals ?? []} farmId={farmId} />
       <MobileActionBar>
         <Link href="/app/health/new" className="block">

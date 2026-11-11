@@ -6,6 +6,8 @@ import { DashboardCharts } from '@/components/dashboard/dashboard-charts'
 import { UpcomingBirths } from '@/components/dashboard/upcoming-births'
 import { LowStock } from '@/components/dashboard/low-stock'
 import { PendingTasks, type PendingTask } from '@/components/dashboard/pending-tasks'
+import { BruceloseCard } from '@/components/health/brucelose-card'
+import { bruceloseStatus } from '@/lib/brucelose'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/lib/helpers'
@@ -82,6 +84,7 @@ export default async function DashboardPage() {
     { data: yearHealth },
     { data: thirdHerds },
     { data: yearPurchases },
+    { data: bruceloseRecords },
     ifag,
   ] = await Promise.all([
     supabase.from('animals').select('id, code, name, species, sex, birth_date, breed, is_breeder, is_fat, weight_arrobas, market_value, mother_id, status, entry_type, entry_date').eq('farm_id', farmId),
@@ -98,6 +101,7 @@ export default async function DashboardPage() {
     supabase.from('health_records').select('cost').eq('farm_id', farmId).gte('application_date', yearStart),
     supabase.from('third_party_herds').select('*').eq('farm_id', farmId),
     supabase.from('animal_purchases').select('purchase_price').eq('farm_id', farmId).gte('purchase_date', yearStart),
+    supabase.from('health_records').select('animal_id, product_name').eq('farm_id', farmId),
     getIfagPrices(),
   ])
 
@@ -307,6 +311,7 @@ export default async function DashboardPage() {
   return (
     <div>
       <PageHeader title="Dashboard" description="Quanto vale o rebanho e quanto você está ganhando" />
+      <BruceloseCard {...bruceloseStatus(allAnimals, bruceloseRecords ?? [], todayStr)} />
       <PendingTasks tasks={tasks} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">

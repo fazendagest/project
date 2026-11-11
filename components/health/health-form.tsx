@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { isBruceloseProduct } from '@/lib/brucelose'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { HealthRecord } from '@/types'
@@ -39,6 +40,7 @@ export function HealthForm({ farmId, animals, record, mode }: HealthFormProps) {
     applied_by: record?.applied_by ?? '',
     cost: record?.cost != null ? formatBRL(record.cost) : '',
     notes: record?.notes ?? '',
+    sidago_certificate: record?.sidago_certificate ?? '',
   })
 
   const filteredAnimals = animals.filter(a =>
@@ -84,13 +86,16 @@ export function HealthForm({ farmId, animals, record, mode }: HealthFormProps) {
       applied_by: form.applied_by || null,
       cost: parseBRL(form.cost) ?? 0,
       notes: form.notes || null,
+      sidago_certificate: isBruceloseProduct(form.product_name) ? form.sidago_certificate.trim() || null : null,
     }
 
     let error
     if (mode === 'edit') {
       ;({ error } = await supabase.from('health_records').update(base).eq('id', record!.id).eq('farm_id', farmId))
     } else if (multipleAnimals) {
-      const inserts = selectedAnimals.map(animal_id => ({ ...base, animal_id }))
+      // Custo total do lote dividido entre os animais (Tião, P6): antes cada um recebia o valor inteiro.
+      const each = Math.round((base.cost / selectedAnimals.length) * 100) / 100
+      const inserts = selectedAnimals.map(animal_id => ({ ...base, cost: each, animal_id }))
       ;({ error } = await supabase.from('health_records').insert(inserts))
     } else {
       ;({ error } = await supabase.from('health_records').insert({ ...base, animal_id: form.animal_id }))
@@ -197,8 +202,17 @@ export function HealthForm({ farmId, animals, record, mode }: HealthFormProps) {
               <Input id="product_name" value={form.product_name}
                 onChange={e => set('product_name', e.target.value)}
                 onBlur={e => set('product_name', toTitleCase(e.target.value))}
-                placeholder="Ex: Vacina Aftosa, Ivermectina..." required />
+                placeholder="Ex.: Brucelose B19, Clostridiose, Ivermectina" required />
             </div>
+
+            {isBruceloseProduct(form.product_name) && (
+              <div className="space-y-2">
+                <Label htmlFor="sidago_certificate">Nº do atestado no SIDAGO</Label>
+                <Input id="sidago_certificate" value={form.sidago_certificate}
+                  onChange={e => set('sidago_certificate', e.target.value)} />
+                <p className="text-xs text-muted-foreground">O veterinário lança a vacina no SIDAGO (o sistema da Agrodefesa) e passa o número do atestado.</p>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -206,11 +220,12 @@ export function HealthForm({ farmId, animals, record, mode }: HealthFormProps) {
                 <Input id="dose" value={form.dose} onChange={e => set('dose', e.target.value)} placeholder="Ex: 5ml" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cost">Custo (R$)</Label>
+                <Label htmlFor="cost">{mode === 'create' && multipleAnimals ? 'Custo do lote (R$)' : 'Custo (R$)'}</Label>
                 <Input id="cost" type="text" inputMode="decimal" value={form.cost}
                   onChange={e => set('cost', e.target.value)}
                   onBlur={() => { const n = parseBRL(form.cost); if (n !== null) set('cost', formatBRL(n)) }}
                   placeholder="0,00" />
+                {mode === 'create' && multipleAnimals && <p className="text-xs text-muted-foreground">O total, dividido entre os animais.</p>}
               </div>
             </div>
 

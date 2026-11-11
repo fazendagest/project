@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DataCard } from '@/components/ui/data-card'
 import { EmptyState } from '@/components/ui/empty-state'
+import { CardList, RecordCard } from '@/components/ui/record-card'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { Pencil, Trash2, AlertTriangle } from 'lucide-react'
@@ -75,7 +76,7 @@ export function HealthClient({
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <SearchInput value={search} onChange={v => { setSearch(v); setPage(1) }} placeholder="Buscar por produto ou animal..." />
         <Select value={typeFilter} onValueChange={v => { if (v) { setTypeFilter(v); setPage(1) } }}>
-          <SelectTrigger className="w-full sm:w-44"><SelectValue placeholder="Tipo" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-44"><SelectValue>{({ all: 'Todos os tipos', vacina: 'Vacina', vermifugacao: 'Vermifugação', medicamento: 'Medicamento', consulta: 'Consulta' } as Record<string, string>)[typeFilter]}</SelectValue></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os tipos</SelectItem>
             <SelectItem value="vacina">Vacina</SelectItem>
@@ -88,7 +89,28 @@ export function HealthClient({
 
       <p className="text-sm text-muted-foreground mb-3">{filtered.length} registro(s)</p>
 
-      <DataCard>
+      <CardList empty="Nenhum registro de saúde">
+        {paged.map(r => (
+          <RecordCard
+            key={r.id}
+            title={r.product_name}
+            subtitle={<>{healthTypeLabel(r.type)}, {(r.animal as any)?.name || (r.animal as any)?.code || 'animal não informado'}</>}
+            amount={r.cost ? formatCurrency(r.cost) : undefined}
+            fields={[
+              { label: 'Aplicação', value: formatDate(r.application_date) },
+              ...(r.next_due_date ? [{
+                label: 'Próxima',
+                value: <span className={isDueSoon(r.next_due_date) ? 'text-amber-700 inline-flex items-center gap-1' : ''}>{isDueSoon(r.next_due_date) && <AlertTriangle className="h-3 w-3" />}{formatDate(r.next_due_date)}</span>,
+              }] : []),
+              ...(r.dose ? [{ label: 'Dose', value: r.dose }] : []),
+            ]}
+            editHref={`/app/health/${r.id}/edit`}
+            onDelete={() => setConfirmId(r.id)}
+          />
+        ))}
+      </CardList>
+
+      <DataCard className="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { DataCard } from '@/components/ui/data-card'
 import { EmptyState } from '@/components/ui/empty-state'
+import { CardList, RecordCard } from '@/components/ui/record-card'
 import { BirthDialog } from '@/components/reproduction/birth-dialog'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -87,7 +88,7 @@ export function ReproductionClient({
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <SearchInput value={search} onChange={v => { setSearch(v); setPage(1) }} placeholder="Buscar por fêmea..." />
         <Select value={statusFilter} onValueChange={v => { if (v) { setStatusFilter(v); setPage(1) } }}>
-          <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-40"><SelectValue>{({ all: 'Todos', coberta: 'Coberta', prenha: 'Prenha', parida: 'Parida', perdida: 'Perdida' } as Record<string, string>)[statusFilter]}</SelectValue></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="coberta">Coberta</SelectItem>
@@ -100,7 +101,38 @@ export function ReproductionClient({
 
       <p className="text-sm text-muted-foreground mb-3">{filtered.length} registro(s)</p>
 
-      <DataCard>
+      <CardList empty="Nenhuma cobertura registrada">
+        {paged.map(r => {
+          const female = r.female as any
+          const male = r.male as any
+          const sire = male?.code ? `${male.name || male.code}` : r.external_male_name || 'Inseminação'
+          return (
+            <RecordCard
+              key={r.id}
+              title={female?.name || female?.code || 'Fêmea não informada'}
+              titleNote={female?.name ? female.code : undefined}
+              subtitle={`Com ${sire}`}
+              fields={[
+                { label: 'Cobertura', value: formatDate(r.coverage_date) },
+                r.actual_birth_date
+                  ? { label: 'Pariu', value: formatDate(r.actual_birth_date) }
+                  : { label: 'Parto previsto', value: r.expected_birth_date ? formatDate(r.expected_birth_date) : 'sem data' },
+                ...(r.offspring_count ? [{ label: 'Filhotes', value: r.offspring_count }] : []),
+              ]}
+              footer={<Badge className={statusColors[r.status]}>{reproStatusLabel(r.status)}</Badge>}
+              extraActions={(r.status === 'coberta' || r.status === 'prenha') && (
+                <Button variant="outline" className="h-11 gap-1 mr-auto" onClick={() => setBirthRecord(r)}>
+                  <Baby className="h-4 w-4 text-pink-500" /> Registrar parto
+                </Button>
+              )}
+              editHref={`/app/reproduction/${r.id}/edit`}
+              onDelete={() => setConfirmId(r.id)}
+            />
+          )
+        })}
+      </CardList>
+
+      <DataCard className="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>

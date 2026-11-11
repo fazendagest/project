@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getFarmId } from '@/lib/farm'
-import { PageHeader } from '@/components/layout/page-header'
+import { PageHeader, MobileActionBar } from '@/components/layout/page-header'
 import { ReproductionClient } from '@/components/reproduction/reproduction-client'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -34,10 +34,11 @@ export default async function ReproductionPage() {
   ])
 
   return (
-    <div>
+    <div className="pb-24 md:pb-0">
       <PageHeader
         title="Reprodução"
         description="Coberturas, gestações e partos"
+        actionsDesktopOnly
         actions={
           <Link href="/app/reproduction/new">
             <Button className="h-10 gap-2"><Plus className="h-4 w-4" /> Nova Cobertura</Button>
@@ -50,6 +51,11 @@ export default async function ReproductionPage() {
         males={males ?? []}
         farmId={farmId}
       />
+      <MobileActionBar>
+        <Link href="/app/reproduction/new" className="block">
+          <Button className="h-12 w-full gap-2 text-base"><Plus className="h-5 w-5" /> Nova cobertura</Button>
+        </Link>
+      </MobileActionBar>
     </div>
   )
 }

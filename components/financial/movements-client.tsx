@@ -19,12 +19,17 @@ import { Plus, Trash2, Pencil } from 'lucide-react'
 import { toTitleCase } from '@/lib/utils'
 import { DataCard } from '@/components/ui/data-card'
 import { EmptyState } from '@/components/ui/empty-state'
+import { CardList, RecordCard } from '@/components/ui/record-card'
+import { MobileActionBar } from '@/components/layout/page-header'
 import { formatDate, formatCurrency, formatNumber, expenseCategoryLabel, healthTypeLabel, parseBRL, formatBRL, animalCategory } from '@/lib/helpers'
 import type { Invested } from '@/lib/investment'
 import Link from 'next/link'
 import { monthOf, sameDayIn, fixedDates, sumExpensesInRange, todaySP, monthLabelPt } from '@/lib/fixed-expenses'
 
 const today = new Date().toISOString().slice(0, 10)
+
+/** Nome do animal para o cartão: nome, senão código. */
+const animalLabel = (a: any) => a?.name || a?.code || 'animal não informado'
 
 export function ExpensesClient({
   initialExpenses,
@@ -53,6 +58,7 @@ export function ExpensesClient({
   const feedStock = initialFeedStock
   const healthRecords = initialHealthRecords
 
+  const [tab, setTab] = useState('expenses')
   const [expDialog, setExpDialog] = useState(false)
   const [saleDialog, setSaleDialog] = useState(false)
   // null = closed | string (uuid) = editing that id
@@ -164,6 +170,11 @@ export function ExpensesClient({
       router.refresh()
     }
     setStopping(false)
+  }
+
+  function openNewSale() {
+    setSaleForm({ animal_ids: [], buyer_name: '', sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', notes: '' })
+    setSaleDialog(true)
   }
 
   async function saveSale(e: React.FormEvent) {
@@ -283,8 +294,8 @@ export function ExpensesClient({
   }
 
   return (
-    <div>
-      <Tabs defaultValue="expenses">
+    <div className="pb-24 md:pb-0">
+      <Tabs value={tab} onValueChange={v => setTab(String(v))}>
         <TabsList className="mb-4 flex-wrap h-auto">
           <TabsTrigger value="expenses">Despesas ({expenses.length})</TabsTrigger>
           <TabsTrigger value="sales">Vendas ({sales.length})</TabsTrigger>
@@ -298,9 +309,26 @@ export function ExpensesClient({
             <p className="text-sm text-muted-foreground">
               Total: {formatCurrency(sumExpensesInRange(expenses, '0000-01-01', todayLocal, todayLocal))}
             </p>
-            <Button onClick={() => setExpDialog(true)} className="gap-2"><Plus className="h-4 w-4" /> Nova Despesa</Button>
+            <Button onClick={() => setExpDialog(true)} className="gap-2 hidden md:inline-flex"><Plus className="h-4 w-4" /> Nova Despesa</Button>
           </div>
-          <DataCard>
+          <CardList empty="Nenhuma despesa">
+            {expenses.map(e => (
+              <RecordCard
+                key={e.id}
+                title={e.description}
+                subtitle={e.is_fixed
+                  ? <>Todo mês desde {monthLabelPt(e.date)}{isRunning(e) ? '' : `, parou em ${monthLabelPt(e.fixed_until!)}`}</>
+                  : formatDate(e.date)}
+                amount={<>{formatCurrency(e.amount)}{e.is_fixed && <span className="font-normal text-xs"> por mês</span>}</>}
+                amountClassName="text-red-700"
+                footer={<Badge variant="outline">{expenseCategoryLabel(e.category)}</Badge>}
+                extraActions={isRunning(e) && <Button variant="outline" className="h-11 mr-auto" onClick={() => setStopConfirm(e)}>Parar</Button>}
+                onEdit={() => openEditExpense(e)}
+                onDelete={() => setDelConfirm({ type: 'expense', id: e.id })}
+              />
+            ))}
+          </CardList>
+          <DataCard className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -337,9 +365,28 @@ export function ExpensesClient({
         <TabsContent value="sales">
           <div className="flex justify-between items-center mb-4">
             <p className="text-sm text-muted-foreground">Total: {formatCurrency(sales.reduce((s, r) => s + r.sale_price, 0))}</p>
-            <Button onClick={() => { setSaleForm({ animal_ids: [], buyer_name: '', sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', notes: '' }); setSaleDialog(true) }} className="gap-2"><Plus className="h-4 w-4" /> Registrar Venda</Button>
+            <Button onClick={openNewSale} className="gap-2 hidden md:inline-flex"><Plus className="h-4 w-4" /> Registrar Venda</Button>
           </div>
-          <DataCard>
+          <CardList empty="Nenhuma venda">
+            {sales.map(s => (
+              <RecordCard
+                key={s.id}
+                title={animalLabel(s.animal)}
+                titleNote={(s.animal as any)?.name ? (s.animal as any)?.code : undefined}
+                subtitle={<>{formatDate(s.sale_date)}{s.buyer_name ? `, para ${s.buyer_name}` : ''}</>}
+                amount={formatCurrency(s.sale_price)}
+                amountClassName="text-green-700"
+                fields={[
+                  { label: 'Tipo', value: <span className="capitalize">{s.sale_type}</span> },
+                  ...(s.weight_kg != null ? [{ label: 'Peso', value: `${s.weight_kg}\u00a0@` }] : []),
+                  ...(invested[s.animal_id]?.total ? [{ label: 'Lucro', value: <span className={s.sale_price - invested[s.animal_id].total >= 0 ? 'text-green-700' : 'text-red-700'}>{formatCurrency(s.sale_price - invested[s.animal_id].total)}</span> }] : []),
+                ]}
+                onEdit={() => openEditSale(s)}
+                onDelete={() => setDelConfirm({ type: 'sale', id: s.id })}
+              />
+            ))}
+          </CardList>
+          <DataCard className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -381,7 +428,22 @@ export function ExpensesClient({
           <div className="mb-4">
             <p className="text-sm text-muted-foreground">Total: {formatCurrency(purchases.reduce((s, p) => s + p.purchase_price, 0))}</p>
           </div>
-          <DataCard>
+          <CardList empty="Nenhuma compra">
+            {purchases.map(p => (
+              <RecordCard
+                key={p.id}
+                title={animalLabel(p.animal)}
+                titleNote={(p.animal as any)?.name ? (p.animal as any)?.code : undefined}
+                subtitle={<>{formatDate(p.purchase_date)}{p.seller_name ? `, de ${p.seller_name}` : ''}</>}
+                amount={p.purchase_price > 0 ? formatCurrency(p.purchase_price) : 'sem preço'}
+                amountClassName={p.purchase_price > 0 ? 'text-red-700' : 'text-amber-700'}
+                fields={p.weight_kg != null ? [{ label: 'Peso', value: `${p.weight_kg}\u00a0@` }] : undefined}
+                onEdit={() => openEditPurchase(p)}
+                onDelete={() => setDelConfirm({ type: 'purchase', id: p.id })}
+              />
+            ))}
+          </CardList>
+          <DataCard className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -429,7 +491,22 @@ export function ExpensesClient({
               {' '}· Entradas de estoque lançadas em <Link href="/app/feeding" className="text-primary hover:underline">Alimentação</Link>
             </p>
           </div>
-          <DataCard>
+          <CardList empty="Nenhuma compra de alimentação registrada">
+            {feedStock.map(r => (
+              <RecordCard
+                key={r.id}
+                title={r.product_name}
+                subtitle={r.purchase_date ? formatDate(r.purchase_date) : 'sem data'}
+                amount={formatCurrency(r.total_cost ?? 0)}
+                amountClassName="text-red-700"
+                fields={[
+                  { label: 'Quantidade', value: `${formatNumber(r.current_quantity)}\u00a0${r.unit}` },
+                  { label: 'Preço', value: `${formatCurrency(r.cost_per_unit)}/${r.unit}` },
+                ]}
+              />
+            ))}
+          </CardList>
+          <DataCard className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -463,7 +540,18 @@ export function ExpensesClient({
               {' '}· Registros lançados em <Link href="/app/health" className="text-primary hover:underline">Saúde</Link>
             </p>
           </div>
-          <DataCard>
+          <CardList empty="Nenhum registro de saúde com custo">
+            {healthRecords.map(r => (
+              <RecordCard
+                key={r.id}
+                title={r.product_name}
+                subtitle={<>{healthTypeLabel(r.type)}, {animalLabel(r.animal)}, {formatDate(r.application_date)}</>}
+                amount={formatCurrency(r.cost)}
+                amountClassName="text-red-700"
+              />
+            ))}
+          </CardList>
+          <DataCard className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -497,6 +585,14 @@ export function ExpensesClient({
           </DataCard>
         </TabsContent>
       </Tabs>
+
+      {(tab === 'expenses' || tab === 'sales') && (
+        <MobileActionBar>
+          {tab === 'expenses'
+            ? <Button className="h-12 w-full gap-2 text-base" onClick={() => setExpDialog(true)}><Plus className="h-5 w-5" /> Nova despesa</Button>
+            : <Button className="h-12 w-full gap-2 text-base" onClick={openNewSale}><Plus className="h-5 w-5" /> Registrar venda</Button>}
+        </MobileActionBar>
+      )}
 
       {/* Expense Dialog */}
       <Dialog open={expDialog} onOpenChange={setExpDialog}>

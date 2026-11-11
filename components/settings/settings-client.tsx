@@ -197,17 +197,6 @@ export function SettingsClient({ farm, userEmail }: { farm: Farm | null; userEma
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Armazenamento de Fotos</CardTitle></CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            As fotos dos animais são armazenadas no Supabase Storage no bucket{' '}
-            <code className="bg-muted px-1 rounded">animal-photos</code>.
-            Certifique-se de criar este bucket com acesso público no painel do Supabase.
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
         <CardHeader>
           <CardTitle>Backup de Dados</CardTitle>
           <CardDescription>

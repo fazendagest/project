@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button'
 
 /** Troque a chave quando houver novidades novas: o aviso aparece de novo uma vez. */
-const STORAGE_KEY = 'fazendagest-novidades-2026-11'
+const STORAGE_KEY = 'fazendagest-novidades-2026-11b'
 
 /** Aviso único de novidades. Some quando o fazendeiro toca em "Entendi" (guardado neste aparelho). */
 export function WhatsNew() {
@@ -29,31 +29,33 @@ export function WhatsNew() {
       <DialogContent showCloseButton={false} className="sm:max-w-md max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-lg">Novidades no FazendaGest</DialogTitle>
-          <DialogDescription>O sistema ficou mais fácil no celular e agora mostra quanto o rebanho vale e quanto você ganha.</DialogDescription>
+          <DialogDescription>Agora o sistema acompanha a prenhez das vacas, o caixa do gado no ano e o gado de terceiros no seu pasto.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 text-sm text-foreground">
           <ul className="list-disc space-y-1.5 pl-5">
-            <li>Os animais aparecem em cartões, separados em vacas, novilhas, bezerros, touros e bois, cavalos e porcos. Toque no animal para ver tudo dele.</li>
-            <li>Cada animal mostra quanto você <strong>investiu</strong> nele e quanto ele <strong>vale hoje</strong>. Se você não digitar o valor, o sistema usa o preço médio de Goiás (IFAG).</li>
-            <li>O <strong>Dashboard</strong> mostra quanto o rebanho vale se vendesse hoje, o lucro das vendas e se rendeu mais ou menos que deixar o dinheiro no banco.</li>
-            <li>No topo do Dashboard fica a lista <strong>Falta completar</strong>: cada item some quando você resolve.</li>
-            <li>Sal, ração, salário do caseiro, energia e diesel entram no custo dos animais. Os cavalos de trabalho ficam fora dessa conta.</li>
-            <li>Dá para vender vários animais de uma vez e cadastrar vários iguais (uma ninhada, por exemplo).</li>
-            <li>Animal gordo para o frigorífico: marque <strong>Gordo</strong> e informe o peso vivo; o valor sai pela arroba. Só informe peso se pesou na balança ou na fita.</li>
+            <li>
+              Em <strong>Reprodução</strong>, aba Diagnóstico: lance o resultado do toque ou do ultrassom (prenhe ou vazia).
+              O Dashboard mostra quantas estão prenhes e as vazias para avaliar a venda com o veterinário.
+            </li>
+            <li>Na venda, diga o <strong>motivo</strong> (bezerro desmamado, gordo, descarte...). No animal morto, a data e a causa.</li>
+            <li>
+              O cartão <strong>A fazenda se pagou?</strong> mostra o caixa do gado no ano: vendas, menos o Funrural (1,63%), as compras
+              de animais e os custos.
+            </li>
+            <li>
+              Menu <strong>Gado de terceiros</strong>: registre o gado de outra pessoa no seu pasto (aluguel ou parceria), com GTA e exame de
+              brucelose e tuberculose.
+            </li>
+            <li>Ração e despesas agora se dividem pelo tamanho do animal: vaca conta mais que bezerro. Compra de ração só dos porcos, marque <strong>Comida dos porcos</strong>.</li>
           </ul>
 
           <div>
             <p className="font-semibold mb-1.5">O que fazer agora</p>
             <ol className="list-decimal space-y-1.5 pl-5">
-              <li>
-                Lance as compras de <strong>sal, milho e ração</strong> em Alimentação. Sem isso, o lucro mostrado é maior do que o real.
-              </li>
-              <li>
-                Lance as <strong>despesas da fazenda</strong> em Financeiro, Despesas. No que você paga todo mês, como o salário do
-                caseiro, marque <strong>Pago todo mês</strong> e diga desde quando: lança uma vez só e o sistema conta todo mês sozinho.
-              </li>
-              <li>Resolva os itens da lista <strong>Falta completar</strong>, no Dashboard.</li>
+              <li>Em <strong>Configurações</strong>, informe quanto da fazenda é <strong>pasto</strong> (em hectares).</li>
+              <li>Lance as compras de <strong>sal, milho e ração</strong> e as <strong>despesas da fazenda</strong> (caseiro, energia, diesel).</li>
+              <li>Quando o veterinário fizer o toque, lance o resultado em Reprodução.</li>
             </ol>
           </div>
         </div>

@@ -212,13 +212,13 @@ export default async function DashboardPage() {
   const thirdHeads = thirdOnFarm.reduce((s, h) => s + h.head_count, 0)
   const totalUA = ownUA + thirdUA
   const perHa = area > 0 ? totalUA / area : null
-  if (area <= 0 || (perHa != null && perHa < 0.02)) {
+  if (usingTotalArea || area <= 0 || (perHa != null && perHa < 0.02)) {
     tasks.push({
       key: 'area-pasto',
-      title: area > 0 ? `Corrigir a área de pasto (está ${area.toLocaleString('pt-BR')} ha)` : 'Informar a área de pasto',
-      detail: 'Em hectares. 1 alqueire goiano = 4,84 ha. Serve para saber quanto gado ainda cabe no pasto.',
+      title: area > 0 && !usingTotalArea ? `Corrigir a área de pasto (está ${area.toLocaleString('pt-BR')} ha)` : 'Informar quanto da fazenda é pasto',
+      detail: 'Em hectares, só o que é pasto (sem lavoura, mata e sede). 1 alqueire goiano = 4,84 ha. Serve para saber quanto gado o pasto aguenta.',
       href: '/app/settings',
-      action: 'Corrigir em Configurações',
+      action: 'Informar em Configurações',
     })
   }
   const calvesNoMother = active.filter(a => a.species === 'bovino' && !a.mother_id && a.entry_type === 'nascimento' && (monthsOld(a.birth_date) ?? 99) < 12)

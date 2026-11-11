@@ -4,8 +4,8 @@ import type { BruceloseItem } from '@/lib/brucelose'
 const age = (m: number) => `${m} ${m === 1 ? 'mês' : 'meses'}`
 
 /** Aviso da vacina de brucelose (Tião, P6): some quando não há bezerra pendente. */
-export function BruceloseCard({ due, late }: { due: BruceloseItem[]; late: BruceloseItem[] }) {
-  if (due.length === 0 && late.length === 0) return null
+export function BruceloseCard({ due, late, bought = [] }: { due: BruceloseItem[]; late: BruceloseItem[]; bought?: BruceloseItem[] }) {
+  if (due.length === 0 && late.length === 0 && bought.length === 0) return null
   return (
     <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 mb-4">
       <p className="font-semibold text-base">Vacina de brucelose (obrigatória em Goiás)</p>
@@ -27,6 +27,19 @@ export function BruceloseCard({ due, late }: { due: BruceloseItem[]; late: Bruce
           <p className="font-medium">Passou da idade da vacina comum: fale com o veterinário ({late.length})</p>
           <ul className="mt-1 space-y-1">
             {late.map(a => (
+              <li key={a.id}>
+                <Link href={`/app/animals/${a.id}`} className="underline underline-offset-2">{a.label}</Link>, {age(a.months)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {bought.length > 0 && (
+        <div className="mt-3">
+          <p className="font-medium">Comprada sem atestado lançado ({bought.length})</p>
+          <p className="text-xs mt-0.5">Peça ao vendedor o atestado da vacina (ou confira no SIDAGO) e lance em Saúde. Sem ele, ela fica presa na hora de vender ou transportar.</p>
+          <ul className="mt-1 space-y-1">
+            {bought.map(a => (
               <li key={a.id}>
                 <Link href={`/app/animals/${a.id}`} className="underline underline-offset-2">{a.label}</Link>, {age(a.months)}
               </li>

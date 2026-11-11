@@ -48,7 +48,7 @@ export default async function HealthPage() {
           </Link>
         }
       />
-      <BruceloseCard due={brucelose.due} late={brucelose.late} />
+      <BruceloseCard {...brucelose} />
       <HealthClient initialRecords={records ?? []} animals={animals ?? []} farmId={farmId} />
       <MobileActionBar>
         <Link href="/app/health/new" className="block">

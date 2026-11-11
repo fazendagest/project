@@ -36,6 +36,8 @@ export function bruceloseStatus(animals: BruceloseAnimal[], records: BruceloseRe
   const vaccinated = new Set(records.filter(r => isBruceloseProduct(r.product_name)).map(r => r.animal_id))
   const due: BruceloseItem[] = []
   const late: BruceloseItem[] = []
+  /** Comprada sem atestado lançado (Tião, auditoria do P6): sem ele, não sai GTA para vender ou transportar. */
+  const bought: BruceloseItem[] = []
   for (const a of animals) {
     if (a.status !== 'ativo' || a.species !== 'bovino' || a.sex !== 'F' || !a.birth_date || vaccinated.has(a.id)) continue
     const d = ageDays(a.birth_date, today)
@@ -43,6 +45,7 @@ export function bruceloseStatus(animals: BruceloseAnimal[], records: BruceloseRe
     if (d >= FROM_DAYS && d <= UNTIL_DAYS) due.push(item)
     // Passou da idade: só as nascidas aqui (a comprada pode ter sido vacinada antes, sem registro aqui).
     else if (d > UNTIL_DAYS && d <= LATE_LIMIT_DAYS && a.entry_type === 'nascimento') late.push(item)
+    else if (d > UNTIL_DAYS && d <= LATE_LIMIT_DAYS && a.entry_type === 'compra') bought.push(item)
   }
-  return { due, late }
+  return { due, late, bought }
 }

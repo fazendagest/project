@@ -12,13 +12,13 @@ import { PregnancyChecks, type CheckFemale } from '@/components/reproduction/pre
 export function ReproductionTabs({
   checks,
   checkFemales,
-  lastCoverage,
+  coverages,
   farmId,
   children,
 }: {
   checks: React.ComponentProps<typeof PregnancyChecks>['initialChecks']
   checkFemales: CheckFemale[]
-  lastCoverage: Record<string, string>
+  coverages: Record<string, string[]>
   farmId: string
   /** Lista de coberturas (ReproductionClient). */
   children: React.ReactNode
@@ -47,7 +47,7 @@ export function ReproductionTabs({
           )}
         </div>
         <TabsContent value="diagnostico">
-          <PregnancyChecks initialChecks={checks} females={checkFemales} lastCoverage={lastCoverage} farmId={farmId} open={newCheck} onOpenChange={setNewCheck} />
+          <PregnancyChecks initialChecks={checks} females={checkFemales} coverages={coverages} farmId={farmId} open={newCheck} onOpenChange={setNewCheck} />
         </TabsContent>
         <TabsContent value="coberturas">{children}</TabsContent>
       </Tabs>

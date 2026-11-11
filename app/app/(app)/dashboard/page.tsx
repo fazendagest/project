@@ -15,7 +15,7 @@ import { computeHerdValue } from '@/lib/herd-value'
 import { getIfagPrices } from '@/lib/ifag'
 import { IFAG_SOURCE_URL } from '@/lib/market-reference'
 import { ChevronRight, Droplet } from 'lucide-react'
-import { format, startOfMonth, endOfMonth, differenceInMonths, parseISO, subDays } from 'date-fns'
+import { format, startOfMonth, endOfMonth, differenceInMonths, differenceInDays, parseISO, subDays } from 'date-fns'
 
 /** Sem centavos, que é como o fazendeiro fala de preço de animal. */
 function money(v: number) {
@@ -77,6 +77,7 @@ export default async function DashboardPage() {
     { data: monthHealth },
     { data: milkToday },
     { data: pregnancyChecks },
+    { data: reproRecords },
     ifag,
   ] = await Promise.all([
     supabase.from('animals').select('id, code, name, species, sex, birth_date, breed, is_breeder, is_fat, weight_arrobas, market_value, mother_id, status, entry_type, entry_date').eq('farm_id', farmId),
@@ -89,6 +90,7 @@ export default async function DashboardPage() {
     supabase.from('health_records').select('cost').eq('farm_id', farmId).gte('application_date', monthStart).lte('application_date', monthEnd),
     supabase.from('milk_production').select('liters').eq('farm_id', farmId).eq('date', todayStr),
     supabase.from('pregnancy_checks').select('animal_id, exam_date, result').eq('farm_id', farmId).gte('exam_date', format(subDays(now, 365), 'yyyy-MM-dd')),
+    supabase.from('reproduction_records').select('female_id, actual_birth_date, status').eq('farm_id', farmId),
     getIfagPrices(),
   ])
 
@@ -201,15 +203,42 @@ export default async function DashboardPage() {
     })
   }
   // Prenhez (pedido do Tião, 11/11/2026): último diagnóstico de cada vaca ou novilha ativa nos últimos 12 meses.
-  const cowsAndHeifers = active.filter(a => a.species === 'bovino' && a.sex === 'F' && (monthsOld(a.birth_date) ?? 99) >= 12)
   const lastCheck = new Map<string, { exam_date: string; result: string }>()
   for (const c of pregnancyChecks ?? []) {
     const prev = lastCheck.get(c.animal_id)
     if (!prev || c.exam_date > prev.exam_date) lastCheck.set(c.animal_id, c)
   }
+  // Partos conhecidos: filho cadastrado com a mãe e parto lançado em Reprodução.
+  const calvings = new Map<string, string[]>()
+  const calved = new Set<string>()
+  const covered = new Set<string>()
+  const addCalving = (id: string, date?: string | null) => {
+    calved.add(id)
+    if (date) calvings.set(id, [...(calvings.get(id) ?? []), date])
+  }
+  for (const a of allAnimals) if (a.mother_id) addCalving(a.mother_id, a.birth_date)
+  for (const r of reproRecords ?? []) {
+    covered.add(r.female_id)
+    if (r.actual_birth_date || r.status === 'parida') addCalving(r.female_id, r.actual_birth_date)
+  }
+  // Entra na conta (Tião): vaca que já pariu, novilha com 20 meses ou mais, fêmea com cobertura lançada
+  // ou já examinada. Sem data de nascimento entra, para não esconder vaca antiga.
+  const HEIFER_MIN_MONTHS = 20
+  const cowsAndHeifers = active.filter(a => a.species === 'bovino' && a.sex === 'F' && (
+    calved.has(a.id) || covered.has(a.id) || lastCheck.has(a.id) || (monthsOld(a.birth_date) ?? 99) >= HEIFER_MIN_MONTHS
+  ))
+  // Vazia até 90 dias depois do parto é normal (Tião): sai da lista de avaliar venda.
+  const RECENT_CALVING_DAYS = 90
+  const lastCalvingBefore = (id: string, exam: string) => (calvings.get(id) ?? []).filter(d => d <= exam).sort().at(-1)
   const examined = cowsAndHeifers.filter(a => lastCheck.has(a.id))
   const pregnant = examined.filter(a => lastCheck.get(a.id)!.result === 'prenhe')
   const empty = examined.filter(a => lastCheck.get(a.id)!.result === 'vazia')
+  const emptyToReview = empty
+    .map(a => {
+      const exam = lastCheck.get(a.id)!.exam_date
+      return { a, exam, calving: lastCalvingBefore(a.id, exam) }
+    })
+    .filter(r => !r.calving || differenceInDays(parseISO(r.exam), parseISO(r.calving)) >= RECENT_CALVING_DAYS)
   const pregnancyRate = examined.length > 0 ? pregnant.length / examined.length : null
 
   const milkLiters = milkToday?.reduce((s, r) => s + (r.liters || 0), 0) ?? 0
@@ -410,15 +439,22 @@ export default async function DashboardPage() {
                   {pregnant.length} prenhe{pregnant.length === 1 ? '' : 's'} de {examined.length} examinada{examined.length === 1 ? '' : 's'}
                   {cowsAndHeifers.length > examined.length && `, ${cowsAndHeifers.length - examined.length} sem exame`}
                 </p>
-                {empty.length > 0 && (
+                {emptyToReview.length > 0 && (
                   <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3">
-                    <p className="text-sm font-medium text-amber-900">Vazias: candidatas a venda ({empty.length})</p>
-                    <p className="text-xs text-amber-900 mb-1">Vaca vazia come o pasto sem dar bezerro.</p>
+                    <p className="text-sm font-medium text-amber-900">Vazias: avaliar venda ({emptyToReview.length})</p>
+                    <p className="text-xs text-amber-900 mb-1">Vaca vazia come o pasto sem dar bezerro. Decida com o veterinário.</p>
                     <ul className="divide-y divide-amber-200">
-                      {empty.map(a => (
+                      {emptyToReview.map(({ a, exam, calving }) => (
                         <li key={a.id}>
                           <Link href={`/app/animals/${a.id}`} className="flex items-center justify-between gap-3 py-2 min-h-11 text-sm hover:underline">
-                            <span>{nameOf(a)} <span className="text-xs text-amber-900/80">vazia em {formatDate(lastCheck.get(a.id)!.exam_date)}</span></span>
+                            <span>
+                              {nameOf(a)}{' '}
+                              <span className="text-xs text-amber-900">
+                                {calving
+                                  ? `vazia em ${formatDate(exam)}, último parto em ${formatDate(calving)}`
+                                  : `vazia em ${formatDate(exam)}: confira com o veterinário se ela pariu há pouco`}
+                              </span>
+                            </span>
                             <ChevronRight className="h-4 w-4 shrink-0" />
                           </Link>
                         </li>

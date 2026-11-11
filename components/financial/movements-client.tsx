@@ -745,7 +745,7 @@ export function ExpensesClient({
             <div className="space-y-2">
               <Label>Motivo da venda</Label>
               <Select value={saleForm.sale_reason} onValueChange={v => setSaleForm(p => ({ ...p, sale_reason: String(v ?? '') }))}>
-                <SelectTrigger><SelectValue>{saleForm.sale_reason ? SALE_REASONS[saleForm.sale_reason] : 'Escolha o motivo'}</SelectValue></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Escolha o motivo" /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(SALE_REASONS).map(([k, label]) => <SelectItem key={k} value={k}>{label}</SelectItem>)}
                 </SelectContent>
@@ -843,7 +843,7 @@ export function ExpensesClient({
             <div className="space-y-2">
               <Label>Motivo da venda</Label>
               <Select value={saleEditForm.sale_reason} onValueChange={v => setSaleEditForm(p => ({ ...p, sale_reason: String(v ?? '') }))}>
-                <SelectTrigger><SelectValue>{saleEditForm.sale_reason ? SALE_REASONS[saleEditForm.sale_reason] : 'Escolha o motivo'}</SelectValue></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Escolha o motivo" /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(SALE_REASONS).map(([k, label]) => <SelectItem key={k} value={k}>{label}</SelectItem>)}
                 </SelectContent>

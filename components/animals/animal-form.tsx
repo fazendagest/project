@@ -650,14 +650,14 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag }: Ani
               {form.status === 'morto' && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="death_date">Data da morte</Label>
+                    <Label htmlFor="death_date">{form.death_cause === 'sumiu' ? 'Data em que sumiu' : 'Data da morte'}</Label>
                     <Input id="death_date" type="date" value={form.death_date} max={new Date().toISOString().slice(0, 10)}
                       onChange={e => set('death_date', e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Causa da morte</Label>
+                    <Label>Causa da morte ou sumiço</Label>
                     <Select value={form.death_cause} onValueChange={v => set('death_cause', v ? String(v) : '')}>
-                      <SelectTrigger><SelectValue>{form.death_cause ? DEATH_CAUSES[form.death_cause] : 'Escolha a causa'}</SelectValue></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Escolha a causa" /></SelectTrigger>
                       <SelectContent>
                         {Object.entries(DEATH_CAUSES).map(([k, label]) => <SelectItem key={k} value={k}>{label}</SelectItem>)}
                       </SelectContent>

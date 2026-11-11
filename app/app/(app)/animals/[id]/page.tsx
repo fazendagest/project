@@ -101,7 +101,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
               <Row label="Peso" value={`${(animal as any).weight_arrobas} @`} />
             )}
             {animal.status === 'morto' && (animal.death_date || animal.death_cause) && (
-              <Row label="Morte" value={[animal.death_date ? formatDate(animal.death_date) : null, animal.death_cause ? DEATH_CAUSES[animal.death_cause] ?? animal.death_cause : null].filter(Boolean).join(', ')} />
+              <Row label={animal.death_cause === 'sumiu' ? 'Sumiu' : 'Morte'} value={[animal.death_date ? formatDate(animal.death_date) : null, animal.death_cause ? DEATH_CAUSES[animal.death_cause] ?? animal.death_cause : null].filter(Boolean).join(', ')} />
             )}
             {lastChecks?.[0] && (
               <Row

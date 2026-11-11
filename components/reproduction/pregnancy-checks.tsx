@@ -31,7 +31,19 @@ const today = () => new Date().toISOString().slice(0, 10)
 
 /** Gestação média de vaca de corte, para sugerir a previsão do parto (estimativa do Tião, 11/11/2026). */
 export const GESTATION_DAYS = 290
-const addDays = (iso: string, days: number) => new Date(new Date(iso + 'T12:00:00').getTime() + days * 86_400_000).toISOString().slice(0, 10)
+/** Cobertura mais antiga que ainda pode ter dado esta prenhez (Tião, 11/11/2026). */
+export const MAX_COVERAGE_DAYS = 300
+const DAY = 86_400_000
+const addDays = (iso: string, days: number) => new Date(new Date(iso + 'T12:00:00').getTime() + days * DAY).toISOString().slice(0, 10)
+const daysBetween = (from: string, to: string) => Math.round((new Date(to + 'T12:00:00').getTime() - new Date(from + 'T12:00:00').getTime()) / DAY)
+
+/** Última cobertura feita antes do exame e há no máximo 300 dias; sem ela, não há sugestão. */
+function coverageFor(dates: string[] | undefined, exam: string) {
+  return (dates ?? [])
+    .filter(d => d < exam && daysBetween(d, exam) <= MAX_COVERAGE_DAYS)
+    .sort()
+    .at(-1)
+}
 
 /**
  * Diagnóstico de gestação (pedido do Tião, 11/11/2026): o veterinário confirma por toque ou ultrassom
@@ -40,15 +52,15 @@ const addDays = (iso: string, days: number) => new Date(new Date(iso + 'T12:00:0
 export function PregnancyChecks({
   initialChecks,
   females,
-  lastCoverage = {},
+  coverages = {},
   farmId,
   open,
   onOpenChange,
 }: {
   initialChecks: (PregnancyCheck & { animal?: { code: string; name?: string | null } })[]
   females: CheckFemale[]
-  /** Última cobertura ou inseminação de cada fêmea (id → AAAA-MM-DD), para sugerir o parto. */
-  lastCoverage?: Record<string, string>
+  /** Coberturas e inseminações de cada fêmea (id → datas AAAA-MM-DD), para sugerir o parto. */
+  coverages?: Record<string, string[]>
   farmId: string
   open: boolean
   onOpenChange: (o: boolean) => void
@@ -63,14 +75,14 @@ export function PregnancyChecks({
 
   const name = (a?: { code: string; name?: string | null }) => a?.name || a?.code || 'animal não informado'
   const selected = females.find(f => f.id === form.animal_id)
-  const coverage = form.animal_id ? lastCoverage[form.animal_id] : undefined
+  const coverage = form.animal_id ? coverageFor(coverages[form.animal_id], form.exam_date) : undefined
   const suggestedBirth = coverage ? addDays(coverage, GESTATION_DAYS) : null
 
-  // Prenhe com cobertura lançada: sugere o parto (cobertura + 290 dias) se o campo estiver vazio.
+  // Prenhe com cobertura válida: sugere o parto (cobertura + 290 dias) se o campo estiver vazio.
   function pick(patch: Partial<typeof form>) {
     setForm(p => {
       const next = { ...p, ...patch }
-      const cov = next.animal_id ? lastCoverage[next.animal_id] : undefined
+      const cov = next.animal_id ? coverageFor(coverages[next.animal_id], next.exam_date) : undefined
       if (next.result === 'prenhe' && !next.expected_birth_date && cov) next.expected_birth_date = addDays(cov, GESTATION_DAYS)
       return next
     })
@@ -116,7 +128,7 @@ export function PregnancyChecks({
   return (
     <div>
       <p className="text-sm text-muted-foreground mb-3">
-        O veterinário confirma por toque ou ultrassom se a vaca está prenhe. Vaca vazia come o mesmo pasto sem dar bezerro: é candidata a venda.
+        O veterinário confirma por toque ou ultrassom se a vaca está prenhe. Vaca vazia come o mesmo pasto sem dar bezerro: vale avaliar a venda com o veterinário.
       </p>
 
       <CardList empty="Nenhum diagnóstico lançado ainda.">
@@ -177,7 +189,7 @@ export function PregnancyChecks({
             <div className="space-y-2">
               <Label>Vaca ou novilha *</Label>
               <Select value={form.animal_id} onValueChange={v => pick({ animal_id: String(v ?? ''), expected_birth_date: '' })}>
-                <SelectTrigger><SelectValue>{selected ? `${selected.name || selected.code}${selected.name ? ` (${selected.code})` : ''}` : 'Escolha'}</SelectValue></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Escolha" /></SelectTrigger>
                 <SelectContent>
                   {females.map(f => <SelectItem key={f.id} value={f.id}>{f.name || f.code}{f.name ? ` (${f.code})` : ''}</SelectItem>)}
                 </SelectContent>
@@ -187,7 +199,7 @@ export function PregnancyChecks({
             <div className="space-y-2">
               <Label htmlFor="exam_date">Data do exame</Label>
               <Input id="exam_date" type="date" value={form.exam_date} max={today()} required
-                onChange={e => setForm(p => ({ ...p, exam_date: e.target.value }))} />
+                onChange={e => pick({ exam_date: e.target.value, expected_birth_date: form.expected_birth_date === suggestedBirth ? '' : form.expected_birth_date })} />
             </div>
             <div className="space-y-2">
               <Label>Resultado *</Label>
@@ -219,7 +231,7 @@ export function PregnancyChecks({
             )}
             {form.result === 'vazia' && (
               <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                Ela vai aparecer no Dashboard como candidata a venda.
+                Ela vai aparecer no Dashboard, em Vazias: avaliar venda.
               </p>
             )}
             <div className="space-y-2">

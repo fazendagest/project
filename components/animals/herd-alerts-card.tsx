@@ -13,6 +13,7 @@ function List({ title, why, items }: { title: string; why: string; items: AlertI
         {items.map(a => (
           <li key={a.id}>
             <Link href={`/app/animals/${a.id}`} className="underline underline-offset-2">{a.label}</Link>, {age(a.months)}
+            {a.note && <span className="font-medium"> ({a.note})</span>}
           </li>
         ))}
       </ul>

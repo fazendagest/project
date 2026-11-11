@@ -14,7 +14,10 @@ export type AlertAnimal = {
   status: string
 }
 
-export type AlertItem = { id: string; label: string; months: number }
+/** note: aviso junto ao nome (bezerra sem brucelose: não sai com GTA; Tião, revisão do sistema, item 7). */
+export type AlertItem = { id: string; label: string; months: number; note?: string }
+
+export const NO_BRUCELOSE_NOTE = 'antes de vender, resolver a brucelose com o veterinário'
 
 /** Bezerro a partir desta idade está pronto para desmamar. */
 export const WEANING_MONTHS = 7
@@ -29,14 +32,15 @@ function monthsAt(birth: string, today: string) {
   return (d.getFullYear() - b.getFullYear()) * 12 + (d.getMonth() - b.getMonth()) - (d.getDate() < b.getDate() ? 1 : 0)
 }
 
-export function herdAlerts(animals: AlertAnimal[], today: string) {
+/** vaccinated: fêmeas com vacina de brucelose em Saúde (isBruceloseProduct em lib/brucelose.ts). */
+export function herdAlerts(animals: AlertAnimal[], today: string, vaccinated: Set<string> = new Set()) {
   const weaning: AlertItem[] = []
   const oldCows: AlertItem[] = []
   for (const a of animals) {
     if (a.status !== 'ativo' || a.species !== 'bovino' || !a.birth_date) continue
     const m = monthsAt(a.birth_date, today)
     const item = { id: a.id, label: a.name || a.code, months: m }
-    if (m >= WEANING_MONTHS && m <= CALF_MAX_MONTHS) weaning.push(item)
+    if (m >= WEANING_MONTHS && m <= CALF_MAX_MONTHS) weaning.push(a.sex === 'F' && !vaccinated.has(a.id) ? { ...item, note: NO_BRUCELOSE_NOTE } : item)
     else if (a.sex === 'F' && m >= OLD_COW_MONTHS) oldCows.push(item)
   }
   return { weaning, oldCows }

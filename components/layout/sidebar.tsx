@@ -21,6 +21,7 @@ import {
   X,
   ChevronRight,
   Shield,
+  Handshake,
 } from 'lucide-react'
 import { CowIcon } from '@/components/icons/cow-icon'
 import { Button } from '@/components/ui/button'
@@ -31,6 +32,7 @@ const navItems = [
   { href: '/app/health', label: 'Saúde', icon: Heart },
   { href: '/app/reproduction', label: 'Reprodução', icon: Baby },
   { href: '/app/feeding', label: 'Alimentação', icon: Wheat },
+  { href: '/app/pasture', label: 'Gado de terceiros', icon: Handshake },
   {
     label: 'Financeiro',
     icon: DollarSign,

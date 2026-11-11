@@ -9,11 +9,12 @@ import { PendingTasks, type PendingTask } from '@/components/dashboard/pending-t
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/lib/helpers'
-import { computeInvested, monthlyReturn, BANK_MONTHLY, OUTSIDE_HERD_CATEGORY } from '@/lib/investment'
+import { computeInvested, monthlyReturn, animalUA, BANK_MONTHLY, OUTSIDE_HERD_CATEGORY } from '@/lib/investment'
 import { expandExpenses, sumExpensesInRange } from '@/lib/fixed-expenses'
 import { computeHerdValue } from '@/lib/herd-value'
 import { getIfagPrices } from '@/lib/ifag'
 import { IFAG_SOURCE_URL } from '@/lib/market-reference'
+import { incomeInRange, isOnFarm, herdUA, type ThirdPartyHerd } from '@/lib/third-party'
 import { ChevronRight, Droplet } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, differenceInMonths, differenceInDays, parseISO, subDays } from 'date-fns'
 
@@ -79,6 +80,7 @@ export default async function DashboardPage() {
     { data: pregnancyChecks },
     { data: reproRecords },
     { data: yearHealth },
+    { data: thirdHerds },
     ifag,
   ] = await Promise.all([
     supabase.from('animals').select('id, code, name, species, sex, birth_date, breed, is_breeder, is_fat, weight_arrobas, market_value, mother_id, status, entry_type, entry_date').eq('farm_id', farmId),
@@ -93,6 +95,7 @@ export default async function DashboardPage() {
     supabase.from('pregnancy_checks').select('animal_id, exam_date, result').eq('farm_id', farmId).gte('exam_date', format(subDays(now, 365), 'yyyy-MM-dd')),
     supabase.from('reproduction_records').select('female_id, actual_birth_date, status').eq('farm_id', farmId),
     supabase.from('health_records').select('cost').eq('farm_id', farmId).gte('application_date', yearStart),
+    supabase.from('third_party_herds').select('*').eq('farm_id', farmId),
     getIfagPrices(),
   ])
 
@@ -159,8 +162,11 @@ export default async function DashboardPage() {
   const yearFeed = (feeds ?? []).filter(f => f.purchase_date && f.purchase_date >= yearStart && f.purchase_date <= todayStr).reduce((s, f) => s + Number(f.total_cost || 0), 0)
   const yearFarmExpenses = sumExpensesInRange((allExpenses ?? []).filter(e => e.category !== OUTSIDE_HERD_CATEGORY), yearStart, todayStr, todayStr)
   const yearHealthCost = (yearHealth ?? []).reduce((s, r) => s + Number(r.cost || 0), 0)
-  const yearResult = soldTotal - yearFeed - yearFarmExpenses - yearHealthCost
-  const yearAnything = soldTotal > 0 || yearFeed > 0 || yearFarmExpenses > 0 || yearHealthCost > 0
+  // Aluguel de pasto e acerto de parceria com gado de terceiros (Tião, P3) também pagam a fazenda.
+  const herdsThird = (thirdHerds ?? []) as ThirdPartyHerd[]
+  const yearRent = herdsThird.reduce((s, h) => s + incomeInRange(h, yearStart, todayStr), 0)
+  const yearResult = soldTotal + yearRent - yearFeed - yearFarmExpenses - yearHealthCost
+  const yearAnything = soldTotal > 0 || yearRent > 0 || yearFeed > 0 || yearFarmExpenses > 0 || yearHealthCost > 0
 
   // Animal que entrou por compra sem preço: o investido e o lucro dele ficam errados.
   const costById = new Map((costs ?? []).map(c => [c.animal_id, c]))
@@ -179,9 +185,16 @@ export default async function DashboardPage() {
   const monthUpkeep = monthOut - (monthPurchases ?? []).reduce((s, r) => s + Number(r.purchase_price || 0), 0)
   const upkeepPerHead = active.length > 0 ? monthUpkeep / active.length : 0
 
-  // Lotação: animais por hectare. Referência do Inttegra: acima de 1,2 UA/ha (1 UA = 450 kg, perto de uma vaca adulta).
+  // Lotação em UA por hectare (Tião, P3): gado próprio pelo tamanho (UA), cavalo 1 UA (também come pasto),
+  // porco fora (não pasta) e o gado de terceiros que está no pasto hoje. Referência do Inttegra: acima de 1,2 UA/ha.
   const area = Number(farm?.area_hectares ?? 0)
-  const perHa = area > 0 ? active.length / area : null
+  const mothersSet = new Set(allAnimals.map(a => a.mother_id).filter(Boolean) as string[])
+  const ownUA = active.filter(a => a.species !== 'suino').reduce((s, a) => s + animalUA(a, todayStr, mothersSet.has(a.id)), 0)
+  const thirdOnFarm = herdsThird.filter(h => isOnFarm(h, todayStr))
+  const thirdUA = thirdOnFarm.reduce((s, h) => s + herdUA(h), 0)
+  const thirdHeads = thirdOnFarm.reduce((s, h) => s + h.head_count, 0)
+  const totalUA = ownUA + thirdUA
+  const perHa = area > 0 ? totalUA / area : null
   if (area <= 0 || (perHa != null && perHa < 0.02)) {
     tasks.push({
       key: 'area-pasto',
@@ -363,10 +376,11 @@ export default async function DashboardPage() {
             ) : (
               <>
                 <p className={`text-lg font-semibold ${missingCosts.length > 0 && yearResult > 0 ? '' : yearResult >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                  {yearResult < 0 ? 'Não, as vendas não pagaram o custo do ano' : missingCosts.length > 0 ? 'Por enquanto sim, mas falta lançar custo' : 'Sim, as vendas pagaram o custo do ano'}
+                  {yearResult < 0 ? 'Não, o que entrou não pagou o custo do ano' : missingCosts.length > 0 ? 'Por enquanto sim, mas falta lançar custo' : 'Sim, o que entrou pagou o custo do ano'}
                 </p>
                 <div className="divide-y mt-1">
                   <Row label="Vendas" value={money(soldTotal)} />
+                  {yearRent > 0 && <Row label="Aluguel de pasto e parceria" hint="Gado de terceiros" value={money(yearRent)} />}
                   <Row label="Sal, milho e ração" value={yearFeed > 0 ? `-${money(yearFeed)}` : money(0)} />
                   <Row label="Despesas da fazenda" hint="Caseiro, energia, diesel e o que mais foi lançado" value={yearFarmExpenses > 0 ? `-${money(yearFarmExpenses)}` : money(0)} />
                   <Row label="Vacina e remédio" value={yearHealthCost > 0 ? `-${money(yearHealthCost)}` : money(0)} />
@@ -406,11 +420,15 @@ export default async function DashboardPage() {
               ) : perHa != null ? (
                 <>
                   <p>
-                    <span className="font-semibold tabular-nums">{perHa.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}</span> animal por hectare
-                    <span className="text-muted-foreground tabular-nums"> ({active.length} em {area.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;ha)</span>
+                    <span className="font-semibold tabular-nums">{perHa.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span> UA por hectare
+                    <span className="text-muted-foreground tabular-nums"> ({totalUA.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;UA em {area.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;ha)</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground tabular-nums mt-1">
+                    Seu gado: {ownUA.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;UA.
+                    {' '}De terceiros: {thirdHeads > 0 ? <>{thirdUA.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;UA ({thirdHeads} {thirdHeads === 1 ? 'cabeça' : 'cabeças'})</> : 'nenhum'}.
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Quem lucra com gado põe mais de 1,2 vaca adulta por hectare de pasto (Inttegra).
+                    1 UA é um animal de 450&nbsp;kg, perto de uma vaca adulta. Quem lucra com gado põe mais de 1,2&nbsp;UA por hectare de pasto (Inttegra).
                     {perHa < 0.8 && ' Se a área for toda pasto, cabe mais gado sem comprar terra.'}
                   </p>
                 </>

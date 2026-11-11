@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { Sidebar } from '@/components/layout/sidebar'
 import { ImpersonationBanner } from '@/components/admin/impersonation-banner'
+import { WhatsNew } from '@/components/layout/whats-new'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
@@ -49,6 +50,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="flex-1 pt-4 px-4 pb-4 md:p-6 lg:p-8">
           {children}
         </div>
+        {!isAdmin && <WhatsNew />}
       </main>
     </div>
   )

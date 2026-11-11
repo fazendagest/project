@@ -17,7 +17,7 @@ import { computeInvested, monthlyReturn, animalUA, uaGroup, UA_GROUP_LABELS, typ
 import { expandExpenses, sumExpensesInRange } from '@/lib/fixed-expenses'
 import { computeHerdValue } from '@/lib/herd-value'
 import { getIfagPrices } from '@/lib/ifag'
-import { criaIndicators, criaCost, CRIA_TARGETS } from '@/lib/cria'
+import { criaIndicators, criaCost, firstCalving, CRIA_TARGETS } from '@/lib/cria'
 import { CriaCard } from '@/components/dashboard/cria-card'
 import { IFAG_SOURCE_URL, marketReference } from '@/lib/market-reference'
 import { incomeInRange, isOnFarm, herdUA, type ThirdPartyHerd } from '@/lib/third-party'
@@ -287,6 +287,8 @@ export default async function DashboardPage() {
   const pregnancyRate = examined.length > 0 ? pregnant.length / examined.length : null
   // Índices da cria com a meta da fazenda (Tião, P4).
   const cria = criaIndicators(allAnimals, allSales ?? [], todayStr)
+  // Idade ao primeiro parto e novilhas passadas da idade (Tião, P8 item 2).
+  const firstCalf = firstCalving({ animals: allAnimals, calvings, calved, covered, checked: new Set(lastCheck.keys()), today: todayStr })
   // Custo por vaca e por bezerro desmamado nos últimos 12 meses (Tião, P8 item 1).
   const costFrom = format(subDays(now, 365), 'yyyy-MM-dd')
   const bovineIds = new Set(allAnimals.filter(a => a.species === 'bovino').map(a => a.id))
@@ -576,6 +578,7 @@ export default async function DashboardPage() {
       <CriaCard
         cria={cria}
         cost={cost}
+        firstCalf={firstCalf}
         prenhez={pregnancyRate == null
           ? { value: null, missing: 'Nenhuma vaca ou novilha examinada nos últimos 12 meses. Lance o toque ou o ultrassom em Reprodução.' }
           : {

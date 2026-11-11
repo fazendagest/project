@@ -253,3 +253,57 @@ export function criaCost(args: {
   }
   return { perCow, perCalf, calfPrice }
 }
+
+/**
+ * Idade ao primeiro parto (Tião, P8 item 2): média em meses das vacas com data de nascimento e primeiro parto
+ * conhecido (filho cadastrado com a mãe ou parto lançado em Reprodução). Meta 36 meses agora, 30 em 2030;
+ * Nelore no Brasil fica entre 39 e 45 meses (Embrapa). Parto antes de 15 meses de idade é erro de data e sai da conta.
+ * Junto, a lista das novilhas com 24 meses ou mais sem parto, sem cobertura e sem diagnóstico.
+ * Só entra a fêmea que nasceu aqui ou chegou com menos de 24 meses [Ravi]: a vaca comprada adulta já pode ter
+ * parido antes, e o primeiro parto dela aqui não é o primeiro da vida (dava 88 meses de média nos dados de hoje).
+ */
+export const FIRST_CALVING_TARGET = { target: 36, text: '36 meses agora; 30 em 2030' }
+const FIRST_CALVING_MIN_MONTHS = 15
+const OPEN_HEIFER_MONTHS = 24
+
+export type OpenHeifer = { id: string; label: string; months: number }
+
+export function firstCalving(args: {
+  animals: (CriaAnimal & { is_fat?: boolean | null })[]
+  calvings: Map<string, string[]>
+  calved: Set<string>
+  covered: Set<string>
+  checked: Set<string>
+  today: string
+}): { index: CriaIndex; openHeifers: OpenHeifer[] } {
+  const { animals, calvings, calved, covered, checked, today } = args
+  const cameYoung = (a: CriaAnimal) =>
+    a.entry_type === 'nascimento' || (!!a.birth_date && monthsBetween(a.birth_date, a.entry_date) < OPEN_HEIFER_MONTHS)
+  const ages: number[] = []
+  let strange = 0
+  for (const a of animals) {
+    if (a.species !== 'bovino' || a.sex !== 'F' || !a.birth_date || !cameYoung(a)) continue
+    const first = (calvings.get(a.id) ?? []).filter(Boolean).sort()[0]
+    if (!first) continue
+    const m = monthsBetween(a.birth_date, first)
+    if (m < FIRST_CALVING_MIN_MONTHS) { strange++; continue }
+    ages.push(m)
+  }
+  const strangeText = strange > 0 ? ` ${strange} ${strange === 1 ? 'vaca ficou' : 'vacas ficaram'} fora: parto antes dos 15 meses de idade, confira as datas.` : ''
+  const index: CriaIndex = ages.length === 0
+    ? { value: null, missing: `Nenhuma vaca nascida aqui (ou comprada novilha) com filho cadastrado. Cadastre os filhos com a mãe e a data de nascimento, inclusive os já vendidos.${strangeText}` }
+    : {
+        value: ages.reduce((s, m) => s + m, 0) / ages.length,
+        detail: `média de ${ages.length} ${ages.length === 1 ? 'vaca' : 'vacas'}; o Nelore no Brasil fica entre 39 e 45 meses (Embrapa).${strangeText}`,
+        caveat: ages.length < 3 ? 'Poucas vacas na conta: o número muda muito a cada parto novo.' : undefined,
+      }
+  if (index.value != null) index.belowTarget = index.value > FIRST_CALVING_TARGET.target
+
+  const openHeifers = animals
+    .filter(a => a.species === 'bovino' && a.sex === 'F' && a.status === 'ativo' && a.birth_date && !a.is_fat && cameYoung(a)
+      && !calved.has(a.id) && !covered.has(a.id) && !checked.has(a.id))
+    .map(a => ({ id: a.id, label: a.name || a.code || 'sem nome', months: Math.floor(monthsBetween(a.birth_date!, today)) }))
+    .filter(h => h.months >= OPEN_HEIFER_MONTHS)
+    .sort((x, y) => y.months - x.months)
+  return { index, openHeifers }
+}

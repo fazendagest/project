@@ -22,6 +22,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { formatDate, formatCurrency, formatNumber, expenseCategoryLabel, healthTypeLabel, parseBRL, formatBRL, animalCategory } from '@/lib/helpers'
 import type { Invested } from '@/lib/investment'
 import Link from 'next/link'
+import { missingFixed, monthsFrom, monthOf, sameDayIn, MONTH_NAMES } from '@/lib/fixed-expenses'
 
 const today = new Date().toISOString().slice(0, 10)
 
@@ -67,7 +68,8 @@ export function ExpensesClient({
   const [saleEditLoading, setSaleEditLoading] = useState(false)
   const [expEditLoading, setExpEditLoading] = useState(false)
 
-  const [expForm, setExpForm] = useState({ category: 'mao_de_obra', date: today, amount: '', description: '', notes: '' })
+  const [expForm, setExpForm] = useState({ category: 'mao_de_obra', date: today, amount: '', description: '', notes: '', fixed: false, since: monthOf(today) })
+  const [repeatLoading, setRepeatLoading] = useState(false)
   const [saleForm, setSaleForm] = useState({ animal_ids: [] as string[], buyer_name: '', sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', notes: '' })
   const [purchaseForm, setPurchaseForm] = useState({
     seller_name: '',
@@ -120,17 +122,53 @@ export function ExpensesClient({
     e.preventDefault()
     if (!expForm.description || !expForm.amount) return toast.error('Preencha todos os campos obrigatórios')
     setExpLoading(true)
-    const { data, error } = await supabase.from('operational_expenses').insert({
+    const day = Number(expForm.date.slice(8, 10))
+    // Fixa: uma linha por mês, desde o mês informado até o mês da data.
+    const dates = expForm.fixed ? monthsFrom(expForm.since, monthOf(expForm.date)).map(m => sameDayIn(m, day)) : [expForm.date]
+    const rows = dates.map(date => ({
       farm_id: farmId,
       category: expForm.category,
-      date: expForm.date,
+      date,
       amount: parseBRL(expForm.amount) ?? 0,
       description: expForm.description,
       notes: expForm.notes || null,
-    }).select().single()
+      is_fixed: expForm.fixed,
+    }))
+    const { data, error } = await supabase.from('operational_expenses').insert(rows).select()
     if (error) toast.error('Erro: ' + error.message)
-    else { setExpenses(prev => [data, ...prev]); setExpDialog(false); toast.success('Despesa registrada!'); router.refresh() }
+    else {
+      setExpenses(prev => [...(data ?? []), ...prev].sort((a, b) => b.date.localeCompare(a.date)))
+      setExpDialog(false)
+      setExpForm(p => ({ ...p, amount: '', description: '', notes: '', fixed: false, since: monthOf(today) }))
+      toast.success(rows.length > 1 ? `${rows.length} meses registrados!` : 'Despesa registrada!')
+      router.refresh()
+    }
     setExpLoading(false)
+  }
+
+  const pendingFixed = missingFixed(expenses, today)
+  const fixedCount = expForm.fixed ? monthsFrom(expForm.since, monthOf(expForm.date)).length : 1
+  const monthName = MONTH_NAMES[Number(today.slice(5, 7)) - 1]
+
+  /** Repete as despesas fixas que faltam no mês atual, com o mesmo valor do último mês. */
+  async function repeatFixed() {
+    setRepeatLoading(true)
+    const rows = pendingFixed.map(e => ({
+      farm_id: farmId,
+      category: e.category,
+      date: sameDayIn(monthOf(today), Number(e.date.slice(8, 10))),
+      amount: e.amount,
+      description: e.description,
+      is_fixed: true,
+    }))
+    const { data, error } = await supabase.from('operational_expenses').insert(rows).select()
+    if (error) toast.error('Erro: ' + error.message)
+    else {
+      setExpenses(prev => [...(data ?? []), ...prev].sort((a, b) => b.date.localeCompare(a.date)))
+      toast.success('Despesas fixas do mês lançadas!')
+      router.refresh()
+    }
+    setRepeatLoading(false)
   }
 
   async function saveSale(e: React.FormEvent) {
@@ -261,6 +299,20 @@ export function ExpensesClient({
         </TabsList>
 
         <TabsContent value="expenses">
+          {pendingFixed.length > 0 && (
+            <section className="rounded-xl border border-amber-300 bg-amber-50 p-4 mb-4">
+              <p className="font-semibold text-amber-900">Despesas fixas de {monthName} ainda não lançadas</p>
+              <ul className="text-sm text-amber-900 mt-1 space-y-0.5">
+                {pendingFixed.map(e => (
+                  <li key={e.id}>{e.description}: {formatCurrency(e.amount)}</li>
+                ))}
+              </ul>
+              <p className="text-xs text-amber-900 mt-1">Mesmo valor do último mês. Se mudou, lance e depois corrija no lápis.</p>
+              <Button className="h-11 md:h-9 mt-3 w-full sm:w-auto" onClick={repeatFixed} disabled={repeatLoading}>
+                {pendingFixed.length === 1 ? 'Lançar a de' : `Lançar as ${pendingFixed.length} de`} {monthName}
+              </Button>
+            </section>
+          )}
           <div className="flex justify-between items-center mb-4">
             <p className="text-sm text-muted-foreground">
               Total: {formatCurrency(expenses.reduce((s, e) => s + e.amount, 0))}
@@ -284,7 +336,7 @@ export function ExpensesClient({
                   <TableRow key={e.id}>
                     <TableCell>{formatDate(e.date)}</TableCell>
                     <TableCell><Badge variant="outline">{expenseCategoryLabel(e.category)}</Badge></TableCell>
-                    <TableCell>{e.description}</TableCell>
+                    <TableCell>{e.description}{e.is_fixed && <span className="text-xs text-muted-foreground"> (fixa)</span>}</TableCell>
                     <TableCell className="font-semibold text-red-600">{formatCurrency(e.amount)}</TableCell>
                     <TableCell><div className="flex justify-end gap-1"><Button size="icon" variant="ghost" onClick={() => openEditExpense(e)}><Pencil className="h-4 w-4" /></Button><Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDelConfirm({ type: 'expense', id: e.id })}><Trash2 className="h-4 w-4" /></Button></div></TableCell>
                   </TableRow>
@@ -485,7 +537,7 @@ export function ExpensesClient({
                 <Input type="date" value={expForm.date} onChange={e => setExpForm(p => ({ ...p, date: e.target.value }))} required />
               </div>
               <div className="space-y-2">
-                <Label>{saleForm.animal_ids.length > 1 ? 'Valor total (R$) *' : 'Valor (R$) *'}</Label>
+                <Label>{expForm.fixed ? 'Valor por mês (R$) *' : 'Valor (R$) *'}</Label>
                 <Input type="text" inputMode="decimal" value={expForm.amount}
                   onChange={e => setExpForm(p => ({ ...p, amount: e.target.value }))}
                   onBlur={() => { const n = parseBRL(expForm.amount); if (n !== null) setExpForm(p => ({ ...p, amount: formatBRL(n) })) }}
@@ -494,8 +546,28 @@ export function ExpensesClient({
             </div>
             <div className="space-y-2">
               <Label>Descrição *</Label>
-              <Input value={expForm.description} onChange={e => setExpForm(p => ({ ...p, description: e.target.value }))} placeholder="Descreva a despesa" required />
+              <Input value={expForm.description} onChange={e => setExpForm(p => ({ ...p, description: e.target.value }))} placeholder="Ex.: Salário do caseiro" required />
             </div>
+            <label className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer">
+              <input type="checkbox" className="mt-0.5 h-5 w-5 accent-primary" checked={expForm.fixed}
+                onChange={e => setExpForm(p => ({ ...p, fixed: e.target.checked }))} />
+              <span>
+                <span className="font-medium">Pago todo mês (despesa fixa)</span>
+                <span className="block text-xs text-muted-foreground">Salário do caseiro, conta de luz, água. O sistema lembra de lançar no mês seguinte.</span>
+              </span>
+            </label>
+            {expForm.fixed && (
+              <div className="space-y-2">
+                <Label>Paga desde (mês)</Label>
+                <Input type="month" value={expForm.since} max={monthOf(expForm.date)}
+                  onChange={e => setExpForm(p => ({ ...p, since: e.target.value || monthOf(p.date) }))} />
+                <p className="text-xs text-muted-foreground">
+                  {fixedCount > 1
+                    ? `Lança ${fixedCount} meses, um em cada mês, com o mesmo valor. Se o valor mudou em algum mês, corrija no lápis.`
+                    : 'Se já paga há algum tempo, escolha o mês em que começou: o sistema lança os meses que faltam.'}
+                </p>
+              </div>
+            )}
             <FormActions
               onCancel={() => setExpDialog(false)}
               isLoading={expLoading}

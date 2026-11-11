@@ -175,6 +175,7 @@ create table if not exists operational_expenses (
   amount numeric(12,2) not null,
   description text not null,
   notes text,
+  is_fixed boolean not null default false,
   created_at timestamptz default now() not null
 );
 

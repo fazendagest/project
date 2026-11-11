@@ -52,8 +52,9 @@ export function WhatsNew() {
                 cobrir as vacas.
               </li>
               <li>
-                Nos bezerros, escolha a <strong>mãe</strong> (por exemplo, na bezerra da Rolinha, a mãe é a Rolinha).
-                Assim o sistema sabe quem é filho de quem e quando a novilha vira vaca.
+                Lance as <strong>despesas da fazenda</strong> em Financeiro, Despesas: salário do caseiro, energia, água,
+                diesel do trator, limpeza de pasto. No que você paga todo mês, marque <strong>Pago todo mês</strong> e
+                diga desde quando: o sistema lança os meses que passaram e lembra dos próximos.
               </li>
             </ol>
           </div>

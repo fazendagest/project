@@ -1,5 +1,6 @@
 'use client'
 
+import { sumExpensesInRange, todaySP } from '@/lib/fixed-expenses'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -34,7 +35,7 @@ export function DREClient({ farmId }: { farmId: string }) {
       const [salesRes, feedStockRes, opExpRes, healthRes, milkRes] = await Promise.all([
         supabase.from('animal_sales').select('sale_price, animal_id').eq('farm_id', farmId).gte('sale_date', start).lte('sale_date', end),
         supabase.from('feed_stock').select('total_cost').eq('farm_id', farmId).gte('purchase_date', start).lte('purchase_date', end),
-        supabase.from('operational_expenses').select('amount').eq('farm_id', farmId).gte('date', start).lte('date', end),
+        supabase.from('operational_expenses').select('*').eq('farm_id', farmId).lte('date', end),
         supabase.from('health_records').select('cost, animal_id').eq('farm_id', farmId).gte('application_date', start).lte('application_date', end),
         supabase.from('milk_payments').select('total_amount').eq('farm_id', farmId).gte('reference_month', start).lte('reference_month', end),
       ])
@@ -69,7 +70,7 @@ export function DREClient({ farmId }: { farmId: string }) {
 
       // OpEx: feed stock + health for non-sold animals + operational
       const feedStockCost = feedStockRes.data?.reduce((s, r) => s + (r.total_cost || 0), 0) ?? 0
-      const opExpenses = opExpRes.data?.reduce((s, r) => s + (r.amount || 0), 0) ?? 0
+      const opExpenses = sumExpensesInRange(opExpRes.data ?? [], start, end, todaySP())
       const generalHealthCost = allHealthRecords.filter(r => !soldAnimalIds.includes(r.animal_id)).reduce((s, r) => s + (r.cost || 0), 0)
       const totalOpEx = feedStockCost + generalHealthCost + opExpenses
       const netProfit = grossProfit - totalOpEx

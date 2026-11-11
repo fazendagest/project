@@ -10,7 +10,7 @@ import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/lib/helpers'
 import { computeInvested, monthlyReturn, BANK_MONTHLY, OUTSIDE_HERD_CATEGORY } from '@/lib/investment'
-import { missingFixed, MONTH_NAMES } from '@/lib/fixed-expenses'
+import { expandExpenses, sumExpensesInRange } from '@/lib/fixed-expenses'
 import { computeHerdValue } from '@/lib/herd-value'
 import { getIfagPrices } from '@/lib/ifag'
 import { IFAG_SOURCE_URL } from '@/lib/market-reference'
@@ -73,7 +73,6 @@ export default async function DashboardPage() {
     { data: allExpenses },
     { data: yearSales },
     { data: monthPurchases },
-    { data: monthOpExpenses },
     { data: monthHealth },
     { data: milkToday },
     ifag,
@@ -85,7 +84,6 @@ export default async function DashboardPage() {
     supabase.from('operational_expenses').select('*').eq('farm_id', farmId),
     supabase.from('animal_sales').select('animal_id, sale_price, sale_date').eq('farm_id', farmId).gte('sale_date', yearStart),
     supabase.from('animal_purchases').select('purchase_price').eq('farm_id', farmId).gte('purchase_date', monthStart).lte('purchase_date', monthEnd),
-    supabase.from('operational_expenses').select('amount').eq('farm_id', farmId).gte('date', monthStart).lte('date', monthEnd),
     supabase.from('health_records').select('cost').eq('farm_id', farmId).gte('application_date', monthStart).lte('application_date', monthEnd),
     supabase.from('milk_production').select('liters').eq('farm_id', farmId).eq('date', todayStr),
     getIfagPrices(),
@@ -110,7 +108,7 @@ export default async function DashboardPage() {
   const monthOut =
     (monthPurchases ?? []).reduce((s, r) => s + Number(r.purchase_price || 0), 0) +
     monthFeed +
-    (monthOpExpenses ?? []).reduce((s, r) => s + Number(r.amount || 0), 0) +
+    sumExpensesInRange(allExpenses ?? [], monthStart, monthEnd, todayStr) +
     (monthHealth ?? []).reduce((s, r) => s + Number(r.cost || 0), 0)
 
   const milkActive = farm?.milk_active ?? false
@@ -131,24 +129,15 @@ export default async function DashboardPage() {
   }
 
   // Despesas da fazenda (caseiro, energia, diesel): avisar quando nada foi lançado e lembrar das fixas do mês.
-  const herdExpenses = (allExpenses ?? []).filter(e => e.category !== OUTSIDE_HERD_CATEGORY)
+  const herdExpenses = expandExpenses((allExpenses ?? []).filter(e => e.category !== OUTSIDE_HERD_CATEGORY), todayStr)
   const recentCut = format(subDays(now, 60), 'yyyy-MM-dd')
-  const fixedMissing = missingFixed(herdExpenses, todayStr)
   if (!herdExpenses.some(e => e.date >= recentCut)) {
     tasks.push({
       key: 'despesas-fazenda',
       title: 'Lançar as despesas da fazenda',
-      detail: 'Salário do caseiro, energia, água, diesel do trator, limpeza de pasto. O que você paga todo mês, marque "Pago todo mês": o sistema lança os meses que já passaram e lembra dos próximos.',
+      detail: 'Salário do caseiro, energia, água, diesel do trator, limpeza de pasto. O que você paga todo mês, marque "Pago todo mês" e diga desde quando: lança uma vez só e o sistema conta todo mês sozinho.',
       href: '/app/financial/movements',
       action: 'Lançar despesa',
-    })
-  } else if (fixedMissing.length > 0) {
-    tasks.push({
-      key: `fixas-${todayStr.slice(0, 7)}`,
-      title: `Lançar as despesas fixas de ${MONTH_NAMES[now.getMonth()]}`,
-      detail: fixedMissing.map(e => `${e.description}: ${money(Number(e.amount))}`).join(', ') + '. Um toque lança todas com o valor do mês passado.',
-      href: '/app/financial/movements',
-      action: 'Ver e lançar',
     })
   }
 

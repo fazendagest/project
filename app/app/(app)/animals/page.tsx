@@ -18,7 +18,7 @@ export default async function AnimalsPage() {
     supabase.from('animals').select('*').eq('farm_id', farmId).order('code', { ascending: true }),
     supabase.from('animal_costs').select('animal_id, entry_date, sale_date, purchase_cost, health_cost, species').eq('farm_id', farmId),
     supabase.from('feed_stock').select('purchase_date, total_cost').eq('farm_id', farmId),
-    supabase.from('operational_expenses').select('date, amount, category').eq('farm_id', farmId),
+    supabase.from('operational_expenses').select('*').eq('farm_id', farmId),
     getIfagPrices(),
   ])
   const invested = computeInvested(costs ?? [], feeds ?? [], expenses ?? [])

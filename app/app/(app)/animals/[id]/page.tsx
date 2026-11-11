@@ -40,7 +40,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
     supabase.from('animals').select('id', { count: 'exact', head: true }).eq('farm_id', farmId).eq('mother_id', params.id),
     supabase.from('animal_costs').select('animal_id, entry_date, sale_date, purchase_cost, health_cost, species').eq('farm_id', farmId),
     supabase.from('feed_stock').select('purchase_date, total_cost').eq('farm_id', farmId),
-    supabase.from('operational_expenses').select('date, amount, category').eq('farm_id', farmId),
+    supabase.from('operational_expenses').select('*').eq('farm_id', farmId),
   ])
 
   if (!animal) notFound()

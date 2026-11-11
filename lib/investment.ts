@@ -5,6 +5,8 @@
  * (entraram até a data e não tinham sido vendidos). É uma estimativa.
  * Decisão de 11/11/2026 (opção A, divisão por cabeça).
  */
+import { expandExpenses, todaySP, type ExpenseLike } from './fixed-expenses'
+
 export type CostRow = {
   animal_id: string
   entry_date: string
@@ -25,7 +27,7 @@ export const isWorkAnimal = (c: { species?: string | null }) => c.species === 'e
 export type FeedPurchase = { purchase_date: string | null; total_cost: number | null }
 
 /** Despesa geral da fazenda (caseiro, diesel, energia, limpeza de pasto...). */
-export type GeneralExpense = { date: string | null; amount: number | null; category: string | null }
+export type GeneralExpense = ExpenseLike
 
 /** Categoria de despesa que não é dos animais cadastrados (galinha, lavoura para vender, casa): fica fora do custo deles. */
 export const OUTSIDE_HERD_CATEGORY = 'fora_do_gado'
@@ -55,7 +57,8 @@ export function computeInvested(costs: CostRow[], feeds: FeedPurchase[], expense
     }
   }
   for (const f of feeds) spread(f.purchase_date, Number(f.total_cost ?? 0), 'feed')
-  for (const e of expenses) {
+  // Despesa fixa conta uma vez por mês, do primeiro pagamento até hoje (ou até parar).
+  for (const e of expandExpenses(expenses, todaySP())) {
     if (e.category === OUTSIDE_HERD_CATEGORY) continue
     spread(e.date, Number(e.amount ?? 0), 'general')
   }

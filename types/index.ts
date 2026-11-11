@@ -155,6 +155,8 @@ export interface OperationalExpense {
   notes?: string
   /** Despesa fixa, paga todo mês (salário, conta de luz). */
   is_fixed?: boolean
+  /** Despesa fixa: última data que conta (vazio = continua todo mês). */
+  fixed_until?: string | null
   created_at: string
 }
 

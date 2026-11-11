@@ -74,6 +74,8 @@ export type CriaIndex = {
   belowTarget?: boolean
   /** Conta medida, mas com pouco dado para confiar. */
   caveat?: string
+  /** Rótulo curto do caveat ao lado do número (padrão "poucos dados"). */
+  caveatTag?: string
 }
 
 export type CriaIndicators = {
@@ -199,4 +201,55 @@ export function criaIndicators(animals: CriaAnimal[], sales: CriaSale[], today: 
   if (intervalo.value != null) intervalo.belowTarget = intervalo.value > CRIA_TARGETS.intervalo.target
 
   return { window: { from, to }, desmame, kg, mortalidade, intervalo }
+}
+
+/**
+ * Custo por vaca no ano e por bezerro desmamado (Tião, P8 item 1). Custo do gado em 12 meses: alimentação
+ * (sem a dos porcos), despesas da fazenda (sem "Fora dos animais") e saúde dos bovinos, sem compra de animal.
+ * Divide pelas vacas e novilhas com 20 meses ou mais na fazenda hoje [Ravi: as vacas expostas da conta do desmame
+ * são de uma época mais antiga; hoje só as mães entram, o que inflaria o custo]. Por bezerro = por vaca ÷ desmame.
+ */
+export type CriaCost = { perCow: CriaIndex; perCalf: CriaIndex; calfPrice: number | null }
+
+export function criaCost(args: {
+  feed: number
+  expenses: number
+  health: number
+  cows: number
+  desmame: CriaIndex
+  calfPrice: number | null
+}): CriaCost {
+  const { feed, expenses, health, cows, desmame, calfPrice } = args
+  const total = feed + expenses + health
+  const noCost = feed <= 0 && expenses <= 0
+  const missingParts = [feed <= 0 && 'sal e ração', expenses <= 0 && 'despesas da fazenda'].filter(Boolean) as string[]
+  const money = (v: number) => `R$ ${Math.round(v).toLocaleString('pt-BR')}`
+  if (noCost) {
+    const missing = 'Lance sal, ração e despesas para ver quanto custa cada vaca.'
+    return { perCow: { value: null, missing }, perCalf: { value: null, missing: 'Depende do custo por vaca (acima).' }, calfPrice }
+  }
+  if (cows <= 0) {
+    const missing = 'Nenhuma vaca ou novilha com 20 meses ou mais na fazenda: confira as datas de nascimento.'
+    return { perCow: { value: null, missing }, perCalf: { value: null, missing: 'Depende do custo por vaca (acima).' }, calfPrice }
+  }
+  const caveat = missingParts.length > 0 ? `Pode ser maior: falta lançar ${missingParts.join(' e ')}.` : undefined
+  const perCow: CriaIndex = {
+    value: total / cows,
+    detail: `${money(total)} em 12 meses (alimentação ${money(feed)}, despesas ${money(expenses)}, vacina e remédio ${money(health)}) ÷ ${cows} ${cows === 1 ? 'vaca' : 'vacas e novilhas'}`,
+    caveat,
+    caveatTag: 'estimado',
+  }
+  let perCalf: CriaIndex
+  if (desmame.value == null || desmame.value <= 0) {
+    perCalf = { value: null, missing: 'Depende da taxa de desmame (acima).' }
+  } else {
+    perCalf = {
+      value: perCow.value! / desmame.value,
+      detail: `custo por vaca ÷ desmame de ${Math.round(desmame.value * 100)}%`,
+      caveat: [caveat, desmame.caveat && 'A taxa de desmame ainda tem poucos dados.'].filter(Boolean).join(' ') || undefined,
+      caveatTag: desmame.caveat ? 'poucos dados' : 'estimado',
+    }
+    if (calfPrice != null) perCalf.belowTarget = perCalf.value! > calfPrice
+  }
+  return { perCow, perCalf, calfPrice }
 }

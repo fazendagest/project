@@ -1,15 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { CRIA_TARGETS, type CriaIndex, type CriaIndicators } from '@/lib/cria'
+import { CRIA_TARGETS, type CriaCost, type CriaIndex, type CriaIndicators } from '@/lib/cria'
 import { cn } from '@/lib/utils'
 
 const pct = (v: number) => `${Math.round(v * 100)}%`
+const money = (v: number) => `R$ ${Math.round(v).toLocaleString('pt-BR')}`
 const num = (v: number, digits = 0) => v.toLocaleString('pt-BR', { maximumFractionDigits: digits })
 
 /**
  * Índices da cria (Tião, P4): o valor de hoje ao lado da meta da fazenda. Sem dado, diz o que falta lançar.
  * No celular cada índice é um bloco; no computador, uma linha com três colunas.
  */
-export function CriaCard({ cria, prenhez }: { cria: CriaIndicators; prenhez: CriaIndex }) {
+export function CriaCard({ cria, prenhez, cost }: { cria: CriaIndicators; prenhez: CriaIndex; cost: CriaCost }) {
   const rows: { label: string; index: CriaIndex; show: (v: number) => string; target: string; extra?: string }[] = [
     { label: 'Taxa de desmame', index: cria.desmame, show: pct, target: CRIA_TARGETS.desmame.text },
     { label: 'Kg desmamado por vaca exposta', index: cria.kg, show: v => `${num(v)} kg`, target: CRIA_TARGETS.kg.text },
@@ -22,6 +23,14 @@ export function CriaCard({ cria, prenhez }: { cria: CriaIndicators; prenhez: Cri
       extra: cria.mortalidade.missingHeads > 0 ? `Fora da conta, ${cria.mortalidade.missingHeads} ${cria.mortalidade.missingHeads === 1 ? 'sumiu' : 'sumiram'}.` : undefined,
     },
     { label: 'Intervalo entre partos', index: cria.intervalo, show: v => `${num(v, 1)} meses`, target: CRIA_TARGETS.intervalo.text },
+    // P8 item 1: o bezerro desmamado paga a vaca?
+    { label: 'Custo por vaca no ano', index: cost.perCow, show: money, target: 'Pago pelo bezerro (linha abaixo)' },
+    {
+      label: 'Custo por bezerro desmamado',
+      index: cost.perCalf,
+      show: money,
+      target: cost.calfPrice != null ? `Abaixo de ${money(cost.calfPrice)}, o bezerro na desmama (média de Goiás, IFAG)` : 'Abaixo do preço do bezerro na desmama',
+    },
   ]
 
   return (
@@ -42,7 +51,7 @@ export function CriaCard({ cria, prenhez }: { cria: CriaIndicators; prenhez: Cri
                 {r.index.value != null ? (
                   <>
                     <span className={cn('font-semibold tabular-nums', r.index.belowTarget && 'text-amber-800')}>{r.show(r.index.value)}</span>
-                    {r.index.caveat && <span className="text-xs text-muted-foreground"> (poucos dados)</span>}
+                    {r.index.caveat && <span className="text-xs text-muted-foreground"> ({r.index.caveatTag ?? 'poucos dados'})</span>}
                     {r.index.belowTarget && <span className="text-xs font-medium text-amber-800"> fora da meta</span>}
                     {r.index.detail && <span className="block text-xs text-muted-foreground">{r.index.detail}</span>}
                     {r.index.caveat && <span className="block text-xs text-muted-foreground mt-1">{r.index.caveat}</span>}

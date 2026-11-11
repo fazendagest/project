@@ -17,7 +17,7 @@ import { computeInvested, monthlyReturn, animalUA, uaGroup, UA_GROUP_LABELS, typ
 import { expandExpenses, sumExpensesInRange } from '@/lib/fixed-expenses'
 import { computeHerdValue } from '@/lib/herd-value'
 import { getIfagPrices } from '@/lib/ifag'
-import { criaIndicators, CRIA_TARGETS } from '@/lib/cria'
+import { criaIndicators, criaCost, CRIA_TARGETS } from '@/lib/cria'
 import { CriaCard } from '@/components/dashboard/cria-card'
 import { IFAG_SOURCE_URL, marketReference } from '@/lib/market-reference'
 import { incomeInRange, isOnFarm, herdUA, type ThirdPartyHerd } from '@/lib/third-party'
@@ -107,7 +107,7 @@ export default async function DashboardPage() {
     supabase.from('health_records').select('cost').eq('farm_id', farmId).gte('application_date', yearStart),
     supabase.from('third_party_herds').select('*').eq('farm_id', farmId),
     supabase.from('animal_purchases').select('purchase_price').eq('farm_id', farmId).gte('purchase_date', yearStart),
-    supabase.from('health_records').select('animal_id, product_name, notes').eq('farm_id', farmId),
+    supabase.from('health_records').select('animal_id, product_name, notes, cost, application_date').eq('farm_id', farmId),
     // Declaração de Rebanho marcada como feita (P7). Consulta à parte: sem a coluna, o painel continua de pé.
     supabase.from('farms').select('herd_declarations').eq('id', farmId).maybeSingle(),
     // Todas as vendas: data de saída da vaca e peso do bezerro vendido na desmama (P4).
@@ -287,6 +287,17 @@ export default async function DashboardPage() {
   const pregnancyRate = examined.length > 0 ? pregnant.length / examined.length : null
   // Índices da cria com a meta da fazenda (Tião, P4).
   const cria = criaIndicators(allAnimals, allSales ?? [], todayStr)
+  // Custo por vaca e por bezerro desmamado nos últimos 12 meses (Tião, P8 item 1).
+  const costFrom = format(subDays(now, 365), 'yyyy-MM-dd')
+  const bovineIds = new Set(allAnimals.filter(a => a.species === 'bovino').map(a => a.id))
+  const cost = criaCost({
+    feed: (feeds ?? []).filter(f => !f.for_pigs && f.purchase_date && f.purchase_date > costFrom && f.purchase_date <= todayStr).reduce((s, f) => s + Number(f.total_cost || 0), 0),
+    expenses: sumExpensesInRange((allExpenses ?? []).filter(e => e.category !== OUTSIDE_HERD_CATEGORY), costFrom, todayStr, todayStr),
+    health: (bruceloseRecords ?? []).filter(r => r.animal_id && bovineIds.has(r.animal_id) && r.application_date && r.application_date > costFrom && r.application_date <= todayStr).reduce((s, r) => s + Number(r.cost || 0), 0),
+    cows: active.filter(a => a.species === 'bovino' && a.sex === 'F' && (monthsOld(a.birth_date) ?? 99) >= HEIFER_MIN_MONTHS).length,
+    desmame: cria.desmame,
+    calfPrice: calfRef?.perHead ?? null,
+  })
 
   // O que só você resolve (P7; título trocado na revisão do Tião): o que só o dono resolve.
   const declaredPeriods = ((declRow as { herd_declarations?: string[] | null } | null)?.herd_declarations) ?? []
@@ -564,6 +575,7 @@ export default async function DashboardPage() {
 
       <CriaCard
         cria={cria}
+        cost={cost}
         prenhez={pregnancyRate == null
           ? { value: null, missing: 'Nenhuma vaca ou novilha examinada nos últimos 12 meses. Lance o toque ou o ultrassom em Reprodução.' }
           : {

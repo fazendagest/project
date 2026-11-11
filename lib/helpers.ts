@@ -160,7 +160,7 @@ export function last12Months(): string[] {
  * Fêmea de gado: novilha até 3 anos, a não ser que já tenha cria cadastrada.
  */
 export function animalCategory(
-  a: { species: string; sex: string; birth_date?: string | null },
+  a: { species: string; sex: string; birth_date?: string | null; is_breeder?: boolean | null },
   hasOffspring = false,
 ): string {
   const months = a.birth_date ? differenceInMonths(new Date(), parseISO(a.birth_date)) : null
@@ -168,6 +168,7 @@ export function animalCategory(
   if (a.species === 'bovino') {
     if (months !== null && months < 12) return female ? 'Bezerra' : 'Bezerro'
     if (female) return months !== null && months < 36 && !hasOffspring ? 'Novilha' : 'Vaca'
+    if (a.is_breeder) return 'Touro'
     return months !== null && months < 24 ? 'Garrote' : 'Boi'
   }
   if (a.species === 'equino') {
@@ -184,9 +185,9 @@ export function animalCategory(
 /** Grupos da lista de animais, na ordem em que aparecem. */
 export const ANIMAL_GROUPS: { key: string; label: string; hint?: string; match: (cat: string) => boolean }[] = [
   { key: 'vacas', label: 'Vacas', match: c => c === 'Vaca' },
-  { key: 'novilhas', label: 'Novilhas', hint: 'Passa a vaca aos 3 anos ou quando tiver a primeira cria cadastrada.', match: c => c === 'Novilha' },
+  { key: 'novilhas', label: 'Novilhas', hint: 'Fêmea jovem que ainda não pariu. Vira vaca na primeira cria ou aos 3 anos.', match: c => c === 'Novilha' },
   { key: 'bezerros', label: 'Bezerros', hint: 'Com 1 ano, a bezerra passa a novilha e o bezerro a garrote.', match: c => c === 'Bezerra' || c === 'Bezerro' },
-  { key: 'bois', label: 'Bois e garrotes', hint: 'O garrote passa a boi aos 2 anos.', match: c => c === 'Boi' || c === 'Garrote' },
+  { key: 'bois', label: 'Touros, bois e garrotes', hint: 'Touro: macho inteiro, que cobre as vacas e faz os bezerros. Boi: macho castrado, para engorda e venda. Garrote: macho jovem, de 1 a 2 anos.', match: c => c === 'Touro' || c === 'Boi' || c === 'Garrote' },
   { key: 'cavalos', label: 'Cavalos', match: c => ['Cavalo', 'Égua', 'Potro', 'Potra'].includes(c) },
   { key: 'porcos', label: 'Porcos', match: c => ['Porco', 'Porca', 'Leitão', 'Leitoa'].includes(c) },
 ]

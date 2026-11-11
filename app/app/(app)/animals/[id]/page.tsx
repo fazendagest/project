@@ -9,8 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Link from 'next/link'
 import { Pencil } from 'lucide-react'
 import {
-  calcAge, formatDate, formatCurrency, speciesLabel,
-  statusLabel, statusColor, sexLabel, healthTypeLabel
+  calcAge, formatDate, formatCurrency,
+  statusLabel, statusColor, healthTypeLabel, animalCategory
 } from '@/lib/helpers'
 import Image from 'next/image'
 import { DeleteAnimalButton } from '@/components/animals/delete-animal-button'
@@ -26,15 +26,22 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
     { data: repro },
     { data: purchase },
     { data: sale },
+    { count: offspringCount },
   ] = await Promise.all([
     supabase.from('animals').select('*').eq('id', params.id).eq('farm_id', farmId).single(),
     supabase.from('health_records').select('*').eq('animal_id', params.id).order('application_date', { ascending: false }),
     supabase.from('reproduction_records').select('*, male:male_id(code,name), external_male_name').eq('female_id', params.id).order('coverage_date', { ascending: false }),
     supabase.from('animal_purchases').select('*').eq('animal_id', params.id).maybeSingle(),
     supabase.from('animal_sales').select('*').eq('animal_id', params.id).maybeSingle(),
+    supabase.from('animals').select('id', { count: 'exact', head: true }).eq('farm_id', farmId).eq('mother_id', params.id),
   ])
 
   if (!animal) notFound()
+
+  const category = animalCategory(animal, (offspringCount ?? 0) > 0)
+  const { data: mother } = animal.mother_id
+    ? await supabase.from('animals').select('id, code, name').eq('id', animal.mother_id).eq('farm_id', farmId).maybeSingle()
+    : { data: null }
 
   const totalHealthCost = health?.reduce((s, r) => s + (r.cost || 0), 0) ?? 0
   const totalCost = (purchase?.purchase_price || 0) + totalHealthCost
@@ -44,7 +51,8 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
     <div>
       <PageHeader
         title={animal.code + (animal.name ? ` · ${animal.name}` : '')}
-        description={`${speciesLabel(animal.species)} · Cadastrado em ${formatDate(animal.entry_date)}`}
+        back={{ href: '/app/animals', label: 'Animais' }}
+        description={`${category}, cadastrado em ${formatDate(animal.entry_date)}`}
         actions={
           <>
             <DeleteAnimalButton animalId={animal.id} />
@@ -56,7 +64,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <div className="relative h-56 rounded-xl overflow-hidden bg-muted">
+        <div className={`relative h-56 rounded-xl overflow-hidden bg-muted ${animal.photo_url ? '' : 'hidden lg:block'}`}>
           {animal.photo_url ? (
             <Image src={animal.photo_url} alt={animal.code} fill className="object-cover" />
           ) : (
@@ -71,9 +79,9 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
           <CardContent className="space-y-2 text-sm">
             <Row label="Código" value={animal.code} />
             <Row label="Nome" value={animal.name ?? '—'} />
-            <Row label="Espécie" value={speciesLabel(animal.species)} />
+            <Row label="Categoria" value={category} />
+            {mother && <Row label="Mãe" value={mother.name ? `${mother.name} (${mother.code})` : mother.code} />}
             <Row label="Raça" value={animal.breed ?? '—'} />
-            <Row label="Sexo" value={sexLabel(animal.sex)} />
             <Row label="Nascimento" value={formatDate(animal.birth_date)} />
             <Row label="Idade" value={animal.birth_date ? calcAge(animal.birth_date) : '—'} />
             <Row label="Entrada" value={`${formatDate(animal.entry_date)} (${animal.entry_type})`} />

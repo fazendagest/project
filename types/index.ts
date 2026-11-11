@@ -52,6 +52,7 @@ export interface Animal {
   ear_tag?: string
   to_discard?: boolean
   mother_id?: string
+  is_breeder?: boolean
   created_at: string
 }
 

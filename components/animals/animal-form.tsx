@@ -13,7 +13,7 @@ import { FormActions } from '@/components/ui/form-actions'
 import { toast } from 'sonner'
 import { Loader2, Upload, ChevronsUpDown, Check } from 'lucide-react'
 import { generateAnimalCode } from '@/lib/animal-utils'
-import { parseBRL, formatBRL } from '@/lib/helpers'
+import { parseBRL, formatBRL, animalCategory } from '@/lib/helpers'
 import { toTitleCase } from '@/lib/utils'
 
 const BREED_OPTIONS: Record<string, string[]> = {
@@ -41,7 +41,35 @@ const BREED_OPTIONS: Record<string, string[]> = {
   suino: ['Duroc', 'Landrace', 'Large White', 'Mestiço', 'Pietrain', 'Outro'],
 }
 
-type Female = { id: string; code: string; name?: string }
+type Female = { id: string; code: string; name?: string; species: string; birth_date?: string | null }
+
+/** Como o fazendeiro chama cada espécie e cada sexo. O sexo continua gravado (M/F). */
+const SPECIES_CHOICES: { key: Species; label: string; female: string; male: string }[] = [
+  { key: 'bovino', label: 'Gado', female: 'Vaca', male: 'Boi' },
+  { key: 'equino', label: 'Cavalo', female: 'Égua', male: 'Cavalo' },
+  { key: 'suino', label: 'Porco', female: 'Porca', male: 'Porco' },
+]
+
+/** Bezerra e potra não entram na lista de mães (menos de 12 meses). */
+function isTooYoungToBeMother(f: Female) {
+  if (!f.birth_date) return false
+  const months = (Date.now() - new Date(f.birth_date).getTime()) / (1000 * 60 * 60 * 24 * 30.44)
+  return months < 12
+}
+
+function ChoiceButton({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <Button
+      type="button"
+      variant={selected ? 'default' : 'outline'}
+      className="h-11 md:h-9 px-4 rounded-full"
+      aria-pressed={selected}
+      onClick={onClick}
+    >
+      {children}
+    </Button>
+  )
+}
 
 function BreedCombobox({ value, onChange, options }: {
   value: string
@@ -151,6 +179,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
     weight_arrobas: animal?.weight_arrobas != null ? String(animal.weight_arrobas) : '',
     to_discard: animal?.to_discard ?? false,
     mother_id: animal?.mother_id ?? '',
+    is_breeder: animal?.is_breeder ?? false,
     rental_owner: '',
   })
 
@@ -180,7 +209,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
   useEffect(() => {
     supabase
       .from('animals')
-      .select('id, code, name')
+      .select('id, code, name, species, birth_date')
       .eq('farm_id', farmId)
       .eq('sex', 'F')
       .eq('status', 'ativo')
@@ -194,7 +223,8 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
   }
 
   function handleSpeciesChange(species: Species) {
-    setForm(prev => ({ ...prev, species, breed: '' }))
+    if (species === form.species) return
+    setForm(prev => ({ ...prev, species, breed: '', mother_id: '' }))
     if (mode === 'create') fetchCode(species)
   }
 
@@ -242,6 +272,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
       weight_arrobas: form.weight_arrobas ? parseInt(form.weight_arrobas, 10) : null,
       to_discard: form.to_discard,
       mother_id: form.mother_id || null,
+      is_breeder: form.species === 'bovino' && form.sex === 'M' ? form.is_breeder : false,
     }
 
     const purchasePayload = {
@@ -290,17 +321,46 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
             <CardHeader><CardTitle>Identificação</CardTitle></CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-              {/* 1. Espécie */}
-              <div className="space-y-2">
-                <Label>Espécie *</Label>
-                <Select value={form.species} onValueChange={handleSpeciesChange}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="bovino">Bovino</SelectItem>
-                    <SelectItem value="equino">Equino</SelectItem>
-                    <SelectItem value="suino">Suíno</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* 1. Tipo de animal: espécie e sexo pelo nome que o fazendeiro usa */}
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Que animal é? *</Label>
+                <div className="flex flex-wrap gap-2">
+                  {SPECIES_CHOICES.map(c => (
+                    <ChoiceButton key={c.key} selected={form.species === c.key} onClick={() => handleSpeciesChange(c.key)}>
+                      {c.label}
+                    </ChoiceButton>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {(() => {
+                    const c = SPECIES_CHOICES.find(x => x.key === form.species)!
+                    return (
+                      <>
+                        <ChoiceButton selected={form.sex === 'F'} onClick={() => set('sex', 'F')}>{c.female} (fêmea)</ChoiceButton>
+                        <ChoiceButton selected={form.sex === 'M'} onClick={() => set('sex', 'M')}>{c.male} (macho)</ChoiceButton>
+                      </>
+                    )
+                  })()}
+                </div>
+                {form.species === 'bovino' && form.sex === 'M' && (
+                  <label className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 accent-primary"
+                      checked={form.is_breeder}
+                      onChange={e => setForm(prev => ({ ...prev, is_breeder: e.target.checked }))}
+                    />
+                    <span>
+                      <span className="block text-sm font-medium">É touro</span>
+                      <span className="block text-xs text-muted-foreground">Marque se ele não foi castrado e serve para cobrir as vacas e fazer bezerros. Se foi castrado, deixe desmarcado: é boi, criado para engorda e venda.</span>
+                    </span>
+                  </label>
+                )}
+                {form.birth_date && (
+                  <p className="text-xs text-muted-foreground">
+                    Na lista, aparece como <span className="font-medium text-foreground">{animalCategory({ species: form.species, sex: form.sex, birth_date: form.birth_date, is_breeder: form.species === 'bovino' && form.sex === 'M' && form.is_breeder })}</span>.
+                  </p>
+                )}
               </div>
 
               {/* 2. Código */}
@@ -363,18 +423,6 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                 />
               </div>
 
-              {/* 7. Sexo */}
-              <div className="space-y-2">
-                <Label>Sexo *</Label>
-                <Select value={form.sex} onValueChange={v => set('sex', v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="M">Macho</SelectItem>
-                    <SelectItem value="F">Fêmea</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
               {/* 8. Peso — só para nascimento/arrendamento; compra tem campo próprio */}
               {form.entry_type !== 'compra' && (
                 <div className="space-y-2">
@@ -389,6 +437,22 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                 <Label htmlFor="birth_date">Data de Nascimento</Label>
                 <Input id="birth_date" type="date" value={form.birth_date}
                   onChange={e => set('birth_date', e.target.value)} />
+              </div>
+
+              {/* Mãe: para qualquer tipo de entrada, liga a cria à mãe ("Filha da Rolinha") */}
+              <div className="space-y-2">
+                <Label>Mãe</Label>
+                <Select value={form.mother_id || 'none'} onValueChange={v => set('mother_id', v === 'none' ? '' : v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar mãe" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Não informar</SelectItem>
+                    {females.filter(f => f.species === form.species && f.id !== animal?.id && !isTooYoungToBeMother(f)).map(f => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.name ? `${f.name} (${f.code})` : f.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* 10. Data de Entrada */}
@@ -439,29 +503,6 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode }: AnimalFor
                     onChange={e => setPurchaseForm(p => ({ ...p, seller_name: e.target.value }))}
                     onBlur={e => setPurchaseForm(p => ({ ...p, seller_name: toTitleCase(e.target.value) }))}
                     placeholder="Nome do vendedor" />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Seção condicional: Nascimento — campo Mãe */}
-          {form.entry_type === 'nascimento' && (
-            <Card>
-              <CardHeader><CardTitle>Dados do Nascimento</CardTitle></CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <Label>Mãe</Label>
-                  <Select value={form.mother_id || 'none'} onValueChange={v => set('mother_id', v === 'none' ? '' : v)}>
-                    <SelectTrigger><SelectValue placeholder="Selecionar mãe..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Não informar</SelectItem>
-                      {females.map(f => (
-                        <SelectItem key={f.id} value={f.id}>
-                          {f.code}{f.name ? ` · ${f.name}` : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
                 </div>
               </CardContent>
             </Card>

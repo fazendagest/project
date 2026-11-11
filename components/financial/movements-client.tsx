@@ -724,6 +724,7 @@ export function ExpensesClient({
               <div className="space-y-2">
                 <Label>Peso (@)</Label>
                 <Input type="number" step="1" min="0" value={saleForm.weight_kg} onChange={e => setSaleForm(p => ({ ...p, weight_kg: e.target.value }))} />
+                <p className="text-xs text-muted-foreground">Da balança do comprador. Se não pesou, deixe vazio.</p>
               </div>
               <div className="space-y-2">
                 <Label>Preço/@ (R$)</Label>
@@ -798,6 +799,7 @@ export function ExpensesClient({
               <div className="space-y-2">
                 <Label>Peso (@)</Label>
                 <Input type="number" step="1" min="0" value={saleEditForm.weight_kg} onChange={e => setSaleEditForm(p => ({ ...p, weight_kg: e.target.value }))} />
+                <p className="text-xs text-muted-foreground">Da balança do comprador. Se não pesou, deixe vazio.</p>
               </div>
               <div className="space-y-2 col-span-2">
                 <Label>Preço/@ (R$)</Label>
@@ -891,6 +893,7 @@ export function ExpensesClient({
               <div className="space-y-2">
                 <Label>Peso (@)</Label>
                 <Input type="number" step="1" min="0" value={purchaseForm.weight_kg} onChange={e => setPurchaseForm(p => ({ ...p, weight_kg: e.target.value }))} />
+                <p className="text-xs text-muted-foreground">Da balança do vendedor. Se não pesou, deixe vazio.</p>
               </div>
               <div className="space-y-2">
                 <Label>Vendedor</Label>

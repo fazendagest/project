@@ -179,7 +179,7 @@ function MarketHint({ ifag, animal, onUse }: {
         <p>
           Preço em Goiás: <span className="font-semibold tabular-nums">{formatCurrencyCard(ref.perHead)}</span>
           {ref.perKg != null && animal.weight_arrobas ? (
-            <span className="text-muted-foreground tabular-nums"> ({animal.weight_arrobas * 15}&nbsp;kg a R$&nbsp;{ref.perKg.toFixed(2).replace('.', ',')} o quilo)</span>
+            <span className="text-muted-foreground tabular-nums"> (pelo peso que você informou, {animal.weight_arrobas * 15}&nbsp;kg a R$&nbsp;{ref.perKg.toFixed(2).replace('.', ',')} o quilo)</span>
           ) : ref.min != null && ref.max != null && ref.min !== ref.max && (
             <span className="text-muted-foreground tabular-nums"> (de {formatCurrencyCard(ref.min)} a {formatCurrencyCard(ref.max)})</span>
           )}
@@ -187,7 +187,7 @@ function MarketHint({ ifag, animal, onUse }: {
       ) : (
         <p>
           Porco em Goiás: <span className="font-semibold tabular-nums">R$&nbsp;{ref.perKg?.toFixed(2).replace('.', ',')}</span> o quilo vivo.
-          Informe o peso para calcular o valor.
+          Se pesou o porco, informe o peso para calcular o valor.
         </p>
       )}
       <p className="text-xs text-muted-foreground">
@@ -498,7 +498,8 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag }: Ani
                 <div className="space-y-2">
                   <Label htmlFor="weight_arrobas">Peso (@)</Label>
                   <Input id="weight_arrobas" type="number" step="1" min="0" value={form.weight_arrobas}
-                    onChange={e => set('weight_arrobas', e.target.value)} placeholder="Ex: 15" />
+                    onChange={e => set('weight_arrobas', e.target.value)} />
+                  <p className="text-xs text-muted-foreground">Só preencha se pesou na balança ou na fita. Se não pesou, deixe vazio.</p>
                 </div>
               )}
 
@@ -578,7 +579,8 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag }: Ani
                   <Label htmlFor="weight_arrobas_compra">Peso (@)</Label>
                   <Input id="weight_arrobas_compra" type="number" step="1" min="0"
                     value={form.weight_arrobas}
-                    onChange={e => set('weight_arrobas', e.target.value)} placeholder="Ex: 15" />
+                    onChange={e => set('weight_arrobas', e.target.value)} />
+                  <p className="text-xs text-muted-foreground">Só preencha se pesou na balança ou na fita. Se não pesou, deixe vazio.</p>
                 </div>
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="seller_name">Vendedor</Label>

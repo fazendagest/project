@@ -17,6 +17,8 @@ import { computeInvested, monthlyReturn, animalUA, uaGroup, UA_GROUP_LABELS, typ
 import { expandExpenses, sumExpensesInRange } from '@/lib/fixed-expenses'
 import { computeHerdValue } from '@/lib/herd-value'
 import { getIfagPrices } from '@/lib/ifag'
+import { criaIndicators, CRIA_TARGETS } from '@/lib/cria'
+import { CriaCard } from '@/components/dashboard/cria-card'
 import { IFAG_SOURCE_URL, marketReference } from '@/lib/market-reference'
 import { incomeInRange, isOnFarm, herdUA, type ThirdPartyHerd } from '@/lib/third-party'
 import { ChevronRight, Droplet } from 'lucide-react'
@@ -88,9 +90,10 @@ export default async function DashboardPage() {
     { data: yearPurchases },
     { data: bruceloseRecords },
     { data: declRow },
+    { data: allSales },
     ifag,
   ] = await Promise.all([
-    supabase.from('animals').select('id, code, name, species, sex, birth_date, breed, is_breeder, is_fat, weight_arrobas, market_value, mother_id, status, entry_type, entry_date').eq('farm_id', farmId),
+    supabase.from('animals').select('id, code, name, species, sex, birth_date, breed, is_breeder, is_fat, weight_arrobas, market_value, mother_id, status, entry_type, entry_date, death_date, death_cause, weaned_at, weaning_weight_kg').eq('farm_id', farmId),
     supabase.from('farms').select('milk_active, area_hectares, pasture_hectares').eq('id', farmId).single(),
     supabase.from('animal_costs').select('animal_id, entry_date, sale_date, purchase_cost, health_cost, species').eq('farm_id', farmId),
     supabase.from('feed_stock').select('purchase_date, total_cost, for_pigs').eq('farm_id', farmId),
@@ -107,6 +110,8 @@ export default async function DashboardPage() {
     supabase.from('health_records').select('animal_id, product_name, notes').eq('farm_id', farmId),
     // Declaração de Rebanho marcada como feita (P7). Consulta à parte: sem a coluna, o painel continua de pé.
     supabase.from('farms').select('herd_declarations').eq('id', farmId).maybeSingle(),
+    // Todas as vendas: data de saída da vaca e peso do bezerro vendido na desmama (P4).
+    supabase.from('animal_sales').select('animal_id, sale_date, weight_kg, arroba_basis').eq('farm_id', farmId),
     getIfagPrices(),
   ])
 
@@ -280,6 +285,8 @@ export default async function DashboardPage() {
     })
     .filter(r => !r.calving || differenceInDays(parseISO(r.exam), parseISO(r.calving)) >= RECENT_CALVING_DAYS)
   const pregnancyRate = examined.length > 0 ? pregnant.length / examined.length : null
+  // Índices da cria com a meta da fazenda (Tião, P4).
+  const cria = criaIndicators(allAnimals, allSales ?? [], todayStr)
 
   // Para ver com o Dineuvan (P7): o que só o dono resolve.
   const declaredPeriods = ((declRow as { herd_declarations?: string[] | null } | null)?.herd_declarations) ?? []
@@ -553,6 +560,17 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <CriaCard
+        cria={cria}
+        prenhez={pregnancyRate == null
+          ? { value: null, missing: 'Nenhuma vaca ou novilha examinada nos últimos 12 meses. Lance o toque ou o ultrassom em Reprodução.' }
+          : {
+              value: pregnancyRate,
+              detail: `${pregnant.length} de ${examined.length} ${examined.length === 1 ? 'examinada' : 'examinadas'}${cowsAndHeifers.length > examined.length ? `, ${cowsAndHeifers.length - examined.length} sem exame` : ''}`,
+              belowTarget: pregnancyRate < CRIA_TARGETS.prenhez.target,
+            }}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         {/* 5. Prenhez das vacas */}

@@ -65,6 +65,9 @@ export interface Animal {
   herd_role?: 'reposicao' | 'cruzamento' | null
   /** Destino do bezerro (P5): venda na desmama ou reposicao. Vazio = padrão pela mãe. */
   calf_destination?: 'venda' | 'reposicao' | null
+  /** Desmama do bezerro (P4): data e peso vivo em kg. */
+  weaned_at?: string | null
+  weaning_weight_kg?: number | null
   created_at: string
 }
 

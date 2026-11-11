@@ -17,7 +17,7 @@ import { parseBRL, formatBRL, animalCategory, formatDate, formatCurrencyCard, DE
 import { toTitleCase } from '@/lib/utils'
 import {
   HERD_ROLES, CALF_DESTINATIONS, isAdultFemale, isYoungBovine, effectiveRole, effectiveDestination, defaultRole,
-  calfBreedName, type HerdRole, type CalfDestination,
+  calfBreedName, monthsOld, type HerdRole, type CalfDestination,
 } from '@/lib/herd-role'
 import { marketReference, isDairyBreed, IFAG_SOURCE_URL, SCOT_SOURCE_URL, type IfagPrices } from '@/lib/market-reference'
 
@@ -276,6 +276,8 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
     is_fat: animal?.is_fat ?? false,
     herd_role: (animal?.herd_role ?? '') as '' | 'reposicao' | 'cruzamento',
     calf_destination: (animal?.calf_destination ?? '') as '' | CalfDestination,
+    weaned_at: animal?.weaned_at ?? '',
+    weaning_weight_kg: animal?.weaning_weight_kg != null ? String(animal.weaning_weight_kg) : '',
     rental_owner: '',
     count: '1',
   })
@@ -373,6 +375,9 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
   const destination = effectiveDestination(form, mother)
   const motherIsDairy = !!mother && isDairyBreed(mother.breed)
   const suggestedBreed = form.species === 'bovino' ? calfBreedName(mother?.breed, sireBreed) : null
+  // Desmama (P4): bezerro com data de nascimento e menos de 24 meses, ou já com desmama lançada.
+  const ageMonths = monthsOld(form.birth_date)
+  const showWeaning = form.species === 'bovino' && ((ageMonths != null && ageMonths < 24) || !!form.weaned_at || !!form.weaning_weight_kg)
 
   function pickRole(v: HerdRole) {
     setForm(prev => v === 'descarte'
@@ -383,6 +388,10 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.code || codeLoading) return toast.error('Aguarde a geração do código')
+    if (showWeaning && form.weaning_weight_kg) {
+      const kg = Number(form.weaning_weight_kg.replace(',', '.'))
+      if (!(kg > 0 && kg < 600)) return toast.error('Peso na desmama: digite os quilos, entre 1 e 599 kg')
+    }
     setLoading(true)
 
     const payload = {
@@ -409,6 +418,8 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
       is_fat: form.species === 'bovino' ? form.is_fat : false,
       herd_role: adultFemale ? form.herd_role || null : null,
       calf_destination: youngBovine ? form.calf_destination || null : null,
+      weaned_at: showWeaning ? form.weaned_at || null : null,
+      weaning_weight_kg: showWeaning && form.weaning_weight_kg ? Number(form.weaning_weight_kg.replace(',', '.')) || null : null,
     }
 
     const purchasePayload = {
@@ -653,6 +664,20 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
                       {form.calf_destination ? 'Escolhido por você.' : 'Sugerido pela mãe e pelo sexo; troque se for diferente.'}
                     </p>
                   )}
+                </div>
+              )}
+
+              {showWeaning && (
+                <div className="space-y-2">
+                  <Label htmlFor="weaning_weight_kg">Desmama: data e peso</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input id="weaned_at" type="date" aria-label="Data da desmama" value={form.weaned_at}
+                      min={form.birth_date || undefined} max={new Date().toISOString().slice(0, 10)}
+                      onChange={e => set('weaned_at', e.target.value)} />
+                    <Input id="weaning_weight_kg" type="text" inputMode="decimal" placeholder="kg" value={form.weaning_weight_kg}
+                      onChange={e => set('weaning_weight_kg', e.target.value)} />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Peso vivo em kg, na balança ou na fita. Serve para o índice de kg desmamado por vaca. Se vendeu na desmama com peso, não precisa repetir aqui.</p>
                 </div>
               )}
 

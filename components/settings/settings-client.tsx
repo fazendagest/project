@@ -24,6 +24,7 @@ export function SettingsClient({ farm, userEmail }: { farm: Farm | null; userEma
     name: farm?.name ?? 'Minha Fazenda',
     location: farm?.location ?? '',
     area_hectares: farm?.area_hectares?.toString() ?? '',
+    pasture_hectares: farm?.pasture_hectares?.toString() ?? '',
   })
 
   async function handleMilkToggle(checked: boolean) {
@@ -103,6 +104,7 @@ export function SettingsClient({ farm, userEmail }: { farm: Farm | null; userEma
       name: form.name,
       location: form.location || null,
       area_hectares: form.area_hectares ? parseFloat(form.area_hectares) : null,
+      pasture_hectares: form.pasture_hectares ? parseFloat(form.pasture_hectares) : null,
     }).eq('id', farm.id)
     if (error) toast.error('Erro ao salvar: ' + error.message)
     else toast.success('Configurações salvas!')
@@ -133,13 +135,22 @@ export function SettingsClient({ farm, userEmail }: { farm: Farm | null; userEma
                 placeholder="Cidade, Estado" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="area">Área de pasto (hectares)</Label>
+              <Label htmlFor="area">Área total da fazenda (hectares)</Label>
               <Input id="area" type="number" step="0.01" min="0" value={form.area_hectares}
                 onChange={e => setForm(p => ({ ...p, area_hectares: e.target.value }))} placeholder="0,00" />
               <p className="text-xs text-muted-foreground">
                 {Number(form.area_hectares) > 0
                   ? `Dá ${(Number(form.area_hectares) / 4.84).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} alqueires goianos (1 alqueire = 4,84 ha).`
                   : 'Em hectares. 1 alqueire goiano = 4,84 ha: 16 alqueires são 77,4 ha.'}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pasture">Área de pasto (hectares)</Label>
+              <Input id="pasture" type="number" step="0.01" min="0" value={form.pasture_hectares}
+                onChange={e => setForm(p => ({ ...p, pasture_hectares: e.target.value }))} placeholder="0,00" />
+              <p className="text-xs text-muted-foreground">
+                Só o que é pasto, sem lavoura, mata e sede. Serve para saber quanto gado o pasto aguenta.
+                {Number(form.pasture_hectares) > 0 && ` Dá ${(Number(form.pasture_hectares) / 4.84).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} alqueires goianos.`}
               </p>
             </div>
             <Button type="submit" className="h-12 w-full" disabled={loading}>

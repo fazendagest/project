@@ -1,7 +1,7 @@
 export type Species = 'bovino' | 'equino' | 'suino'
 export type AnimalStatus = 'ativo' | 'vendido' | 'abatido' | 'morto'
 export type AnimalSex = 'M' | 'F'
-export type EntryType = 'nascimento' | 'compra' | 'arrendamento'
+export type EntryType = 'nascimento' | 'compra' | 'arrendamento' | 'parceria'
 export type HealthType = 'vacina' | 'vermifugacao' | 'medicamento' | 'consulta'
 export type ReproStatus = 'coberta' | 'prenha' | 'parida' | 'perdida'
 export type FeedUnit = 'kg' | 'saco' | 'fardo' | 'litro' | 'outro'
@@ -26,6 +26,8 @@ export interface Farm {
   state?: string
   location?: string
   area_hectares?: number
+  /** Área só de pasto (P3): a lotação usa esta; sem ela, a área total. */
+  pasture_hectares?: number | null
   is_active: boolean
   plan: string
   trial_ends_at?: string
@@ -104,6 +106,8 @@ export interface FeedStock {
   cost_per_unit: number
   purchase_date?: string
   total_cost?: number
+  /** Compra para os porcos: não entra no custo do gado. */
+  for_pigs?: boolean
   last_updated: string
   created_at: string
 }

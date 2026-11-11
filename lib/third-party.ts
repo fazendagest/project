@@ -17,6 +17,8 @@ export type ThirdPartyHerd = {
   agreed_value?: number | null
   partnership_terms?: string | null
   settled_value?: number | null
+  /** Parceria acertada em bezerros (Tião, revisão do P3): não é dinheiro, fica fora do caixa. */
+  settled_heads?: number | null
   herd_kind: HerdKind
   head_count: number
   entry_date: string

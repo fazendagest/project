@@ -18,6 +18,7 @@ import { FormActions } from '@/components/ui/form-actions'
 import { MobileActionBar } from '@/components/layout/page-header'
 import { toast } from 'sonner'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
+import Link from 'next/link'
 import { formatDate, formatCurrency, parseBRL, formatBRL } from '@/lib/helpers'
 import {
   DEAL_TYPES, HERD_KINDS, herdUA, isOnFarm, monthlyRent,
@@ -34,6 +35,8 @@ type FormState = {
   agreed_value: string
   partnership_terms: string
   settled_value: string
+  settle_mode: 'dinheiro' | 'bezerros'
+  settled_heads: string
   herd_kind: HerdKind
   head_count: string
   entry_date: string
@@ -45,7 +48,7 @@ type FormState = {
 }
 
 const empty = (): FormState => ({
-  owner_name: '', owner_phone: '', deal_type: 'aluguel', agreed_value: '', partnership_terms: '', settled_value: '',
+  owner_name: '', owner_phone: '', deal_type: 'aluguel', agreed_value: '', partnership_terms: '', settled_value: '', settle_mode: 'dinheiro', settled_heads: '',
   herd_kind: 'boi', head_count: '', entry_date: today(), exit_date: '', gta_number: '',
   brucelose_tb_exam: false, exam_date: '', notes: '',
 })
@@ -57,6 +60,8 @@ const fromHerd = (h: ThirdPartyHerd): FormState => ({
   agreed_value: h.agreed_value != null ? formatBRL(Number(h.agreed_value)) : '',
   partnership_terms: h.partnership_terms ?? '',
   settled_value: h.settled_value != null ? formatBRL(Number(h.settled_value)) : '',
+  settle_mode: h.settled_heads ? 'bezerros' : 'dinheiro',
+  settled_heads: h.settled_heads ? String(h.settled_heads) : '',
   herd_kind: h.herd_kind,
   head_count: String(h.head_count),
   entry_date: h.entry_date,
@@ -117,7 +122,8 @@ export function ThirdPartyClient({ initialHerds, farmId }: { initialHerds: Third
       deal_type: form.deal_type,
       agreed_value: rentValue,
       partnership_terms: form.deal_type === 'parceria' ? form.partnership_terms.trim() || null : null,
-      settled_value: form.deal_type === 'parceria' ? parseBRL(form.settled_value) : null,
+      settled_value: form.deal_type === 'parceria' && form.settle_mode === 'dinheiro' ? parseBRL(form.settled_value) : null,
+      settled_heads: form.deal_type === 'parceria' && form.settle_mode === 'bezerros' ? parseInt(form.settled_heads, 10) || null : null,
       herd_kind: form.herd_kind,
       head_count: count,
       entry_date: form.entry_date,
@@ -153,8 +159,10 @@ export function ThirdPartyClient({ initialHerds, farmId }: { initialHerds: Third
   const dealText = (h: ThirdPartyHerd) =>
     h.deal_type === 'aluguel'
       ? `${formatCurrency(Number(h.agreed_value ?? 0))} por cabeça por mês`
-      : h.settled_value != null
-        ? `Parceria, acerto de ${formatCurrency(Number(h.settled_value))}`
+      : h.settled_heads
+        ? `Parceria, acerto de ${h.settled_heads} ${h.settled_heads === 1 ? 'bezerro' : 'bezerros'}`
+        : h.settled_value != null
+          ? `Parceria, acerto de ${formatCurrency(Number(h.settled_value))}`
         : `Parceria${h.partnership_terms ? `: ${h.partnership_terms}` : ''}`
 
   const statusBadges = (h: ThirdPartyHerd) => (
@@ -164,6 +172,11 @@ export function ThirdPartyClient({ initialHerds, farmId }: { initialHerds: Third
         : <Badge className="bg-muted text-muted-foreground">Saiu em {formatDate(h.exit_date!)}</Badge>}
       {!h.brucelose_tb_exam && <Badge className="bg-amber-100 text-amber-900">Sem exame de brucelose e tuberculose</Badge>}
       {!h.gta_number && <Badge className="bg-amber-100 text-amber-900">Sem GTA</Badge>}
+      {h.deal_type === 'parceria' && !!h.settled_heads && (
+        <Link href="/app/animals/new?entrada=parceria" className="text-xs font-medium text-primary underline underline-offset-2 min-h-6 inline-flex items-center">
+          Cadastrar os bezerros recebidos no meu rebanho
+        </Link>
+      )}
     </div>
   )
 
@@ -288,12 +301,32 @@ export function ThirdPartyClient({ initialHerds, farmId }: { initialHerds: Third
                     onChange={e => set('partnership_terms', e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="settled_value">Quanto recebeu no acerto (R$)</Label>
-                  <Input id="settled_value" inputMode="decimal" value={form.settled_value}
-                    onChange={e => set('settled_value', e.target.value)}
-                    onBlur={() => { const n = parseBRL(form.settled_value); if (n != null) set('settled_value', formatBRL(n)) }} />
-                  <p className="text-xs text-muted-foreground">Preencha quando acertar. Entra no ano da data de saída.</p>
+                  <Label>Acerto recebido em</Label>
+                  <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Acerto recebido em">
+                    {(['dinheiro', 'bezerros'] as const).map(m => (
+                      <Button key={m} type="button" role="radio" aria-checked={form.settle_mode === m}
+                        variant={form.settle_mode === m ? 'default' : 'outline'} className="h-11" onClick={() => set('settle_mode', m)}>
+                        {m === 'dinheiro' ? 'Dinheiro' : 'Bezerros'}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
+                {form.settle_mode === 'dinheiro' ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="settled_value">Quanto recebeu no acerto (R$)</Label>
+                    <Input id="settled_value" inputMode="decimal" value={form.settled_value}
+                      onChange={e => set('settled_value', e.target.value)}
+                      onBlur={() => { const n = parseBRL(form.settled_value); if (n != null) set('settled_value', formatBRL(n)) }} />
+                    <p className="text-xs text-muted-foreground">Preencha quando acertar. Entra no ano da data de saída.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="settled_heads">Quantos bezerros recebeu</Label>
+                    <Input id="settled_heads" type="number" inputMode="numeric" min={1} value={form.settled_heads}
+                      onChange={e => set('settled_heads', e.target.value)} />
+                    <p className="text-xs text-muted-foreground">Preencha quando acertar. Depois cadastre os bezerros no seu rebanho pelo link no cartão do lote.</p>
+                  </div>
+                )}
               </>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_8rem] gap-3">

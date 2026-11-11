@@ -68,7 +68,7 @@ export function FeedingClient({
   const [deleting, setDeleting] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  const emptyPurchase = { product_name: '', unit: 'saco', quantity: '', cost_per_unit: '', purchase_date: today(), min_quantity: '' }
+  const emptyPurchase = { product_name: '', unit: 'saco', quantity: '', cost_per_unit: '', purchase_date: today(), min_quantity: '', for_pigs: false }
   const [form, setForm] = useState(emptyPurchase)
   const [consumeForm, setConsumeForm] = useState({ species: 'bovino', group_key: '', date: today(), quantity_used: '', notes: '' })
 
@@ -107,6 +107,7 @@ export function FeedingClient({
       unit: last?.unit ?? 'saco',
       cost_per_unit: last ? formatBRL(last.cost_per_unit) : '',
       min_quantity: last?.min_quantity ? String(last.min_quantity) : '',
+      for_pigs: !!last?.for_pigs,
     })
     setPurchaseDialog('new')
   }
@@ -119,6 +120,7 @@ export function FeedingClient({
       cost_per_unit: formatBRL(p.cost_per_unit),
       purchase_date: p.purchase_date ?? today(),
       min_quantity: p.min_quantity ? String(p.min_quantity) : '',
+      for_pigs: !!p.for_pigs,
     })
     setPurchaseDialog(p)
   }
@@ -137,6 +139,7 @@ export function FeedingClient({
       cost_per_unit: unitCost,
       purchase_date: form.purchase_date || today(),
       total_cost: total,
+      for_pigs: form.for_pigs,
       last_updated: new Date().toISOString(),
     }
     if (purchaseDialog === 'new') {
@@ -397,6 +400,14 @@ export function FeedingClient({
               <Input id="feed-date" type="date" value={form.purchase_date}
                 onChange={e => setForm(p => ({ ...p, purchase_date: e.target.value }))} className="h-11 text-base md:h-9 md:text-sm" />
             </div>
+            <label className="flex items-start gap-3 rounded-lg border p-3 min-h-11 cursor-pointer">
+              <input type="checkbox" className="mt-1 h-4 w-4" checked={form.for_pigs}
+                onChange={e => setForm(p => ({ ...p, for_pigs: e.target.checked }))} />
+              <span className="text-sm">
+                Comida dos porcos
+                <span className="block text-xs text-muted-foreground">Marque se esta compra é só para os porcos. Assim ela não entra no custo do gado.</span>
+              </span>
+            </label>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="feed-qty">Quantidade *</Label>

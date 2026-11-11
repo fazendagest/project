@@ -3,7 +3,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { AnimalForm } from '@/components/animals/animal-form'
 import { getIfagPrices } from '@/lib/ifag'
 
-export default async function NewAnimalPage() {
+export default async function NewAnimalPage({ searchParams }: { searchParams: { entrada?: string } }) {
   const farmId = await getFarmId()
   if (!farmId) return null
   const ifag = await getIfagPrices()
@@ -11,7 +11,7 @@ export default async function NewAnimalPage() {
   return (
     <div>
       <PageHeader title="Novo Animal" description="Cadastre um novo animal na fazenda" />
-      <AnimalForm farmId={farmId} mode="create" ifag={ifag} />
+      <AnimalForm farmId={farmId} mode="create" ifag={ifag} defaultEntryType={searchParams.entrada === 'parceria' ? 'parceria' : undefined} />
     </div>
   )
 }

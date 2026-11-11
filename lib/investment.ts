@@ -24,7 +24,16 @@ export type CostRow = {
  */
 export const isWorkAnimal = (c: { species?: string | null }) => c.species === 'equino'
 
-export type FeedPurchase = { purchase_date: string | null; total_cost: number | null }
+export type FeedPurchase = { purchase_date: string | null; total_cost: number | null; for_pigs?: boolean | null }
+
+/** Porco só recebe o que foi lançado para ele (Tião, revisão do P2): ração marcada para o porco. */
+export const isPig = (c: { species?: string | null }) => c.species === 'suino'
+
+/**
+ * Funrural: 1,63% da venda bruta para produtor pessoa física desde 01/04/2026 (LC 224/2025; conferido pelo
+ * Tião na Famato). Usado como estimativa enquanto o imposto não é lançado à parte.
+ */
+export const FUNRURAL_RATE = 0.0163
 
 /** Dados do animal para saber o tamanho dele em UA. */
 export type UaAnimal = {
@@ -39,7 +48,7 @@ export type UaAnimal = {
 
 /**
  * Peso de cada categoria em UA (Tião, P2, 11/11/2026). Mudar aqui muda o rateio em todo o sistema.
- * Porco fica com 1, como na divisão por cabeça de antes; cavalo não entra (é de trabalho).
+ * Porco vale 1 entre os porcos (só recebe a ração marcada para ele); cavalo não entra (é de trabalho).
  */
 export const UA = {
   vaca: 1,
@@ -97,9 +106,10 @@ export function computeInvested(
     const health = Number(c.health_cost ?? 0)
     result[c.animal_id] = { purchase, health, feed: 0, general: 0, total: purchase + health }
   }
-  const spread = (date: string | null, amount: number, field: 'feed' | 'general') => {
+  // Gado recebe a ração comum e as despesas gerais; porco só a ração marcada para ele; cavalo, nada.
+  const spread = (date: string | null, amount: number, field: 'feed' | 'general', pigs = false) => {
     if (!date || amount <= 0) return
-    const present = costs.filter(c => !isWorkAnimal(c) && c.entry_date <= date && (!c.sale_date || c.sale_date >= date))
+    const present = costs.filter(c => !isWorkAnimal(c) && isPig(c) === pigs && c.entry_date <= date && (!c.sale_date || c.sale_date >= date))
     // Sem os dados do animal, cada um vale 1 (divisão por cabeça).
     const weights = present.map(c => (animals.length ? animalUA(byId.get(c.animal_id), date, mothers.has(c.animal_id)) : 1))
     const totalUA = weights.reduce((s, w) => s + w, 0)
@@ -110,7 +120,7 @@ export function computeInvested(
       result[c.animal_id].total += share
     })
   }
-  for (const f of feeds) spread(f.purchase_date, Number(f.total_cost ?? 0), 'feed')
+  for (const f of feeds) spread(f.purchase_date, Number(f.total_cost ?? 0), 'feed', !!f.for_pigs)
   // Despesa fixa conta uma vez por mês, do primeiro pagamento até hoje (ou até parar).
   for (const e of expandExpenses(expenses, todaySP())) {
     if (e.category === OUTSIDE_HERD_CATEGORY) continue

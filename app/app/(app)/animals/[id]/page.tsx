@@ -41,7 +41,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
     supabase.from('animal_sales').select('*').eq('animal_id', params.id).maybeSingle(),
     supabase.from('animals').select('id', { count: 'exact', head: true }).eq('farm_id', farmId).eq('mother_id', params.id),
     supabase.from('animal_costs').select('animal_id, entry_date, sale_date, purchase_cost, health_cost, species').eq('farm_id', farmId),
-    supabase.from('feed_stock').select('purchase_date, total_cost').eq('farm_id', farmId),
+    supabase.from('feed_stock').select('purchase_date, total_cost, for_pigs').eq('farm_id', farmId),
     supabase.from('operational_expenses').select('*').eq('farm_id', farmId),
     supabase.from('pregnancy_checks').select('exam_date, result, expected_birth_date').eq('animal_id', params.id).eq('farm_id', farmId).order('exam_date', { ascending: false }).limit(1),
     supabase.from('animals').select('id, species, sex, birth_date, is_breeder, weight_arrobas, mother_id').eq('farm_id', farmId),

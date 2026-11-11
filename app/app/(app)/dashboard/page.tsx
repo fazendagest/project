@@ -9,11 +9,11 @@ import { PendingTasks, type PendingTask } from '@/components/dashboard/pending-t
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/lib/helpers'
-import { computeInvested, monthlyReturn, animalUA, BANK_MONTHLY, OUTSIDE_HERD_CATEGORY } from '@/lib/investment'
+import { computeInvested, monthlyReturn, animalUA, BANK_MONTHLY, OUTSIDE_HERD_CATEGORY, FUNRURAL_RATE } from '@/lib/investment'
 import { expandExpenses, sumExpensesInRange } from '@/lib/fixed-expenses'
 import { computeHerdValue } from '@/lib/herd-value'
 import { getIfagPrices } from '@/lib/ifag'
-import { IFAG_SOURCE_URL } from '@/lib/market-reference'
+import { IFAG_SOURCE_URL, marketReference } from '@/lib/market-reference'
 import { incomeInRange, isOnFarm, herdUA, type ThirdPartyHerd } from '@/lib/third-party'
 import { ChevronRight, Droplet } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, differenceInMonths, differenceInDays, parseISO, subDays } from 'date-fns'
@@ -81,12 +81,13 @@ export default async function DashboardPage() {
     { data: reproRecords },
     { data: yearHealth },
     { data: thirdHerds },
+    { data: yearPurchases },
     ifag,
   ] = await Promise.all([
     supabase.from('animals').select('id, code, name, species, sex, birth_date, breed, is_breeder, is_fat, weight_arrobas, market_value, mother_id, status, entry_type, entry_date').eq('farm_id', farmId),
-    supabase.from('farms').select('milk_active, area_hectares').eq('id', farmId).single(),
+    supabase.from('farms').select('milk_active, area_hectares, pasture_hectares').eq('id', farmId).single(),
     supabase.from('animal_costs').select('animal_id, entry_date, sale_date, purchase_cost, health_cost, species').eq('farm_id', farmId),
-    supabase.from('feed_stock').select('purchase_date, total_cost').eq('farm_id', farmId),
+    supabase.from('feed_stock').select('purchase_date, total_cost, for_pigs').eq('farm_id', farmId),
     supabase.from('operational_expenses').select('*').eq('farm_id', farmId),
     supabase.from('animal_sales').select('animal_id, sale_price, sale_date').eq('farm_id', farmId).gte('sale_date', yearStart),
     supabase.from('animal_purchases').select('purchase_price').eq('farm_id', farmId).gte('purchase_date', monthStart).lte('purchase_date', monthEnd),
@@ -96,6 +97,7 @@ export default async function DashboardPage() {
     supabase.from('reproduction_records').select('female_id, actual_birth_date, status').eq('farm_id', farmId),
     supabase.from('health_records').select('cost').eq('farm_id', farmId).gte('application_date', yearStart),
     supabase.from('third_party_herds').select('*').eq('farm_id', farmId),
+    supabase.from('animal_purchases').select('purchase_price').eq('farm_id', farmId).gte('purchase_date', yearStart),
     getIfagPrices(),
   ])
 
@@ -127,7 +129,7 @@ export default async function DashboardPage() {
   const nameOf = (a: { name?: string | null; code: string }) => a.name || a.code
   const monthsOld = (d?: string | null) => (d ? differenceInMonths(now, parseISO(d)) : null)
   const tasks: PendingTask[] = []
-  const anyFeed = (feeds ?? []).some(f => Number(f.total_cost ?? 0) > 0)
+  const anyFeed = (feeds ?? []).some(f => !f.for_pigs && Number(f.total_cost ?? 0) > 0)
   if (!anyFeed && active.some(a => a.species !== 'equino')) {
     tasks.push({
       key: 'custo-alimentacao',
@@ -165,8 +167,18 @@ export default async function DashboardPage() {
   // Aluguel de pasto e acerto de parceria com gado de terceiros (Tião, P3) também pagam a fazenda.
   const herdsThird = (thirdHerds ?? []) as ThirdPartyHerd[]
   const yearRent = herdsThird.reduce((s, h) => s + incomeInRange(h, yearStart, todayStr), 0)
-  const yearResult = soldTotal + yearRent - yearFeed - yearFarmExpenses - yearHealthCost
-  const yearAnything = soldTotal > 0 || yearRent > 0 || yearFeed > 0 || yearFarmExpenses > 0 || yearHealthCost > 0
+  // Caixa do gado no ano (Tião, revisão do P2): compra de animal conta como gasto, e o Funrural sai da venda.
+  const yearFunrural = soldTotal * FUNRURAL_RATE
+  const yearBought = (yearPurchases ?? []).reduce((s, r) => s + Number(r.purchase_price || 0), 0)
+  const yearCosts = yearFeed + yearFarmExpenses + yearHealthCost
+  const yearResult = soldTotal - yearFunrural + yearRent - yearBought - yearCosts
+  const yearAnything = soldTotal > 0 || yearRent > 0 || yearBought > 0 || yearCosts > 0
+  // Parceria acertada em bezerros: não é dinheiro, aparece à parte com o valor estimado pelo IFAG.
+  const yearCalvesReceived = herdsThird
+    .filter(h => h.deal_type === 'parceria' && h.settled_heads && h.exit_date && h.exit_date >= yearStart && h.exit_date <= todayStr)
+    .reduce((s, h) => s + Number(h.settled_heads), 0)
+  const calfRef = marketReference({ species: 'bovino', sex: 'M', birth_date: format(subDays(now, 240), 'yyyy-MM-dd'), breed: null }, ifag)
+  const calvesValue = calfRef?.perHead ? yearCalvesReceived * calfRef.perHead : null
 
   // Animal que entrou por compra sem preço: o investido e o lucro dele ficam errados.
   const costById = new Map((costs ?? []).map(c => [c.animal_id, c]))
@@ -187,7 +199,12 @@ export default async function DashboardPage() {
 
   // Lotação em UA por hectare (Tião, P3): gado próprio pelo tamanho (UA), cavalo 1 UA (também come pasto),
   // porco fora (não pasta) e o gado de terceiros que está no pasto hoje. Referência do Inttegra: acima de 1,2 UA/ha.
-  const area = Number(farm?.area_hectares ?? 0)
+  // Lotação por hectare de PASTO (Tião, revisão do P3); sem a área de pasto, usa a fazenda toda e avisa.
+  const pastureArea = Number(farm?.pasture_hectares ?? 0)
+  const usingTotalArea = pastureArea <= 0
+  const area = usingTotalArea ? Number(farm?.area_hectares ?? 0) : pastureArea
+  /** Acima disso o pasto pode faltar na seca (estimativa conservadora para pasto sem adubação, Tião). */
+  const DRY_SEASON_ALERT_UA_HA = 1.0
   const mothersSet = new Set(allAnimals.map(a => a.mother_id).filter(Boolean) as string[])
   const ownUA = active.filter(a => a.species !== 'suino').reduce((s, a) => s + animalUA(a, todayStr, mothersSet.has(a.id)), 0)
   const thirdOnFarm = herdsThird.filter(h => isOnFarm(h, todayStr))
@@ -204,7 +221,7 @@ export default async function DashboardPage() {
       action: 'Corrigir em Configurações',
     })
   }
-  const calvesNoMother = active.filter(a => a.species === 'bovino' && !a.mother_id && a.entry_type !== 'compra' && (monthsOld(a.birth_date) ?? 99) < 12)
+  const calvesNoMother = active.filter(a => a.species === 'bovino' && !a.mother_id && a.entry_type === 'nascimento' && (monthsOld(a.birth_date) ?? 99) < 12)
   if (calvesNoMother.length > 0) {
     tasks.push({
       key: `maes-bezerros-${calvesNoMother.map(a => a.id).sort().join('-')}`,
@@ -376,24 +393,35 @@ export default async function DashboardPage() {
             ) : (
               <>
                 <p className={`text-lg font-semibold ${missingCosts.length > 0 && yearResult > 0 ? '' : yearResult >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                  {yearResult < 0 ? 'Não, o que entrou não pagou o custo do ano' : missingCosts.length > 0 ? 'Por enquanto sim, mas falta lançar custo' : 'Sim, o que entrou pagou o custo do ano'}
+                  {yearResult < 0 ? 'Não: o caixa do gado ficou negativo' : missingCosts.length > 0 ? 'Por enquanto sim, mas falta lançar custo' : 'Sim: o caixa do gado ficou positivo'}
                 </p>
                 <div className="divide-y mt-1">
-                  <Row label="Vendas" value={money(soldTotal)} />
-                  {yearRent > 0 && <Row label="Aluguel de pasto e parceria" hint="Gado de terceiros" value={money(yearRent)} />}
-                  <Row label="Sal, milho e ração" value={yearFeed > 0 ? `-${money(yearFeed)}` : money(0)} />
-                  <Row label="Despesas da fazenda" hint="Caseiro, energia, diesel e o que mais foi lançado" value={yearFarmExpenses > 0 ? `-${money(yearFarmExpenses)}` : money(0)} />
-                  <Row label="Vacina e remédio" value={yearHealthCost > 0 ? `-${money(yearHealthCost)}` : money(0)} />
                   <Row
-                    label={yearResult >= 0 ? 'Sobrou' : 'Faltou'}
+                    label="Caixa do gado no ano"
                     value={signedMoney(yearResult)}
                     strong
                     tone={missingCosts.length > 0 && yearResult > 0 ? undefined : tone(yearResult)}
                     warn={missingCosts.length > 0 && yearResult > 0 ? `Pode ser menor: falta lançar ${missingCosts.join(' e ')}.` : undefined}
                   />
+                  <Row label="Vendas" value={money(soldTotal)} />
+                  {soldTotal > 0 && <Row label="Funrural (estimado, 1,63% das vendas)" value={`-${money(yearFunrural)}`} />}
+                  {yearRent > 0 && <Row label="Aluguel de pasto e parceria" hint="Gado de terceiros" value={money(yearRent)} />}
+                  <Row label="Compra de animais" value={yearBought > 0 ? `-${money(yearBought)}` : money(0)} />
+                  <Row
+                    label="Custos"
+                    hint={`Sal, milho e ração ${money(yearFeed)}; despesas da fazenda ${money(yearFarmExpenses)}; vacina e remédio ${money(yearHealthCost)}`}
+                    value={yearCosts > 0 ? `-${money(yearCosts)}` : money(0)}
+                  />
                 </div>
+                {yearCalvesReceived > 0 && (
+                  <p className="text-sm mt-2">
+                    Recebeu {yearCalvesReceived} {yearCalvesReceived === 1 ? 'bezerro' : 'bezerros'} na parceria
+                    {calvesValue ? ` (valem cerca de ${money(calvesValue)}, média de Goiás pelo IFAG)` : ''}. Fora da soma: não é dinheiro.
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground mt-2">
-                  Compra de animal fica fora: é investimento, não custo de tocar a fazenda. Despesas marcadas &quot;Fora dos animais&quot; também.
+                  Comprar animal para o rebanho crescer conta como gasto neste cartão; o valor do rebanho aparece em{' '}
+                  <Link href="/app/animals" className="underline underline-offset-2">Animais</Link>. Despesas marcadas &quot;Fora dos animais&quot; ficam fora.
                 </p>
               </>
             )}
@@ -411,7 +439,7 @@ export default async function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`rounded-lg p-3 mb-2 text-sm ${perHa != null && perHa < 0.02 ? 'border border-amber-300 bg-amber-50' : 'bg-muted/40'}`}>
+            <div className={`rounded-lg p-3 mb-2 text-sm ${perHa != null && (perHa < 0.02 || perHa > DRY_SEASON_ALERT_UA_HA) ? 'border border-amber-300 bg-amber-50' : 'bg-muted/40'}`}>
               {perHa != null && perHa < 0.02 ? (
                 <p className="text-amber-800">
                   A área cadastrada é de {area.toLocaleString('pt-BR')}&nbsp;ha, o que parece um engano.
@@ -421,15 +449,24 @@ export default async function DashboardPage() {
                 <>
                   <p>
                     <span className="font-semibold tabular-nums">{perHa.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span> UA por hectare
-                    <span className="text-muted-foreground tabular-nums"> ({totalUA.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;UA em {area.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;ha)</span>
+                    <span className="text-muted-foreground tabular-nums"> ({totalUA.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;UA em {area.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;ha{usingTotalArea ? '' : ' de pasto'})</span>
                   </p>
+                  {perHa > DRY_SEASON_ALERT_UA_HA && (
+                    <p className="text-amber-800 font-medium mt-1">Pasto pode faltar na seca: confira com o técnico antes de receber mais gado.</p>
+                  )}
+                  {usingTotalArea && (
+                    <p className="text-xs text-amber-800 mt-1">
+                      Conta com a fazenda toda: informe a área de pasto em{' '}
+                      <Link href="/app/settings" className="underline underline-offset-2">Configurações</Link> para ficar certo.
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground tabular-nums mt-1">
                     Seu gado: {ownUA.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;UA.
                     {' '}De terceiros: {thirdHeads > 0 ? <>{thirdUA.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;UA ({thirdHeads} {thirdHeads === 1 ? 'cabeça' : 'cabeças'})</> : 'nenhum'}.
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     1 UA é um animal de 450&nbsp;kg, perto de uma vaca adulta. Quem lucra com gado põe mais de 1,2&nbsp;UA por hectare de pasto (Inttegra).
-                    {perHa < 0.8 && ' Se a área for toda pasto, cabe mais gado sem comprar terra.'}
+                    {perHa < 0.8 && ' Pelo número, ainda cabe mais gado no pasto sem comprar terra.'}
                   </p>
                 </>
               ) : (

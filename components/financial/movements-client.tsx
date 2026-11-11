@@ -618,7 +618,7 @@ export function ExpensesClient({
               </Select>
               <p className="text-xs text-muted-foreground">
                 {expForm.category === 'fora_do_gado'
-                  ? 'Não entra no custo dos animais. Ex.: poleiro das galinhas, lavoura para vender, gasto da casa.'
+                  ? 'Não entra no custo dos animais. Ex.: poleiro das galinhas, lavoura para vender, gasto da casa. Lavoura que vira comida do gado (milho, capineira, silagem) conta como gado: escolha outra categoria.'
                   : 'Entra no custo dos animais, dividido pelo tamanho de cada um (vaca conta mais que bezerro). Ex.: caseiro, diesel do trator, energia, limpeza de pasto.'}
               </p>
             </div>

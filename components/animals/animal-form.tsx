@@ -228,9 +228,11 @@ interface AnimalFormProps {
   existingPurchase?: { id: string; purchase_price: number; weight_kg?: number; seller_name?: string; weight_arrobas?: number }
   mode: 'create' | 'edit'
   ifag?: IfagPrices | null
+  /** Tipo de entrada já escolhido (ex.: bezerro recebido no acerto de parceria). */
+  defaultEntryType?: 'nascimento' | 'compra' | 'parceria'
 }
 
-export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag }: AnimalFormProps) {
+export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defaultEntryType }: AnimalFormProps) {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
@@ -248,7 +250,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag }: Ani
     sex: animal?.sex ?? 'M',
     birth_date: animal?.birth_date ?? '',
     entry_date: animal?.entry_date ?? new Date().toISOString().slice(0, 10),
-    entry_type: animal?.entry_type ?? 'compra',
+    entry_type: animal?.entry_type ?? defaultEntryType ?? 'compra',
     status: animal?.status ?? 'ativo',
     death_date: animal?.death_date ?? '',
     death_cause: animal?.death_cause ?? '',
@@ -492,6 +494,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag }: Ani
                   <SelectContent>
                     <SelectItem value="compra">Compra</SelectItem>
                     <SelectItem value="nascimento">Nascimento</SelectItem>
+                    <SelectItem value="parceria">Parceria (recebido no acerto)</SelectItem>
                     <SelectItem value="arrendamento">Arrendamento</SelectItem>
                   </SelectContent>
                 </Select>

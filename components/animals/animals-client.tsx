@@ -14,6 +14,7 @@ import Image from 'next/image'
 import { LayoutGrid, List, AlertTriangle, ChevronRight } from 'lucide-react'
 import { calcAge, statusLabel, statusColor, animalCategory, ANIMAL_GROUPS } from '@/lib/helpers'
 import { cn } from '@/lib/utils'
+import type { Invested } from '@/lib/investment'
 
 const SPECIES_FILTERS = [
   { key: 'all', label: 'Todos' },
@@ -22,9 +23,14 @@ const SPECIES_FILTERS = [
   { key: 'suino', label: 'Porcos' },
 ] as const
 
-type Row = Animal & { category: string; motherName: string | null }
+type Row = Animal & { category: string; motherName: string | null; investedTotal: number }
 
-export function AnimalsClient({ initialAnimals }: { initialAnimals: Animal[], farmId: string }) {
+export function AnimalsClient({ initialAnimals, invested, feedIncluded }: {
+  initialAnimals: Animal[]
+  farmId: string
+  invested: Record<string, Invested>
+  feedIncluded: boolean
+}) {
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [species, setSpecies] = useState<string>('all')
@@ -40,9 +46,10 @@ export function AnimalsClient({ initialAnimals }: { initialAnimals: Animal[], fa
         ...a,
         category: animalCategory(a, mothers.has(a.id)),
         motherName: mother ? (mother.name ?? mother.code) : null,
+        investedTotal: invested[a.id]?.total ?? 0,
       }
     })
-  }, [initialAnimals])
+  }, [initialAnimals, invested])
 
   const byStatus = rows.filter(a => showAll || a.status === 'ativo')
 
@@ -110,6 +117,12 @@ export function AnimalsClient({ initialAnimals }: { initialAnimals: Animal[], fa
         <p className="text-sm text-muted-foreground py-10 text-center">Nenhum animal encontrado.</p>
       )}
 
+      {filtered.length > 0 && (
+        <p className="text-xs text-muted-foreground mb-4">
+          Investido: compra + saúde{feedIncluded ? ' + sal, milho e ração divididos por cabeça (estimado)' : ''}. Mercado: o valor que o animal vale hoje, digitado no cadastro.
+        </p>
+      )}
+
       {/* Cartões agrupados: sempre no celular; no computador quando escolhido */}
       <div className={cn('space-y-6', view === 'table' && 'md:hidden')}>
         {groups.map(g => (
@@ -138,12 +151,13 @@ export function AnimalsClient({ initialAnimals }: { initialAnimals: Animal[], fa
                 <TableHead>Raça</TableHead>
                 <TableHead>Idade</TableHead>
                 {hasMothers && <TableHead>Mãe</TableHead>}
-                <TableHead className="text-right">Valor de mercado</TableHead>
+                <TableHead className="text-right">Investido</TableHead>
+                <TableHead className="text-right">Mercado</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.length === 0 && <EmptyState colSpan={7} message="Nenhum animal encontrado" />}
+              {filtered.length === 0 && <EmptyState colSpan={8} message="Nenhum animal encontrado" />}
               {filtered.map(a => (
                 <TableRow
                   key={a.id}
@@ -161,6 +175,7 @@ export function AnimalsClient({ initialAnimals }: { initialAnimals: Animal[], fa
                   <TableCell>{a.breed ?? 'Não informada'}</TableCell>
                   <TableCell>{a.birth_date ? calcAge(a.birth_date) : 'Sem data'}</TableCell>
                   {hasMothers && <TableCell>{a.motherName ?? ''}</TableCell>}
+                  <TableCell className="text-right tabular-nums">{a.investedTotal > 0 ? formatMoney(a.investedTotal) : ''}</TableCell>
                   <TableCell className="text-right tabular-nums">{a.market_value ? formatMoney(a.market_value) : ''}</TableCell>
                   <TableCell><Badge className={statusColor(a.status)}>{statusLabel(a.status)}</Badge></TableCell>
                 </TableRow>
@@ -187,22 +202,30 @@ function AnimalCard({ a }: { a: Row }) {
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-2">
-            <p className="min-w-0 flex-1 truncate font-semibold text-foreground">
-              {a.name ?? 'Sem nome'}{' '}
-              <span className="font-mono text-xs font-normal text-muted-foreground">{a.code}</span>
-            </p>
-            {a.market_value ? (
-              <span className="shrink-0 text-right leading-tight">
-                <span className="block text-sm font-medium tabular-nums whitespace-nowrap">{formatMoney(a.market_value)}</span>
-                <span className="block text-xs text-muted-foreground">valor de mercado</span>
-              </span>
-            ) : null}
-          </div>
+          <p className="truncate font-semibold text-foreground">
+            {a.name ?? 'Sem nome'}{' '}
+            <span className="font-mono text-xs font-normal text-muted-foreground">{a.code}</span>
+          </p>
           <p className="text-sm text-muted-foreground">{details}</p>
           {a.motherName && (
             <p className="text-sm text-muted-foreground">{a.sex === 'F' ? 'Filha' : 'Filho'} da {a.motherName}</p>
           )}
+          {(a.investedTotal > 0 || a.market_value) ? (
+            <dl className="mt-2 flex gap-6 text-sm">
+              {a.investedTotal > 0 && (
+                <div>
+                  <dt className="text-xs text-muted-foreground">Investido</dt>
+                  <dd className="font-medium tabular-nums">{formatMoney(a.investedTotal)}</dd>
+                </div>
+              )}
+              {a.market_value ? (
+                <div>
+                  <dt className="text-xs text-muted-foreground">Mercado</dt>
+                  <dd className="font-medium tabular-nums">{formatMoney(a.market_value)}</dd>
+                </div>
+              ) : null}
+            </dl>
+          ) : null}
           {(a.to_discard || a.status !== 'ativo') && (
             <div className="flex gap-1 mt-1">
               {a.status !== 'ativo' && <Badge className={statusColor(a.status)}>{statusLabel(a.status)}</Badge>}

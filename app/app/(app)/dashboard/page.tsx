@@ -5,6 +5,7 @@ import { StatCard } from '@/components/ui/stat-card'
 import { DashboardCharts } from '@/components/dashboard/dashboard-charts'
 import { UpcomingBirths } from '@/components/dashboard/upcoming-births'
 import { LowStock } from '@/components/dashboard/low-stock'
+import { MissingCostsAlert } from '@/components/dashboard/missing-costs-alert'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { PlantelSummaryTable } from '@/components/financial/plantel-summary-table'
 import { Card, CardContent } from '@/components/ui/card'
@@ -91,6 +92,7 @@ export default async function DashboardPage() {
         title="Dashboard"
         description={monthYearLabel}
       />
+      <MissingCostsAlert farmId={farmId} />
 
       <div className={`grid grid-cols-2 gap-4 mb-6 ${milkActive ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
         <StatCard

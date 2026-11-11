@@ -14,6 +14,7 @@ import {
 } from '@/lib/helpers'
 import Image from 'next/image'
 import { DeleteAnimalButton } from '@/components/animals/delete-animal-button'
+import { computeInvested } from '@/lib/investment'
 
 export default async function AnimalDetailPage({ params }: { params: { id: string } }) {
   const supabase = await createClient()
@@ -27,6 +28,8 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
     { data: purchase },
     { data: sale },
     { count: offspringCount },
+    { data: farmCosts },
+    { data: feeds },
   ] = await Promise.all([
     supabase.from('animals').select('*').eq('id', params.id).eq('farm_id', farmId).single(),
     supabase.from('health_records').select('*').eq('animal_id', params.id).order('application_date', { ascending: false }),
@@ -34,6 +37,8 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
     supabase.from('animal_purchases').select('*').eq('animal_id', params.id).maybeSingle(),
     supabase.from('animal_sales').select('*').eq('animal_id', params.id).maybeSingle(),
     supabase.from('animals').select('id', { count: 'exact', head: true }).eq('farm_id', farmId).eq('mother_id', params.id),
+    supabase.from('animal_costs').select('animal_id, entry_date, sale_date, purchase_cost, health_cost').eq('farm_id', farmId),
+    supabase.from('feed_stock').select('purchase_date, total_cost').eq('farm_id', farmId),
   ])
 
   if (!animal) notFound()
@@ -44,7 +49,8 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
     : { data: null }
 
   const totalHealthCost = health?.reduce((s, r) => s + (r.cost || 0), 0) ?? 0
-  const totalCost = (purchase?.purchase_price || 0) + totalHealthCost
+  const feedShare = computeInvested(farmCosts ?? [], feeds ?? [])[params.id]?.feed ?? 0
+  const totalCost = (purchase?.purchase_price || 0) + totalHealthCost + feedShare
   const profit = sale ? sale.sale_price - totalCost : null
 
   return (
@@ -100,7 +106,8 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
           <CardContent className="space-y-2 text-sm">
             <Row label="Preço de Compra" value={formatCurrency(purchase?.purchase_price)} />
             <Row label="Custo de Saúde" value={formatCurrency(totalHealthCost)} />
-            <Row label="Custo Total" value={formatCurrency(totalCost)} bold />
+            {feedShare > 0 && <Row label="Alimentação (estimado, por cabeça)" value={formatCurrency(feedShare)} />}
+            <Row label="Total investido" value={formatCurrency(totalCost)} bold />
             {sale && (
               <>
                 <Row label="Preço de Venda" value={formatCurrency(sale.sale_price)} />

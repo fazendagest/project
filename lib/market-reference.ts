@@ -142,7 +142,7 @@ export function marketReference(
   // vaca boiadeira mestiça da Scot; os mais novos, o mestiço da faixa menos 15% (Tião, P5 e P6).
   if (dairy && a.sex === 'F' && (m == null || m > 36)) {
     return {
-      label: 'Vaca boiadeira mestiça de Goiás (Scot Consultoria)',
+      label: 'vaca boiadeira mestiça de Goiás',
       perHead: DAIRY_COW_REFERENCE.perHead,
       min: null,
       max: null,

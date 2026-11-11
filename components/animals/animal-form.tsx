@@ -15,6 +15,10 @@ import { Loader2, Upload, ChevronsUpDown, Check } from 'lucide-react'
 import { generateAnimalCode } from '@/lib/animal-utils'
 import { parseBRL, formatBRL, animalCategory, formatDate, formatCurrencyCard, DEATH_CAUSES } from '@/lib/helpers'
 import { toTitleCase } from '@/lib/utils'
+import {
+  HERD_ROLES, CALF_DESTINATIONS, isAdultFemale, isYoungBovine, effectiveRole, effectiveDestination, defaultRole,
+  calfBreedName, type HerdRole, type CalfDestination,
+} from '@/lib/herd-role'
 import { marketReference, isDairyBreed, IFAG_SOURCE_URL, SCOT_SOURCE_URL, type IfagPrices } from '@/lib/market-reference'
 
 const BREED_OPTIONS: Record<string, string[]> = {
@@ -42,7 +46,10 @@ const BREED_OPTIONS: Record<string, string[]> = {
   suino: ['Duroc', 'Landrace', 'Large White', 'Mestiço', 'Pietrain', 'Outro'],
 }
 
-type Female = { id: string; code: string; name?: string; species: string; birth_date?: string | null; status?: string }
+type Female = {
+  id: string; code: string; name?: string; species: string; birth_date?: string | null; status?: string
+  sex?: string; breed?: string | null; herd_role?: string | null; to_discard?: boolean | null
+}
 
 /** Como o fazendeiro chama cada espécie e cada sexo. O sexo continua gravado (M/F). */
 const SPECIES_CHOICES: { key: Species; label: string; female: string; male: string }[] = [
@@ -267,6 +274,8 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
     mother_id: animal?.mother_id ?? '',
     is_breeder: animal?.is_breeder ?? false,
     is_fat: animal?.is_fat ?? false,
+    herd_role: (animal?.herd_role ?? '') as '' | 'reposicao' | 'cruzamento',
+    calf_destination: (animal?.calf_destination ?? '') as '' | CalfDestination,
     rental_owner: '',
     count: '1',
   })
@@ -300,12 +309,30 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
   useEffect(() => {
     supabase
       .from('animals')
-      .select('id, code, name, species, birth_date, status')
+      .select('id, code, name, species, sex, birth_date, status, breed, herd_role, to_discard')
       .eq('farm_id', farmId)
       .eq('sex', 'F')
       .order('code')
       .then(({ data }) => { if (data) setFemales(data) })
   }, [farmId])
+
+  // Raça do pai na última cobertura da mãe (antes do nascimento), para sugerir F1 ou cruzado (P5).
+  const [sireBreed, setSireBreed] = useState<string | null>(null)
+  useEffect(() => {
+    setSireBreed(null)
+    if (!form.mother_id || form.species !== 'bovino') return
+    let q = supabase
+      .from('reproduction_records')
+      .select('sire_breed, coverage_date')
+      .eq('farm_id', farmId)
+      .eq('female_id', form.mother_id)
+      .not('sire_breed', 'is', null)
+    if (form.birth_date) q = q.lte('coverage_date', form.birth_date)
+    q.order('coverage_date', { ascending: false })
+      .limit(1)
+      .then(({ data }) => setSireBreed(data?.[0]?.sire_breed ?? null))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.mother_id, form.birth_date, form.species, farmId])
 
   function set(k: string, v: string | null) {
     if (v === null) return
@@ -315,7 +342,6 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
   function handleSpeciesChange(species: Species) {
     if (species === form.species) return
     setForm(prev => ({ ...prev, species, breed: '', mother_id: '' }))
-    if (mode === 'create') fetchCode(species)
   }
 
   function handleMarketValueBlur() {
@@ -337,6 +363,21 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
       toast.success('Foto enviada!')
     }
     setUploading(false)
+  }
+
+  // P5: papel da vaca, destino do bezerro e raça sugerida pelo pai e pela mãe.
+  const adultFemale = isAdultFemale(form)
+  const youngBovine = isYoungBovine(form)
+  const role = effectiveRole(form)
+  const mother = females.find(f => f.id === form.mother_id)
+  const destination = effectiveDestination(form, mother)
+  const motherIsDairy = !!mother && isDairyBreed(mother.breed)
+  const suggestedBreed = form.species === 'bovino' ? calfBreedName(mother?.breed, sireBreed) : null
+
+  function pickRole(v: HerdRole) {
+    setForm(prev => v === 'descarte'
+      ? { ...prev, to_discard: true }
+      : { ...prev, to_discard: false, herd_role: v })
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -366,6 +407,8 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
       mother_id: form.mother_id || null,
       is_breeder: form.species === 'bovino' && form.sex === 'M' ? form.is_breeder : false,
       is_fat: form.species === 'bovino' ? form.is_fat : false,
+      herd_role: adultFemale ? form.herd_role || null : null,
+      calf_destination: youngBovine ? form.calf_destination || null : null,
     }
 
     const purchasePayload = {
@@ -525,6 +568,13 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
                   onChange={v => set('breed', v)}
                   options={BREED_OPTIONS[form.species] ?? []}
                 />
+                {suggestedBreed && suggestedBreed !== form.breed && (
+                  <p className="text-xs text-muted-foreground">
+                    Pela mãe ({mother?.breed}) e pelo pai da última cobertura ({sireBreed}): {suggestedBreed}.{' '}
+                    <button type="button" className="underline underline-offset-2 hover:text-foreground"
+                      onClick={() => set('breed', suggestedBreed)}>Usar</button>
+                  </p>
+                )}
               </div>
 
               {/* 8. Peso — só para nascimento/arrendamento; compra tem campo próprio */}
@@ -564,6 +614,47 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
                   </SelectContent>
                 </Select>
               </div>
+
+              {adultFemale && (
+                <div className="space-y-2">
+                  <Label>Papel no rebanho</Label>
+                  <Select value={role} onValueChange={v => v && pickRole(v as HerdRole)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(Object.keys(HERD_ROLES) as HerdRole[]).map(r => (
+                        <SelectItem key={r} value={r}>{HERD_ROLES[r].label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {HERD_ROLES[role].hint}
+                    {!form.herd_role && !form.to_discard && defaultRole(form.breed) === 'cruzamento' ? ' Sugerido porque a raça é de leite.' : ''}
+                  </p>
+                </div>
+              )}
+
+              {youngBovine && (
+                <div className="space-y-2">
+                  <Label>Destino</Label>
+                  <Select value={destination} onValueChange={v => v && set('calf_destination', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(Object.keys(CALF_DESTINATIONS) as CalfDestination[]).map(d => (
+                        <SelectItem key={d} value={d}>{CALF_DESTINATIONS[d].label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {form.sex === 'F' && motherIsDairy && destination === 'reposicao' ? (
+                    <p className="text-xs rounded-md border border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100 p-2">
+                      Filha de vaca de leite: o plano é vender na desmama. Só deixe no rebanho se tiver um motivo.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      {form.calf_destination ? 'Escolhido por você.' : 'Sugerido pela mãe e pelo sexo; troque se for diferente.'}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {mode === 'create' && (
                 <div className="space-y-2">
@@ -712,7 +803,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
                   onUse={v => set('market_value', formatBRL(v))}
                 />
               </div>
-              <div className="sm:col-span-2 flex items-center justify-between rounded-lg border p-3">
+              {!adultFemale && <div className="sm:col-span-2 flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <p className="text-sm font-medium">Marcar para descarte futuro</p>
                   <p className="text-xs text-muted-foreground">Animal que será vendido ou abatido em breve. Não altera o status atual.</p>
@@ -723,7 +814,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
                   onChange={(e) => setForm(prev => ({ ...prev, to_discard: e.target.checked }))}
                   className="h-4 w-4 cursor-pointer accent-primary"
                 />
-              </div>
+              </div>}
             </CardContent>
           </Card>
         </div>

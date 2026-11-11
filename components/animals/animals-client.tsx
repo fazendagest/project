@@ -13,6 +13,21 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { LayoutGrid, List, AlertTriangle, ChevronRight } from 'lucide-react'
 import { calcAge, statusLabel, statusColor, animalCategory, ANIMAL_GROUPS } from '@/lib/helpers'
+import { HERD_ROLES, isAdultFemale, isYoungBovine, effectiveRole, effectiveDestination } from '@/lib/herd-role'
+
+/** Papel da vaca ou destino do bezerro (P5), para o filtro e o selo da lista. */
+const ROLE_FILTERS = [
+  { key: 'reposicao', label: 'Matriz de reposição' },
+  { key: 'cruzamento', label: 'Matriz de cruzamento' },
+  { key: 'descarte', label: 'Descarte' },
+  { key: 'venda', label: 'Bezerros para vender' },
+  { key: 'fica', label: 'Bezerros que ficam' },
+] as const
+type RoleKey = (typeof ROLE_FILTERS)[number]['key']
+const ROLE_TAG: Record<RoleKey, string> = {
+  reposicao: HERD_ROLES.reposicao.short, cruzamento: HERD_ROLES.cruzamento.short, descarte: HERD_ROLES.descarte.short,
+  venda: 'Para vender', fica: 'Fica no rebanho',
+}
 import { cn } from '@/lib/utils'
 import type { Invested } from '@/lib/investment'
 import type { IfagPrices } from '@/lib/market-reference'
@@ -25,7 +40,7 @@ const SPECIES_FILTERS = [
   { key: 'suino', label: 'Porcos' },
 ] as const
 
-type Row = Animal & { category: string; motherName: string | null; investedTotal: number; mv: AnimalValue }
+type Row = Animal & { category: string; motherName: string | null; investedTotal: number; mv: AnimalValue; roleKey: RoleKey | null }
 
 export function AnimalsClient({ initialAnimals, invested, feedIncluded, missingCosts = [], ifag }: {
   initialAnimals: Animal[]
@@ -41,13 +56,18 @@ export function AnimalsClient({ initialAnimals, invested, feedIncluded, missingC
   const [species, setSpecies] = useState<string>('all')
   const [showAll, setShowAll] = useState(false)
   const [view, setView] = useState<'grid' | 'table'>('table')
+  const [roleFilter, setRoleFilter] = useState<RoleKey | 'all'>('all')
 
   const rows: Row[] = useMemo(() => {
     const byId = new Map(initialAnimals.map(a => [a.id, a]))
     const mothers = new Set(initialAnimals.map(a => a.mother_id).filter(Boolean))
     return initialAnimals.map(a => {
       const mother = a.mother_id ? byId.get(a.mother_id) : undefined
+      const roleKey: RoleKey | null = isAdultFemale(a)
+        ? effectiveRole(a)
+        : isYoungBovine(a) ? (effectiveDestination(a, mother) === 'venda' ? 'venda' : 'fica') : null
       return {
+        roleKey,
         ...a,
         category: animalCategory(a, mothers.has(a.id)),
         motherName: mother ? (mother.name ?? mother.code) : null,
@@ -72,8 +92,11 @@ export function AnimalsClient({ initialAnimals, invested, feedIncluded, missingC
       || a.category.toLowerCase().includes(q)
       || (a.breed ?? '').toLowerCase().includes(q)
     const matchSpecies = species === 'all' || a.species === species
-    return matchSearch && matchSpecies
+    const matchRole = roleFilter === 'all' || a.roleKey === roleFilter
+    return matchSearch && matchSpecies && matchRole
   })
+  const countByRole = (key: RoleKey) => byStatus.filter(a => a.roleKey === key).length
+  const roleChips = ROLE_FILTERS.filter(r => countByRole(r.key) > 0)
 
   const groups = ANIMAL_GROUPS
     .map(g => ({ ...g, items: filtered.filter(a => g.match(a.category)) }))
@@ -89,7 +112,7 @@ export function AnimalsClient({ initialAnimals, invested, feedIncluded, missingC
       <div className="flex flex-col gap-3 mb-6">
         <SearchInput value={search} onChange={setSearch} placeholder="Buscar por nome, código ou raça" />
 
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+        <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
           <div className="flex flex-wrap gap-2">
             {SPECIES_FILTERS.filter(f => f.key === 'all' || countBySpecies(f.key) > 0).map(f => (
               <Button
@@ -104,6 +127,23 @@ export function AnimalsClient({ initialAnimals, invested, feedIncluded, missingC
               </Button>
             ))}
           </div>
+
+          {roleChips.length > 0 && (species === 'all' || species === 'bovino') && (
+            <div className="flex flex-wrap gap-2 md:basis-full md:order-last" aria-label="Papel no rebanho">
+              {roleChips.map(r => (
+                <Button
+                  key={r.key}
+                  type="button"
+                  variant={roleFilter === r.key ? 'default' : 'outline'}
+                  className="h-11 md:h-9 px-4 rounded-full"
+                  aria-pressed={roleFilter === r.key}
+                  onClick={() => setRoleFilter(roleFilter === r.key ? 'all' : r.key)}
+                >
+                  {r.label} <span className="tabular-nums">{countByRole(r.key)}</span>
+                </Button>
+              ))}
+            </div>
+          )}
 
           <div className="flex items-center gap-4 md:ml-auto">
             {/* Área de toque de 44 px sem empurrar o espaço visual (padding e margem negativos) */}
@@ -205,7 +245,10 @@ export function AnimalsClient({ initialAnimals, invested, feedIncluded, missingC
                       {a.to_discard && <AlertTriangle className="h-3.5 w-3.5 text-amber-600" aria-label="Marcado para descarte" />}
                     </Link>
                   </TableCell>
-                  <TableCell>{a.category}</TableCell>
+                  <TableCell>
+                    {a.category}
+                    {a.roleKey && <span className="block text-xs text-muted-foreground">{ROLE_TAG[a.roleKey]}</span>}
+                  </TableCell>
                   <TableCell>{a.breed ?? 'Não informada'}</TableCell>
                   <TableCell>{a.birth_date ? calcAge(a.birth_date) : 'Sem data'}</TableCell>
                   {hasMothers && <TableCell>{a.motherName ?? ''}</TableCell>}
@@ -233,7 +276,8 @@ export function AnimalsClient({ initialAnimals, invested, feedIncluded, missingC
 }
 
 function AnimalCard({ a }: { a: Row }) {
-  const details = [a.category, a.breed, a.birth_date ? calcAge(a.birth_date) : null].filter(Boolean).join(', ')
+  const details = [a.category, a.breed, a.birth_date ? calcAge(a.birth_date) : null, a.roleKey && a.roleKey !== 'descarte' ? ROLE_TAG[a.roleKey] : null]
+    .filter(Boolean).join(', ')
   return (
     <li>
       <Link

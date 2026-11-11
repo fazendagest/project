@@ -10,7 +10,7 @@ export default async function NewReproPage() {
 
   const [{ data: females }, { data: males }] = await Promise.all([
     supabase.from('animals').select('id, code, name, species').eq('farm_id', farmId).eq('sex', 'F').eq('status', 'ativo').order('code'),
-    supabase.from('animals').select('id, code, name, species').eq('farm_id', farmId).eq('sex', 'M').eq('status', 'ativo').order('code'),
+    supabase.from('animals').select('id, code, name, species, breed').eq('farm_id', farmId).eq('sex', 'M').eq('status', 'ativo').order('code'),
   ])
 
   return (

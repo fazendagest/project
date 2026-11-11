@@ -12,11 +12,19 @@ import { FormActions } from '@/components/ui/form-actions'
 import { toast } from 'sonner'
 import { calcExpectedBirth } from '@/lib/helpers'
 import { toTitleCase } from '@/lib/utils'
+import { SIRE_BREEDS } from '@/lib/herd-role'
+
+/** Raça do touro do plantel na lista de raças do pai; senão "Outra". */
+function sireBreedOf(breed?: string | null) {
+  if (!breed) return ''
+  const hit = SIRE_BREEDS.find(b => b.toLowerCase() === breed.trim().toLowerCase())
+  return hit ?? 'Outra'
+}
 
 interface ReproFormProps {
   farmId: string
   females: { id: string; code: string; name?: string; species: Species }[]
-  males: { id: string; code: string; name?: string; species: Species }[]
+  males: { id: string; code: string; name?: string; species: Species; breed?: string | null }[]
   record?: ReproductionRecord
   mode: 'create' | 'edit'
 }
@@ -32,6 +40,7 @@ export function ReproductionForm({ farmId, females, males, record, mode }: Repro
     female_id: record?.female_id ?? '',
     male_id: record?.male_id ?? '',
     external_male_name: record?.external_male_name ?? '',
+    sire_breed: record?.sire_breed ?? '',
     coverage_date: record?.coverage_date ?? new Date().toISOString().slice(0, 10),
     expected_birth_date: record?.expected_birth_date ?? '',
     status: record?.status ?? 'coberta',
@@ -41,6 +50,11 @@ export function ReproductionForm({ farmId, females, males, record, mode }: Repro
   function set(k: string, v: string | null) {
     setForm(prev => {
       const next = { ...prev, [k]: v }
+      // Touro do plantel: a raça do pai vem do cadastro dele.
+      if (k === 'male_id') {
+        const male = males.find(m => m.id === v)
+        if (male?.breed) next.sire_breed = sireBreedOf(male.breed)
+      }
       if (k === 'coverage_date' || k === 'female_id') {
         const femaleId = k === 'female_id' ? v : next.female_id
         const coverage = k === 'coverage_date' ? v : next.coverage_date
@@ -63,6 +77,7 @@ export function ReproductionForm({ farmId, females, males, record, mode }: Repro
       female_id: form.female_id,
       male_id: maleSource === 'plantel' && form.male_id && form.male_id !== 'none' ? form.male_id : null,
       external_male_name: maleSource === 'externo' && form.external_male_name ? form.external_male_name : null,
+      sire_breed: form.sire_breed || null,
       coverage_date: form.coverage_date,
       expected_birth_date: form.expected_birth_date || null,
       status: form.status,
@@ -87,6 +102,10 @@ export function ReproductionForm({ farmId, females, males, record, mode }: Repro
 
   const selectedFemale = females.find(f => f.id === form.female_id)
   const availableMales = males.filter(m => !selectedFemale || m.species === selectedFemale.species)
+  const selectedMale = maleSource === 'plantel' ? males.find(m => m.id === form.male_id) : undefined
+  const isBovine = !selectedFemale || selectedFemale.species === 'bovino'
+  const sireOptions: string[] = [...SIRE_BREEDS]
+  if (form.sire_breed && !sireOptions.includes(form.sire_breed)) sireOptions.unshift(form.sire_breed)
 
   return (
     <form onSubmit={handleSubmit}>
@@ -158,6 +177,23 @@ export function ReproductionForm({ farmId, females, males, record, mode }: Repro
                 />
               )}
             </div>
+
+            {isBovine && (
+              <div className="space-y-2">
+                <Label>Raça do pai (touro ou sêmen)</Label>
+                <Select value={form.sire_breed} onValueChange={v => set('sire_breed', v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a raça" /></SelectTrigger>
+                  <SelectContent>
+                    {sireOptions.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {selectedMale?.breed
+                    ? `Do cadastro do touro: ${selectedMale.breed}.`
+                    : 'Com a raça da mãe, o sistema sugere a raça do bezerro (ex.: F1 Angus × Gir).'}
+                </p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="coverage_date">Data da Cobertura *</Label>

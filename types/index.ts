@@ -61,6 +61,10 @@ export interface Animal {
   is_fat?: boolean
   death_date?: string | null
   death_cause?: DeathCause | null
+  /** Papel da fêmea adulta (P5): reposicao ou cruzamento. Vazio = padrão pela raça. Descarte = to_discard. */
+  herd_role?: 'reposicao' | 'cruzamento' | null
+  /** Destino do bezerro (P5): venda na desmama ou reposicao. Vazio = padrão pela mãe. */
+  calf_destination?: 'venda' | 'reposicao' | null
   created_at: string
 }
 
@@ -88,6 +92,8 @@ export interface ReproductionRecord {
   female_id: string
   male_id?: string
   external_male_name?: string
+  /** Raça do pai (P5): Angus, Nelore... */
+  sire_breed?: string | null
   coverage_date: string
   expected_birth_date?: string
   actual_birth_date?: string

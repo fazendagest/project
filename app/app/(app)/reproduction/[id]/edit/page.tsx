@@ -12,7 +12,7 @@ export default async function EditReproPage({ params }: { params: { id: string }
   const [{ data: record }, { data: females }, { data: males }] = await Promise.all([
     supabase.from('reproduction_records').select('*').eq('id', params.id).eq('farm_id', farmId).single(),
     supabase.from('animals').select('id, code, name, species').eq('farm_id', farmId).eq('sex', 'F').eq('status', 'ativo').order('code'),
-    supabase.from('animals').select('id, code, name, species').eq('farm_id', farmId).eq('sex', 'M').eq('status', 'ativo').order('code'),
+    supabase.from('animals').select('id, code, name, species, breed').eq('farm_id', farmId).eq('sex', 'M').eq('status', 'ativo').order('code'),
   ])
 
   if (!record) notFound()

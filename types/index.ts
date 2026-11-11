@@ -8,6 +8,7 @@ export type FeedUnit = 'kg' | 'saco' | 'fardo' | 'litro' | 'outro'
 export type SaleType = 'venda' | 'abate'
 export type ExpenseCategory =
   | 'mao_de_obra'
+  | 'maquina'
   | 'energia'
   | 'manutencao'
   | 'transporte'

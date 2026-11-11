@@ -124,6 +124,7 @@ export function reproStatusLabel(status: string): string {
 export function expenseCategoryLabel(cat: string): string {
   const map: Record<string, string> = {
     mao_de_obra: 'Mão de Obra',
+    maquina: 'Máquina e trator',
     energia: 'Energia',
     manutencao: 'Manutenção',
     transporte: 'Transporte',

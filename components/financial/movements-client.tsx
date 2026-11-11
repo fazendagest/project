@@ -611,7 +611,7 @@ export function ExpensesClient({
               <Select value={expForm.category} onValueChange={v => v && setExpForm(p => ({ ...p, category: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {['mao_de_obra','energia','manutencao','transporte','equipamento','veterinario','outro','fora_do_gado'].map(c => (
+                  {['mao_de_obra','maquina','energia','manutencao','transporte','equipamento','veterinario','outro','fora_do_gado'].map(c => (
                     <SelectItem key={c} value={c}>{expenseCategoryLabel(c)}</SelectItem>
                   ))}
                 </SelectContent>
@@ -873,7 +873,7 @@ export function ExpensesClient({
               <Select value={expEditForm.category} onValueChange={v => v && setExpEditForm(p => ({ ...p, category: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {['mao_de_obra','energia','manutencao','transporte','equipamento','veterinario','outro','fora_do_gado'].map(c => (
+                  {['mao_de_obra','maquina','energia','manutencao','transporte','equipamento','veterinario','outro','fora_do_gado'].map(c => (
                     <SelectItem key={c} value={c}>{expenseCategoryLabel(c)}</SelectItem>
                   ))}
                 </SelectContent>

@@ -29,7 +29,8 @@ import { FormActions } from '@/components/ui/form-actions'
  * nunca apaga a anterior no Fluxo de Caixa e no DRE (que leem feed_stock pela data).
  * Decisão de 11/11/2026 (opção A).
  */
-const QUICK_PRODUCTS = ['Sal Mineral', 'Milho', 'Ração']
+// Sal proteinado: o maior gasto da cria na seca (Tião, P6).
+const QUICK_PRODUCTS = ['Sal Mineral', 'Sal Proteinado (seca)', 'Milho', 'Ração']
 
 const UNIT_LABEL: Record<string, string> = { kg: 'kg', saco: 'saco(s)', fardo: 'fardo(s)', litro: 'litro(s)', outro: 'unid.' }
 

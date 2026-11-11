@@ -14,6 +14,7 @@ import {
   statusLabel, statusColor, sexLabel, healthTypeLabel
 } from '@/lib/helpers'
 import { Download } from 'lucide-react'
+import { CardList, RecordCard } from '@/components/ui/record-card'
 import Link from 'next/link'
 
 export function ReportsClient({
@@ -59,7 +60,7 @@ export function ReportsClient({
     if (!content) return
     const win = window.open('', '', 'height=800,width=1200')
     if (!win) return
-    win.document.write(`<html><head><title>FazendaGest — Relatório</title>
+    win.document.write(`<html><head><title>FazendaGest: Relatório</title>
       <style>body{font-family:sans-serif;font-size:12px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:6px 8px;text-align:left}th{background:#f5f5f5}</style>
       </head><body>${content}</body></html>`)
     win.document.close()
@@ -81,7 +82,7 @@ export function ReportsClient({
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <SearchInput value={invSearch} onChange={setInvSearch} placeholder="Buscar..." />
           <Select value={invSpecies} onValueChange={v => v && setInvSpecies(v)}>
-            <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Espécie" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-40"><SelectValue>{({ all: 'Todas as espécies', bovino: 'Bovino', equino: 'Equino', suino: 'Suíno' } as Record<string, string>)[invSpecies]}</SelectValue></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas</SelectItem>
               <SelectItem value="bovino">Bovino</SelectItem>
@@ -90,7 +91,7 @@ export function ReportsClient({
             </SelectContent>
           </Select>
           <Select value={invStatus} onValueChange={v => v && setInvStatus(v)}>
-            <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-40"><SelectValue>{({ all: 'Todas as situações', ativo: 'Ativo', vendido: 'Vendido', abatido: 'Abatido', morto: 'Morto' } as Record<string, string>)[invStatus]}</SelectValue></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="ativo">Ativo</SelectItem>
@@ -99,12 +100,12 @@ export function ReportsClient({
               <SelectItem value="morto">Morto</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" className="gap-2 shrink-0" onClick={() => printTable('inv-table')}>
+          <Button variant="outline" className="h-11 md:h-9 gap-2 shrink-0" onClick={() => printTable('inv-table')}>
             <Download className="h-4 w-4" /> Imprimir
           </Button>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4">
           {['bovino', 'equino', 'suino'].map(s => (
             <Card key={s}>
               <CardContent className="pt-4">
@@ -115,7 +116,24 @@ export function ReportsClient({
           ))}
         </div>
 
-        <div id="inv-table" className="rounded-lg border border-gray-100 overflow-x-auto bg-white shadow-sm">
+        <CardList empty="Nenhum animal">
+          {filteredInv.map(a => (
+            <RecordCard
+              key={a.id}
+              href={`/app/animals/${a.id}`}
+              title={a.name ?? a.code}
+              titleNote={a.name ? a.code : undefined}
+              subtitle={`${speciesLabel(a.species)}, ${sexLabel(a.sex)}${a.breed ? `, ${a.breed}` : ''}`}
+              fields={[
+                { label: 'Idade', value: a.birth_date ? calcAge(a.birth_date) : 'sem data de nascimento' },
+                { label: 'Entrada', value: a.entry_date ? formatDate(a.entry_date) : 'sem data' },
+              ]}
+              footer={<Badge className={statusColor(a.status)}>{statusLabel(a.status)}</Badge>}
+            />
+          ))}
+        </CardList>
+
+        <div id="inv-table" className="hidden md:block rounded-lg border border-gray-100 overflow-x-auto bg-white shadow-sm">
           <Table>
             <TableHeader>
               <TableRow>
@@ -134,11 +152,11 @@ export function ReportsClient({
               {filteredInv.map(a => (
                 <TableRow key={a.id}>
                   <TableCell className="font-mono font-semibold">{a.code}</TableCell>
-                  <TableCell>{a.name ?? '—'}</TableCell>
+                  <TableCell>{a.name ?? 'sem nome'}</TableCell>
                   <TableCell>{speciesLabel(a.species)}</TableCell>
-                  <TableCell>{a.breed ?? '—'}</TableCell>
+                  <TableCell>{a.breed ?? 'não informada'}</TableCell>
                   <TableCell>{sexLabel(a.sex)}</TableCell>
-                  <TableCell>{a.birth_date ? calcAge(a.birth_date) : '—'}</TableCell>
+                  <TableCell>{a.birth_date ? calcAge(a.birth_date) : 'sem data'}</TableCell>
                   <TableCell>{formatDate(a.entry_date)}</TableCell>
                   <TableCell><Badge className={statusColor(a.status)}>{statusLabel(a.status)}</Badge></TableCell>
                 </TableRow>
@@ -153,12 +171,30 @@ export function ReportsClient({
       <TabsContent value="health">
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <SearchInput value={healthSearch} onChange={setHealthSearch} placeholder="Buscar por animal ou produto..." />
-          <Button variant="outline" className="gap-2 shrink-0" onClick={() => printTable('health-table')}>
+          <Button variant="outline" className="h-11 md:h-9 gap-2 shrink-0" onClick={() => printTable('health-table')}>
             <Download className="h-4 w-4" /> Imprimir
           </Button>
         </div>
 
-        <div id="health-table" className="rounded-lg border border-gray-100 overflow-x-auto bg-white shadow-sm">
+        <CardList empty="Nenhum registro">
+          {filteredHealth.map(r => (
+            <RecordCard
+              key={r.id}
+              title={r.product_name}
+              subtitle={<>{(r.animal as any)?.name ?? (r.animal as any)?.code ?? 'Animal não informado'}{(r.animal as any)?.name && (r.animal as any)?.code ? <span className="font-mono text-xs"> {(r.animal as any).code}</span> : null}</>}
+              amount={r.cost != null ? formatCurrency(r.cost) : undefined}
+              fields={[
+                { label: 'Data', value: r.application_date ? formatDate(r.application_date) : 'sem data' },
+                { label: 'Próxima', value: r.next_due_date ? formatDate(r.next_due_date) : 'sem data' },
+                { label: 'Dose', value: r.dose ?? 'não informada' },
+                { label: 'Por', value: r.applied_by ?? 'não informado' },
+              ]}
+              footer={<Badge variant="outline">{healthTypeLabel(r.type)}</Badge>}
+            />
+          ))}
+        </CardList>
+
+        <div id="health-table" className="hidden md:block rounded-lg border border-gray-100 overflow-x-auto bg-white shadow-sm">
           <Table>
             <TableHeader>
               <TableRow>
@@ -177,15 +213,15 @@ export function ReportsClient({
               {filteredHealth.map(r => (
                 <TableRow key={r.id}>
                   <TableCell>
-                    <span className="font-mono font-semibold">{(r.animal as any)?.code ?? '—'}</span>
+                    <span className="font-mono font-semibold">{(r.animal as any)?.code ?? 'não informado'}</span>
                     <p className="text-xs text-muted-foreground">{(r.animal as any)?.name ?? ''}</p>
                   </TableCell>
                   <TableCell><Badge variant="outline">{healthTypeLabel(r.type)}</Badge></TableCell>
                   <TableCell>{r.product_name}</TableCell>
-                  <TableCell>{r.dose ?? '—'}</TableCell>
+                  <TableCell>{r.dose ?? 'não informada'}</TableCell>
                   <TableCell>{formatDate(r.application_date)}</TableCell>
-                  <TableCell>{formatDate(r.next_due_date)}</TableCell>
-                  <TableCell>{r.applied_by ?? '—'}</TableCell>
+                  <TableCell>{r.next_due_date ? formatDate(r.next_due_date) : 'sem data'}</TableCell>
+                  <TableCell>{r.applied_by ?? 'não informado'}</TableCell>
                   <TableCell className="text-right">{formatCurrency(r.cost)}</TableCell>
                 </TableRow>
               ))}
@@ -199,12 +235,33 @@ export function ReportsClient({
       <TabsContent value="rentability">
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <SearchInput value={rentSearch} onChange={setRentSearch} placeholder="Buscar por animal..." />
-          <Button variant="outline" className="gap-2 shrink-0" onClick={() => printTable('rent-table')}>
+          <Button variant="outline" className="h-11 md:h-9 gap-2 shrink-0" onClick={() => printTable('rent-table')}>
             <Download className="h-4 w-4" /> Imprimir
           </Button>
         </div>
 
-        <div id="rent-table" className="rounded-lg border border-gray-100 overflow-x-auto bg-white shadow-sm">
+        <CardList empty="Nenhum animal vendido">
+          {soldCosts.map(a => (
+            <RecordCard
+              key={a.animal_id}
+              href={`/app/animals/${a.animal_id}`}
+              title={a.name ?? a.code}
+              titleNote={a.name ? a.code : undefined}
+              subtitle={`${speciesLabel(a.species)}, vendido em ${a.sale_date ? formatDate(a.sale_date) : 'data não informada'}`}
+              fields={[
+                { label: 'Lucro', value: <span className={(a.profit ?? 0) >= 0 ? 'text-green-700' : 'text-red-700'}>{formatCurrency(a.profit ?? 0)}</span> },
+                { label: 'Venda', value: formatCurrency(a.sale_price ?? 0) },
+                { label: 'Custo total', value: formatCurrency(a.total_cost) },
+                { label: 'Compra', value: formatCurrency(a.purchase_cost) },
+                { label: 'Saúde', value: formatCurrency(a.health_cost) },
+                { label: 'Margem', value: a.margin_pct != null ? `${a.margin_pct.toFixed(1)}%` : 'sem margem' },
+                { label: 'Dias na fazenda', value: a.days_in_stock },
+              ]}
+            />
+          ))}
+        </CardList>
+
+        <div id="rent-table" className="hidden md:block rounded-lg border border-gray-100 overflow-x-auto bg-white shadow-sm">
           <Table>
             <TableHeader>
               <TableRow>
@@ -239,7 +296,7 @@ export function ReportsClient({
                   <TableCell className={`text-right font-semibold ${(a.profit ?? 0) >= 0 ? 'text-green-700' : 'text-red-700'}`}>
                     {formatCurrency(a.profit ?? 0)}
                   </TableCell>
-                  <TableCell className="text-right">{a.margin_pct != null ? `${a.margin_pct.toFixed(1)}%` : '—'}</TableCell>
+                  <TableCell className="text-right">{a.margin_pct != null ? `${a.margin_pct.toFixed(1)}%` : 'sem margem'}</TableCell>
                   <TableCell className="text-right">{a.days_in_stock}</TableCell>
                 </TableRow>
               ))}

@@ -11,6 +11,7 @@ import { formatCurrency, formatDate, speciesLabel, statusLabel, statusColor } fr
 import { DataCard } from '@/components/ui/data-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import Link from 'next/link'
+import { CardList, RecordCard } from '@/components/ui/record-card'
 
 const PAGE_SIZE = 20
 
@@ -39,7 +40,7 @@ export function PerAnimalClient({ initialData }: { initialData: AnimalCost[] }) 
 
   return (
     <div>
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         <div className="bg-white border border-gray-100 shadow-sm rounded-lg p-4">
           <p className="text-sm text-muted-foreground">Receita Total (Vendidos)</p>
           <p className="text-xl font-bold text-green-700">{formatCurrency(totalRevenue)}</p>
@@ -57,7 +58,7 @@ export function PerAnimalClient({ initialData }: { initialData: AnimalCost[] }) 
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <SearchInput value={search} onChange={v => { setSearch(v); setPage(1) }} placeholder="Buscar por código ou nome..." />
         <Select value={species} onValueChange={v => { if (v) { setSpecies(v); setPage(1) } }}>
-          <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Espécie" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-40"><SelectValue>{({ all: 'Todas as espécies', bovino: 'Bovino', equino: 'Equino', suino: 'Suíno' } as Record<string, string>)[species]}</SelectValue></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas</SelectItem>
             <SelectItem value="bovino">Bovino</SelectItem>
@@ -66,7 +67,7 @@ export function PerAnimalClient({ initialData }: { initialData: AnimalCost[] }) 
           </SelectContent>
         </Select>
         <Select value={status} onValueChange={v => { if (v) { setStatus(v); setPage(1) } }}>
-          <SelectTrigger className="w-full sm:w-40"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-40"><SelectValue>{({ all: 'Todas as situações', ativo: 'Ativo', vendido: 'Vendido', abatido: 'Abatido', morto: 'Morto' } as Record<string, string>)[status]}</SelectValue></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="ativo">Ativo</SelectItem>
@@ -76,7 +77,31 @@ export function PerAnimalClient({ initialData }: { initialData: AnimalCost[] }) 
         </Select>
       </div>
 
-      <DataCard>
+      <CardList empty="Nenhum animal encontrado">
+        {paged.map(a => (
+          <RecordCard
+            key={a.animal_id}
+            href={`/app/animals/${a.animal_id}`}
+            title={a.name ?? a.code}
+            titleNote={a.name ? a.code : undefined}
+            subtitle={speciesLabel(a.species)}
+            fields={[
+              ...(a.sale_price ? [
+                { label: 'Lucro', value: a.profit != null ? <span className={a.profit >= 0 ? 'text-green-700' : 'text-red-700'}>{formatCurrency(a.profit)}</span> : 'não calculado' },
+                { label: 'Venda', value: formatCurrency(a.sale_price) },
+              ] : []),
+              { label: 'Custo total', value: formatCurrency(a.total_cost) },
+              { label: 'Compra', value: formatCurrency(a.purchase_cost) },
+              { label: 'Saúde', value: formatCurrency(a.health_cost) },
+              ...(a.margin_pct != null ? [{ label: 'Margem', value: `${a.margin_pct.toFixed(1)}%` }] : []),
+              { label: 'Dias na fazenda', value: a.days_in_stock },
+            ]}
+            footer={<Badge className={statusColor(a.status)}>{statusLabel(a.status)}</Badge>}
+          />
+        ))}
+      </CardList>
+
+      <DataCard className="hidden md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -106,12 +131,12 @@ export function PerAnimalClient({ initialData }: { initialData: AnimalCost[] }) 
                 <TableCell className="text-right">{formatCurrency(a.purchase_cost)}</TableCell>
                 <TableCell className="text-right">{formatCurrency(a.health_cost)}</TableCell>
                 <TableCell className="text-right font-semibold">{formatCurrency(a.total_cost)}</TableCell>
-                <TableCell className="text-right text-green-700">{a.sale_price ? formatCurrency(a.sale_price) : '—'}</TableCell>
+                <TableCell className="text-right text-green-700">{a.sale_price ? formatCurrency(a.sale_price) : 'não vendido'}</TableCell>
                 <TableCell className={`text-right font-semibold ${(a.profit ?? 0) >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                  {a.profit != null ? formatCurrency(a.profit) : '—'}
+                  {a.profit != null ? formatCurrency(a.profit) : 'sem venda'}
                 </TableCell>
                 <TableCell className="text-right">
-                  {a.margin_pct != null ? `${a.margin_pct.toFixed(1)}%` : '—'}
+                  {a.margin_pct != null ? `${a.margin_pct.toFixed(1)}%` : 'sem margem'}
                 </TableCell>
                 <TableCell className="text-right">{a.days_in_stock}</TableCell>
               </TableRow>
@@ -122,9 +147,9 @@ export function PerAnimalClient({ initialData }: { initialData: AnimalCost[] }) 
 
       {totalPages > 1 && (
         <div className="flex justify-center gap-2 mt-4">
-          <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Anterior</Button>
-          <span className="flex items-center text-sm px-2">{page} / {totalPages}</span>
-          <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Próxima</Button>
+          <Button variant="outline" size="sm" className="h-11 md:h-8" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Anterior</Button>
+          <span className="flex items-center text-sm px-2 tabular-nums">{page} / {totalPages}</span>
+          <Button variant="outline" size="sm" className="h-11 md:h-8" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Próxima</Button>
         </div>
       )}
     </div>

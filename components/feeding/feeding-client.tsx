@@ -15,6 +15,7 @@ import { DataCard } from '@/components/ui/data-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { MobileActionBar } from '@/components/layout/page-header'
+import { CardList, RecordCard } from '@/components/ui/record-card'
 import { toast } from 'sonner'
 import { Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react'
 import { toTitleCase } from '@/lib/utils'
@@ -269,8 +270,8 @@ export function FeedingClient({
                     </p>
                   </div>
                   <span className="font-semibold tabular-nums whitespace-nowrap">{formatCurrency(p.total_cost ?? p.current_quantity * p.cost_per_unit)}</span>
-                  <Button size="icon" variant="ghost" aria-label="Corrigir compra" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
-                  <Button size="icon" variant="ghost" aria-label="Excluir compra" className="text-destructive" onClick={() => setDelConfirm({ type: 'purchase', id: p.id })}><Trash2 className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="ghost" className="h-11 w-11 md:h-9 md:w-9" aria-label="Corrigir compra" onClick={() => openEdit(p)}><Pencil className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="ghost" aria-label="Excluir compra" className="h-11 w-11 md:h-9 md:w-9 text-destructive" onClick={() => setDelConfirm({ type: 'purchase', id: p.id })}><Trash2 className="h-4 w-4" /></Button>
                 </li>
               ))}
             </ul>
@@ -308,11 +309,24 @@ export function FeedingClient({
         <TabsContent value="consume">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
             <p className="text-sm text-muted-foreground">Opcional: serve só para controlar o estoque. O custo já entrou na compra.</p>
-            <Button variant="outline" onClick={() => setConsumeDialog(true)} className="gap-2 shrink-0" disabled={groups.length === 0}>
+            <Button variant="outline" onClick={() => setConsumeDialog(true)} className="h-11 md:h-9 gap-2 shrink-0" disabled={groups.length === 0}>
               <Plus className="h-4 w-4" /> Registrar consumo
             </Button>
           </div>
-          <DataCard>
+          <CardList empty="Nenhum consumo registrado">
+            {records.map(r => (
+              <RecordCard
+                key={r.id}
+                title={r.feed_stock?.product_name ?? 'Produto excluído'}
+                subtitle={formatDate(r.date)}
+                amount={<>{formatNumber(r.quantity_used, 0)}{r.feed_stock?.unit ? <>&nbsp;{UNIT_LABEL[r.feed_stock.unit]}</> : null}</>}
+                fields={[{ label: 'Para', value: r.species === 'geral' ? 'Todos' : speciesLabel(r.species) }]}
+                onDelete={() => setDelConfirm({ type: 'record', id: r.id })}
+              />
+            ))}
+          </CardList>
+
+          <DataCard className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>

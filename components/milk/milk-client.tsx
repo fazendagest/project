@@ -15,6 +15,8 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { FormActions } from '@/components/ui/form-actions'
+import { CardList, RecordCard } from '@/components/ui/record-card'
+import { MobileActionBar } from '@/components/layout/page-header'
 import { toast } from 'sonner'
 import { Plus, Pencil, Trash2, Droplets, TrendingUp, DollarSign } from 'lucide-react'
 import { formatDate, formatCurrency, formatNumber, parseBRL, formatBRL, monthLabel } from '@/lib/helpers'
@@ -78,6 +80,7 @@ export function MilkClient({
   const [payLoading, setPayLoading] = useState(false)
 
   const [delConfirm, setDelConfirm] = useState<{ type: 'prod' | 'pay'; id: string } | null>(null)
+  const [tab, setTab] = useState<'producao' | 'pagamentos'>('producao')
   const [deleting, setDeleting] = useState(false)
 
   // Computed stats
@@ -193,8 +196,8 @@ export function MilkClient({
   }
 
   return (
-    <div>
-      <Tabs defaultValue="producao">
+    <div className="pb-24 md:pb-0">
+      <Tabs value={tab} onValueChange={v => setTab(v as 'producao' | 'pagamentos')}>
         <TabsList className="mb-6">
           <TabsTrigger value="producao">Produção</TabsTrigger>
           <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
@@ -234,12 +237,25 @@ export function MilkClient({
 
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">{production.length} registro(s)</p>
-            <Button onClick={openProdNew} className="gap-2">
+            <Button onClick={openProdNew} className="hidden md:inline-flex gap-2">
               <Plus className="h-4 w-4" /> Registrar produção
             </Button>
           </div>
 
-          <DataCard>
+          <CardList empty="Nenhum registro de produção">
+            {production.map(r => (
+              <RecordCard
+                key={r.id}
+                title={formatDate(r.date)}
+                amount={<>{formatNumber(r.total_liters, 0)}&nbsp;L</>}
+                subtitle={r.notes ?? undefined}
+                onEdit={() => openProdEdit(r)}
+                onDelete={() => setDelConfirm({ type: 'prod', id: r.id })}
+              />
+            ))}
+          </CardList>
+
+          <DataCard className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -255,7 +271,7 @@ export function MilkClient({
                   <TableRow key={r.id}>
                     <TableCell>{formatDate(r.date)}</TableCell>
                     <TableCell className="font-medium">{formatNumber(r.total_liters, 0)} L</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{r.notes ?? '—'}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{r.notes ?? 'sem observação'}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
                         <Button size="icon" variant="ghost" onClick={() => openProdEdit(r)}>
@@ -300,19 +316,38 @@ export function MilkClient({
                   <Droplets className="h-4 w-4" />
                   <p className="text-sm">Preço médio / litro</p>
                 </div>
-                <p className="text-2xl font-bold">{qs.avgPrice > 0 ? formatCurrency(qs.avgPrice) : '—'}</p>
+                <p className="text-2xl font-bold">{qs.avgPrice > 0 ? formatCurrency(qs.avgPrice) : 'sem pagamentos'}</p>
               </CardContent>
             </Card>
           </div>
 
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">{payments.length} registro(s)</p>
-            <Button onClick={openPayNew} className="gap-2">
+            <Button onClick={openPayNew} className="hidden md:inline-flex gap-2">
               <Plus className="h-4 w-4" /> Registrar pagamento
             </Button>
           </div>
 
-          <DataCard>
+          <CardList empty="Nenhum pagamento registrado">
+            {payments.map(p => (
+              <RecordCard
+                key={p.id}
+                title={p.reference_month ? monthLabel(p.reference_month.slice(0, 7)) : 'Mês não informado'}
+                subtitle={p.buyer_name ?? 'Laticínio não informado'}
+                amount={p.total_amount != null ? formatCurrency(Number(p.total_amount)) : 'sem total'}
+                amountClassName={p.total_amount != null ? 'text-green-700' : 'text-muted-foreground'}
+                fields={[
+                  { label: 'Volume', value: p.total_liters != null ? <>{formatNumber(Number(p.total_liters), 0)}&nbsp;L</> : 'não informado' },
+                  { label: 'Preço por litro', value: p.price_per_liter != null ? formatCurrency(Number(p.price_per_liter)) : 'não informado' },
+                  { label: 'Pago em', value: p.payment_date ? formatDate(p.payment_date) : 'sem data' },
+                ]}
+                onEdit={() => openPayEdit(p)}
+                onDelete={() => setDelConfirm({ type: 'pay', id: p.id })}
+              />
+            ))}
+          </CardList>
+
+          <DataCard className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -328,11 +363,11 @@ export function MilkClient({
                 {payments.length === 0 && <EmptyState colSpan={6} message="Nenhum pagamento registrado" />}
                 {payments.map(p => (
                   <TableRow key={p.id}>
-                    <TableCell>{p.reference_month ? monthLabel(p.reference_month.slice(0, 7)) : '—'}</TableCell>
-                    <TableCell>{p.buyer_name ?? '—'}</TableCell>
-                    <TableCell>{p.total_liters != null ? formatNumber(Number(p.total_liters), 0) + ' L' : '—'}</TableCell>
-                    <TableCell>{p.price_per_liter != null ? formatCurrency(Number(p.price_per_liter)) : '—'}</TableCell>
-                    <TableCell className="font-medium text-green-700">{p.total_amount != null ? formatCurrency(Number(p.total_amount)) : '—'}</TableCell>
+                    <TableCell>{p.reference_month ? monthLabel(p.reference_month.slice(0, 7)) : 'não informado'}</TableCell>
+                    <TableCell>{p.buyer_name ?? 'não informado'}</TableCell>
+                    <TableCell className="tabular-nums whitespace-nowrap">{p.total_liters != null ? formatNumber(Number(p.total_liters), 0) + ' L' : 'não informado'}</TableCell>
+                    <TableCell className="tabular-nums whitespace-nowrap">{p.price_per_liter != null ? formatCurrency(Number(p.price_per_liter)) : 'não informado'}</TableCell>
+                    <TableCell className="font-medium text-green-700 tabular-nums whitespace-nowrap">{p.total_amount != null ? formatCurrency(Number(p.total_amount)) : 'não informado'}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
                         <Button size="icon" variant="ghost" onClick={() => openPayEdit(p)}>
@@ -350,6 +385,18 @@ export function MilkClient({
           </DataCard>
         </TabsContent>
       </Tabs>
+
+      <MobileActionBar>
+        {tab === 'producao' ? (
+          <Button className="h-12 w-full gap-2 text-base" onClick={openProdNew}>
+            <Plus className="h-5 w-5" /> Registrar produção
+          </Button>
+        ) : (
+          <Button className="h-12 w-full gap-2 text-base" onClick={openPayNew}>
+            <Plus className="h-5 w-5" /> Registrar pagamento
+          </Button>
+        )}
+      </MobileActionBar>
 
       {/* Dialog: produção */}
       <Dialog open={prodDialog !== null} onOpenChange={o => !o && setProdDialog(null)}>

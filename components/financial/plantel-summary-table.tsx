@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatCurrency, speciesLabel } from '@/lib/helpers'
 import type { PlantelRow } from '@/lib/plantel-utils'
+import { CardList, RecordCard } from '@/components/ui/record-card'
 
 export function PlantelSummaryTable({ rows, title = 'Valor do Plantel' }: { rows: PlantelRow[]; title?: string }) {
   if (rows.length === 0) return null
@@ -17,7 +18,30 @@ export function PlantelSummaryTable({ rows, title = 'Valor do Plantel' }: { rows
     <Card>
       <CardHeader><CardTitle>{title}</CardTitle></CardHeader>
       <CardContent className="p-0">
-        <Table>
+        <CardList className="px-4 pb-4">
+          {rows.map(r => (
+            <RecordCard
+              key={r.species}
+              title={speciesLabel(r.species)}
+              titleNote={`${r.qty} ${r.qty === 1 ? 'animal' : 'animais'}`}
+              fields={[
+                { label: 'Custo investido', value: formatCurrency(r.custo_investido) },
+                { label: 'Valor de mercado', value: r.valor_mercado != null ? formatCurrency(r.valor_mercado) : 'sem valor' },
+                { label: 'Lucro estimado', value: <span className={r.lucro_estimado != null ? (r.lucro_estimado >= 0 ? 'text-green-700' : 'text-red-700') : 'text-muted-foreground'}>{r.lucro_estimado != null ? formatCurrency(r.lucro_estimado) : 'sem valor de mercado'}</span> },
+              ]}
+            />
+          ))}
+          <RecordCard
+            title="Total"
+            titleNote={`${totalQty} ${totalQty === 1 ? 'animal' : 'animais'}`}
+            fields={[
+              { label: 'Custo investido', value: formatCurrency(totalCusto) },
+              { label: 'Valor de mercado', value: totalMercado != null ? formatCurrency(totalMercado) : 'sem valor' },
+              { label: 'Lucro estimado', value: <span className={totalLucro != null ? (totalLucro >= 0 ? 'text-green-700' : 'text-red-700') : 'text-muted-foreground'}>{totalLucro != null ? formatCurrency(totalLucro) : 'sem valor de mercado'}</span> },
+            ]}
+          />
+        </CardList>
+        <Table className="hidden md:table">
           <TableHeader>
             <TableRow>
               <TableHead>Espécie</TableHead>
@@ -34,10 +58,10 @@ export function PlantelSummaryTable({ rows, title = 'Valor do Plantel' }: { rows
                 <TableCell className="text-right">{r.qty}</TableCell>
                 <TableCell className="text-right">{formatCurrency(r.custo_investido)}</TableCell>
                 <TableCell className="text-right">
-                  {r.valor_mercado != null ? formatCurrency(r.valor_mercado) : '—'}
+                  {r.valor_mercado != null ? formatCurrency(r.valor_mercado) : 'sem valor'}
                 </TableCell>
                 <TableCell className={`text-right font-semibold ${r.lucro_estimado != null ? (r.lucro_estimado >= 0 ? 'text-green-700' : 'text-red-700') : ''}`}>
-                  {r.lucro_estimado != null ? formatCurrency(r.lucro_estimado) : '—'}
+                  {r.lucro_estimado != null ? formatCurrency(r.lucro_estimado) : 'sem valor'}
                 </TableCell>
               </TableRow>
             ))}
@@ -48,10 +72,10 @@ export function PlantelSummaryTable({ rows, title = 'Valor do Plantel' }: { rows
               <TableCell className="text-right font-bold">{totalQty}</TableCell>
               <TableCell className="text-right font-bold">{formatCurrency(totalCusto)}</TableCell>
               <TableCell className="text-right font-bold">
-                {totalMercado != null ? formatCurrency(totalMercado) : '—'}
+                {totalMercado != null ? formatCurrency(totalMercado) : 'sem valor'}
               </TableCell>
               <TableCell className={`text-right font-bold ${totalLucro != null ? (totalLucro >= 0 ? 'text-green-700' : 'text-red-700') : ''}`}>
-                {totalLucro != null ? formatCurrency(totalLucro) : '—'}
+                {totalLucro != null ? formatCurrency(totalLucro) : 'sem valor'}
               </TableCell>
             </TableRow>
           </TableFooter>

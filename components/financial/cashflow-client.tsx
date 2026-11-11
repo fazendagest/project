@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatCurrency, formatCurrencyCard, last12Months, monthLabel } from '@/lib/helpers'
+import { CardList, RecordCard } from '@/components/ui/record-card'
 
 interface MonthData {
   month: string
@@ -96,7 +97,7 @@ export function CashflowClient({ farmId }: { farmId: string }) {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Fluxo de Caixa — Últimos 12 Meses</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Fluxo de Caixa dos últimos 12 meses</CardTitle></CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
@@ -125,7 +126,20 @@ export function CashflowClient({ farmId }: { farmId: string }) {
       <Card>
         <CardHeader><CardTitle>Detalhamento Mensal</CardTitle></CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <CardList empty="Sem movimento nos últimos 12 meses">
+            {data.map((d, i) => (
+              <RecordCard
+                key={i}
+                title={d.month}
+                fields={[
+                  { label: 'Entradas', value: <span className="text-green-700 whitespace-nowrap">{formatCurrency(d.Entradas)}</span> },
+                  { label: 'Saídas', value: <span className="text-red-700 whitespace-nowrap">{formatCurrency(d.Saídas)}</span> },
+                  { label: 'Saldo', value: <span className={`whitespace-nowrap ${d.Saldo >= 0 ? 'text-green-700' : 'text-red-700'}`}>{formatCurrency(d.Saldo)}</span> },
+                ]}
+              />
+            ))}
+          </CardList>
+          <div className="hidden md:block overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

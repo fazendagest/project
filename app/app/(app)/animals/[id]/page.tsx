@@ -152,7 +152,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
               </p>
             )}
             {mv.belowPct != null && (
-              <p className="text-xs text-muted-foreground pt-1">Digitado {mv.belowPct}% abaixo de Goiás. Se é o preço que pagou, troque pelo valor de hoje.</p>
+              <p className="text-xs text-muted-foreground pt-1">Digitado {mv.belowPct}% abaixo de Goiás. {animal.entry_type === 'nascimento' ? 'Confira se o valor está atualizado.' : 'Se é o preço que pagou, troque pelo valor de hoje.'}</p>
             )}
             {mv.fat && (
               <Row label={`Se vender gorda ao frigorífico (${mv.fat.liveArrobas} @ vivas, cerca de ${String(mv.fat.carcassArrobas).replace('.', ',')} @ de carcaça, vaca gorda IFAG)`} value={formatCurrency(mv.fat.value)} />

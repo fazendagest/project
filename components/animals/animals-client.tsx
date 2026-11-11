@@ -324,7 +324,7 @@ function AnimalCard({ a }: { a: Row }) {
             <p className="text-xs font-medium text-amber-800 mt-1">Digitado {Math.round((a.mv.value! / a.mv.ifag - 1) * 100)}% acima da referência de Goiás</p>
           )}
           {a.mv.belowPct != null && (
-            <p className="text-xs text-muted-foreground mt-1">Digitado {a.mv.belowPct}% abaixo de Goiás. Se é o preço que pagou, troque pelo valor de hoje.</p>
+            <p className="text-xs text-muted-foreground mt-1">Digitado {a.mv.belowPct}% abaixo de Goiás. {a.entry_type === 'nascimento' ? 'Confira se o valor está atualizado.' : 'Se é o preço que pagou, troque pelo valor de hoje.'}</p>
           )}
           {a.mv.fat && (
             <p className="text-xs text-muted-foreground mt-1">{fatText(a.mv.fat)}</p>

@@ -25,6 +25,8 @@ import { formatDate, formatCurrency, formatNumber, expenseCategoryLabel, healthT
 import type { Invested } from '@/lib/investment'
 import Link from 'next/link'
 import { monthOf, sameDayIn, fixedDates, sumExpensesInRange, todaySP, monthLabelPt } from '@/lib/fixed-expenses'
+import type { IfagPrices } from '@/lib/market-reference'
+import { saleArroba, referenceFor, ARROBA_BASIS, type ArrobaBasis, type SaleArroba } from '@/lib/sale-arroba'
 
 const today = new Date().toISOString().slice(0, 10)
 
@@ -40,6 +42,7 @@ export function ExpensesClient({
   initialAnimals,
   invested,
   farmId,
+  ifag = null,
 }: {
   initialExpenses: OperationalExpense[]
   initialPurchases: (AnimalPurchase & { animal?: any })[]
@@ -49,6 +52,7 @@ export function ExpensesClient({
   initialAnimals: Pick<Animal, 'id' | 'code' | 'name' | 'species' | 'sex' | 'birth_date' | 'is_breeder'>[]
   invested: Record<string, Invested>
   farmId: string
+  ifag?: IfagPrices | null
 }) {
   const router = useRouter()
   const supabase = createClient()
@@ -77,7 +81,7 @@ export function ExpensesClient({
   const [expForm, setExpForm] = useState({ category: 'mao_de_obra', date: today, amount: '', description: '', notes: '', fixed: false, since: monthOf(today) })
   const [stopConfirm, setStopConfirm] = useState<OperationalExpense | null>(null)
   const [stopping, setStopping] = useState(false)
-  const [saleForm, setSaleForm] = useState({ animal_ids: [] as string[], buyer_name: '', sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', sale_reason: '', notes: '' })
+  const [saleForm, setSaleForm] = useState({ animal_ids: [] as string[], buyer_name: '', sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', sale_reason: '', arroba_basis: '' as ArrobaBasis | '', notes: '' })
   const [purchaseForm, setPurchaseForm] = useState({
     seller_name: '',
     purchase_date: today,
@@ -85,7 +89,7 @@ export function ExpensesClient({
     weight_kg: '',
     notes: '',
   })
-  const [saleEditForm, setSaleEditForm] = useState({ sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', buyer_name: '', sale_type: 'venda', sale_reason: '' })
+  const [saleEditForm, setSaleEditForm] = useState({ sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', buyer_name: '', sale_type: 'venda', sale_reason: '', arroba_basis: '' as ArrobaBasis | '' })
   const [expEditForm, setExpEditForm] = useState({ category: 'mao_de_obra', date: today, amount: '', description: '' })
 
   const editingPurchase = purchaseDialog ? purchases.find(p => p.id === purchaseDialog) : null
@@ -112,6 +116,7 @@ export function ExpensesClient({
       buyer_name: s.buyer_name ?? '',
       sale_type: s.sale_type,
       sale_reason: s.sale_reason ?? '',
+      arroba_basis: s.arroba_basis ?? '',
     })
     setSaleEditDialog(s.id)
   }
@@ -174,7 +179,7 @@ export function ExpensesClient({
   }
 
   function openNewSale() {
-    setSaleForm({ animal_ids: [], buyer_name: '', sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', sale_reason: '', notes: '' })
+    setSaleForm({ animal_ids: [], buyer_name: '', sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', sale_reason: '', arroba_basis: '' as ArrobaBasis | '', notes: '' })
     setSaleDialog(true)
   }
 
@@ -194,12 +199,14 @@ export function ExpensesClient({
       sale_date: saleForm.sale_date,
       sale_price: i === ids.length - 1 ? Math.round((total - each * (ids.length - 1)) * 100) / 100 : each,
       weight_kg: saleForm.weight_kg ? parseInt(saleForm.weight_kg, 10) : null,
-      price_per_kg: parseBRL(saleForm.price_per_kg),
+      // Sem preço por @ digitado, guarda a conta (valor total ÷ peso do lote) para a tabela mostrar o R$ por @.
+      price_per_kg: perArrobaOf(saleForm.price_per_kg, total, saleForm.weight_kg),
       sale_type: saleForm.sale_type,
       sale_reason: saleForm.sale_reason || null,
+      arroba_basis: saleForm.arroba_basis || null,
       notes: saleForm.notes || null,
     }))
-    const { data, error } = await supabase.from('animal_sales').insert(rows).select('*, animal:animal_id(code, name)')
+    const { data, error } = await supabase.from('animal_sales').insert(rows).select('*, animal:animal_id(code, name, sex, birth_date)')
 
     if (error) { toast.error('Erro: ' + error.message); setSaleLoading(false); return }
 
@@ -245,7 +252,8 @@ export function ExpensesClient({
       buyer_name: saleEditForm.buyer_name || null,
       sale_type: saleEditForm.sale_type,
       sale_reason: saleEditForm.sale_reason || null,
-    }).eq('id', saleEditDialog).eq('farm_id', farmId).select('*, animal:animal_id(code, name)').single()
+      arroba_basis: saleEditForm.arroba_basis || null,
+    }).eq('id', saleEditDialog).eq('farm_id', farmId).select('*, animal:animal_id(code, name, sex, birth_date)').single()
     if (error) toast.error('Erro: ' + error.message)
     else {
       setSales(prev => prev.map(s => s.id === saleEditDialog ? data : s))
@@ -383,6 +391,7 @@ export function ExpensesClient({
                   { label: 'Tipo', value: <span className="capitalize">{s.sale_type}</span> },
                   ...(s.sale_reason ? [{ label: 'Motivo', value: SALE_REASONS[s.sale_reason] ?? s.sale_reason }] : []),
                   ...(s.weight_kg != null ? [{ label: 'Peso', value: `${s.weight_kg}\u00a0@` }] : []),
+                  ...arrobaFields(saleArroba(s, s.animal, ifag)),
                   ...(invested[s.animal_id]?.total ? [{ label: 'Lucro', value: <span className={s.sale_price - invested[s.animal_id].total >= 0 ? 'text-green-700' : 'text-red-700'}>{formatCurrency(s.sale_price - invested[s.animal_id].total)}</span> }] : []),
                 ]}
                 onEdit={() => openEditSale(s)}
@@ -399,29 +408,31 @@ export function ExpensesClient({
                   <TableHead>Comprador</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Peso (@)</TableHead>
+                  <TableHead>R$ por @</TableHead>
                   <TableHead>Valor</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sales.length === 0 && <EmptyState colSpan={7} message="Nenhuma venda" />}
+                {sales.length === 0 && <EmptyState colSpan={8} message="Nenhuma venda" />}
                 {sales.map(s => (
                   <TableRow key={s.id}>
                     <TableCell>{formatDate(s.sale_date)}</TableCell>
                     <TableCell>
                       <div>
                         <Link href={`/app/animals/${s.animal_id}`} className="font-mono font-semibold text-sm text-primary hover:underline">
-                          {(s.animal as any)?.code ?? '—'}
+                          {(s.animal as any)?.code ?? 'Sem código'}
                         </Link>
                         {(s.animal as any)?.name && <span className="text-xs text-gray-500 block">{(s.animal as any)?.name}</span>}
                       </div>
                     </TableCell>
-                    <TableCell>{s.buyer_name ?? '—'}</TableCell>
+                    <TableCell>{s.buyer_name ?? ''}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="capitalize">{s.sale_type}</Badge>
                       {s.sale_reason && <span className="block text-xs text-muted-foreground mt-0.5">{SALE_REASONS[s.sale_reason] ?? s.sale_reason}</span>}
                     </TableCell>
-                    <TableCell>{s.weight_kg != null ? `${s.weight_kg} @` : '—'}</TableCell>
+                    <TableCell>{s.weight_kg != null ? `${s.weight_kg} @` : ''}</TableCell>
+                    <TableCell><ArrobaCell a={saleArroba(s, s.animal, ifag)} /></TableCell>
                     <TableCell className="font-semibold text-green-600">{formatCurrency(s.sale_price)}</TableCell>
                     <TableCell><div className="flex justify-end gap-1"><Button size="icon" variant="ghost" onClick={() => openEditSale(s)}><Pencil className="h-4 w-4" /></Button><Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDelConfirm({ type: 'sale', id: s.id })}><Trash2 className="h-4 w-4" /></Button></div></TableCell>
                   </TableRow>
@@ -729,7 +740,7 @@ export function ExpensesClient({
                   placeholder="0,00" required />
               </div>
               <div className="space-y-2">
-                <Label>Peso (@)</Label>
+                <Label>{saleForm.animal_ids.length > 1 ? 'Peso total (@)' : 'Peso (@)'}</Label>
                 <Input type="number" step="1" min="0" value={saleForm.weight_kg} onChange={e => setSaleForm(p => ({ ...p, weight_kg: e.target.value }))} />
                 <p className="text-xs text-muted-foreground">Da balança do comprador. Se não pesou, deixe vazio.</p>
               </div>
@@ -741,6 +752,15 @@ export function ExpensesClient({
                   placeholder="0,00" />
               </div>
             </div>
+            <BasisPicker value={saleForm.arroba_basis} onChange={v => setSaleForm(p => ({ ...p, arroba_basis: v }))} />
+            <ArrobaHint a={saleArroba({
+              sale_price: parseBRL(saleForm.sale_price) ?? 0,
+              sale_date: saleForm.sale_date,
+              weight_kg: saleForm.weight_kg ? Number(saleForm.weight_kg) : null,
+              price_per_kg: parseBRL(saleForm.price_per_kg),
+              arroba_basis: saleForm.arroba_basis,
+              animals: Math.max(1, saleForm.animal_ids.length),
+            }, initialAnimals.find(x => x.id === saleForm.animal_ids[0]), ifag)} />
 
             <div className="space-y-2">
               <Label>Motivo da venda</Label>
@@ -801,7 +821,7 @@ export function ExpensesClient({
             <div className="space-y-1">
               <Label>Animal</Label>
               <p className="text-sm font-mono font-semibold">
-                {(editingSale?.animal as any)?.code ?? '—'}
+                {(editingSale?.animal as any)?.code ?? 'Sem código'}
                 {(editingSale?.animal as any)?.name ? ` · ${(editingSale?.animal as any)?.name}` : ''}
               </p>
             </div>
@@ -840,6 +860,14 @@ export function ExpensesClient({
                   placeholder="0,00" />
               </div>
             </div>
+            <BasisPicker value={saleEditForm.arroba_basis} onChange={v => setSaleEditForm(p => ({ ...p, arroba_basis: v }))} />
+            <ArrobaHint a={saleArroba({
+              sale_price: parseBRL(saleEditForm.sale_price) ?? 0,
+              sale_date: saleEditForm.sale_date,
+              weight_kg: saleEditForm.weight_kg ? Number(saleEditForm.weight_kg) : null,
+              price_per_kg: parseBRL(saleEditForm.price_per_kg),
+              arroba_basis: saleEditForm.arroba_basis,
+            }, editingSale?.animal, ifag)} />
             <div className="space-y-2">
               <Label>Motivo da venda</Label>
               <Select value={saleEditForm.sale_reason} onValueChange={v => setSaleEditForm(p => ({ ...p, sale_reason: String(v ?? '') }))}>
@@ -967,6 +995,88 @@ export function ExpensesClient({
         onConfirm={handleDelete}
         loading={deleting}
       />
+    </div>
+  )
+}
+
+/** Preço por @ digitado; sem ele, valor total ÷ peso do lote (P6 item 6). */
+function perArrobaOf(typed: string, total: number, weight: string) {
+  const t = parseBRL(typed)
+  if (t != null && t > 0) return t
+  const w = Number(weight)
+  return w > 0 && total > 0 ? Math.round((total / w) * 100) / 100 : null
+}
+
+const reais = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+
+/** Diferença contra a referência, em %, com sinal. */
+const diffPct = (v: number, ref: number) => Math.round((v / ref - 1) * 100)
+
+/** Abaixo disso (10% sob a média de Goiás) o R$ por @ fica em amarelo. */
+const LOW_ARROBA = 0.9
+
+/** Campos do cartão da venda no celular. */
+function arrobaFields(a: SaleArroba) {
+  if (a.perArroba == null) return []
+  const ref = referenceFor(a)
+  return [
+    { label: 'R$ por @', value: `${reais(a.perArroba)} (${a.basis ? ARROBA_BASIS[a.basis].short : 'carcaça ou vivo?'})` },
+    ...(ref != null ? [{ label: `Goiás hoje, ${a.kindLabel}`, value: `${reais(ref)}${a.basis ? '' : ' de carcaça'}` }] : []),
+  ]
+}
+
+/** Célula da tabela no computador. */
+function ArrobaCell({ a }: { a: SaleArroba }) {
+  if (a.perArroba == null) return null
+  const ref = referenceFor(a)
+  const low = ref != null && a.basis != null && a.perArroba < ref * LOW_ARROBA
+  return (
+    <div className="tabular-nums">
+      <span className={low ? 'font-medium text-amber-800' : 'font-medium'}>{reais(a.perArroba)}</span>
+      <span className="block text-xs text-muted-foreground">{a.basis ? ARROBA_BASIS[a.basis].short : 'carcaça ou vivo? (editar)'}</span>
+      {ref != null && <span className="block text-xs text-muted-foreground">Goiás hoje: {reais(ref)}</span>}
+    </div>
+  )
+}
+
+/** De que é a arroba: carcaça ou peso vivo. */
+function BasisPicker({ value, onChange }: { value: ArrobaBasis | ''; onChange: (v: ArrobaBasis) => void }) {
+  return (
+    <div className="space-y-2">
+      <Label>A arroba é de quê?</Label>
+      <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="A arroba é de quê?">
+        {(Object.keys(ARROBA_BASIS) as ArrobaBasis[]).map(k => (
+          <Button key={k} type="button" role="radio" aria-checked={value === k}
+            variant={value === k ? 'default' : 'outline'} className="h-11 px-2" onClick={() => onChange(k)}>
+            {ARROBA_BASIS[k].label}
+          </Button>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">{value ? ARROBA_BASIS[value].hint : 'Frigorífico paga pela carcaça; vizinho e leilão costumam pesar o animal vivo.'}</p>
+    </div>
+  )
+}
+
+/** R$ por @ da venda comparado com a média de Goiás (IFAG), antes de salvar. */
+function ArrobaHint({ a }: { a: SaleArroba }) {
+  if (a.refCarcass == null && a.perArroba == null) return null
+  const ref = referenceFor(a)
+  const low = a.perArroba != null && ref != null && a.basis != null && a.perArroba < ref * LOW_ARROBA
+  return (
+    <div className={`rounded-lg border px-3 py-2 text-sm space-y-0.5 ${low ? 'border-amber-300 bg-amber-50 text-amber-900' : 'bg-muted/40'}`}>
+      {a.perArroba != null && (
+        <p>Saiu a <span className="font-semibold tabular-nums">{reais(a.perArroba)}</span> a {a.basis ? ARROBA_BASIS[a.basis].short : 'arroba'}.
+          {low && ref != null && <> {Math.abs(diffPct(a.perArroba, ref))}% abaixo da média de Goiás.</>}
+        </p>
+      )}
+      {a.refCarcass != null && (
+        <p className="tabular-nums">
+          Média de Goiás, {a.kindLabel} à vista (IFAG{a.quotedAt ? `, ${formatDate(a.quotedAt)}` : ''}): {reais(a.refCarcass)} a @ de carcaça
+          {a.refLive != null && <>, cerca de {reais(a.refLive)} a @ de peso vivo</>}.
+        </p>
+      )}
+      {a.perArroba != null && !a.basis && <p className="text-xs">Marque acima se a arroba é de carcaça ou de peso vivo para comparar certo.</p>}
+      {a.stale && <p className="text-xs font-medium text-amber-800">Essa cotação tem mais de 14 dias e pode estar desatualizada.</p>}
     </div>
   )
 }

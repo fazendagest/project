@@ -153,6 +153,8 @@ export interface AnimalSale {
   sale_type: SaleType
   /** Motivo da venda (lista em SALE_REASONS, lib/helpers.ts). */
   sale_reason?: SaleReason | null
+  /** Arroba do peso: 'carcaca' (frigorífico) ou 'vivo' (@ do comércio). P6 item 6. */
+  arroba_basis?: 'carcaca' | 'vivo' | null
   notes?: string
   created_at: string
   animal?: Animal

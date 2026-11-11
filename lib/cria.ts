@@ -206,8 +206,10 @@ export function criaIndicators(animals: CriaAnimal[], sales: CriaSale[], today: 
 /**
  * Custo por vaca no ano e por bezerro desmamado (Tião, P8 item 1). Custo do gado em 12 meses: alimentação
  * (sem a dos porcos), despesas da fazenda (sem "Fora dos animais") e saúde dos bovinos, sem compra de animal.
- * Divide pelas vacas e novilhas com 20 meses ou mais na fazenda hoje [Ravi: as vacas expostas da conta do desmame
- * são de uma época mais antiga; hoje só as mães entram, o que inflaria o custo]. Por bezerro = por vaca ÷ desmame.
+ * Divide pelas vacas e novilhas com 20 meses ou mais na fazenda hoje (aprovado pelo Tião: a matriz carrega o
+ * custo do sistema inteiro). Por bezerro = por vaca ÷ desmame. Despesas e ração já vão inteiras para o gado,
+ * como no rateio do P2 (cavalo e porco fora, decisão do Henrique de 11/11/2026).
+ * Só mostra número com alimentação E despesas lançadas nos 12 meses (Tião, auditoria do 0dacfb0).
  */
 export type CriaCost = { perCow: CriaIndex; perCalf: CriaIndex; calfPrice: number | null }
 
@@ -221,23 +223,23 @@ export function criaCost(args: {
 }): CriaCost {
   const { feed, expenses, health, cows, desmame, calfPrice } = args
   const total = feed + expenses + health
-  const noCost = feed <= 0 && expenses <= 0
-  const missingParts = [feed <= 0 && 'sal e ração', expenses <= 0 && 'despesas da fazenda'].filter(Boolean) as string[]
+  const missingParts = [feed <= 0 && 'sal e ração', expenses <= 0 && 'as despesas da fazenda'].filter(Boolean) as string[]
   const money = (v: number) => `R$ ${Math.round(v).toLocaleString('pt-BR')}`
-  if (noCost) {
-    const missing = 'Lance sal, ração e despesas para ver quanto custa cada vaca.'
+  // Número só com alimentação E despesas lançadas: custo parcial faz a vaca parecer barata (Tião, auditoria do 0dacfb0).
+  if (missingParts.length > 0) {
+    const missing = missingParts.length === 2
+      ? 'Lance sal, ração e despesas para ver quanto custa cada vaca.'
+      : `Falta lançar ${missingParts[0]} para ver quanto custa cada vaca.`
     return { perCow: { value: null, missing }, perCalf: { value: null, missing: 'Depende do custo por vaca (acima).' }, calfPrice }
   }
   if (cows <= 0) {
     const missing = 'Nenhuma vaca ou novilha com 20 meses ou mais na fazenda: confira as datas de nascimento.'
     return { perCow: { value: null, missing }, perCalf: { value: null, missing: 'Depende do custo por vaca (acima).' }, calfPrice }
   }
-  const caveat = missingParts.length > 0 ? `Pode ser maior: falta lançar ${missingParts.join(' e ')}.` : undefined
+  // Na cria a matriz carrega o custo do sistema inteiro: novilha nova, bezerro e touro entram no custo, não no divisor.
   const perCow: CriaIndex = {
     value: total / cows,
-    detail: `${money(total)} em 12 meses (alimentação ${money(feed)}, despesas ${money(expenses)}, vacina e remédio ${money(health)}) ÷ ${cows} ${cows === 1 ? 'vaca' : 'vacas e novilhas'}`,
-    caveat,
-    caveatTag: 'estimado',
+    detail: `Custo do gado todo ÷ matrizes: ${money(total)} em 12 meses (alimentação ${money(feed)}, despesas ${money(expenses)}, vacina e remédio ${money(health)}) ÷ ${cows} ${cows === 1 ? 'vaca ou novilha' : 'vacas e novilhas'} de 20 meses ou mais`,
   }
   let perCalf: CriaIndex
   if (desmame.value == null || desmame.value <= 0) {
@@ -246,8 +248,7 @@ export function criaCost(args: {
     perCalf = {
       value: perCow.value! / desmame.value,
       detail: `custo por vaca ÷ desmame de ${Math.round(desmame.value * 100)}%`,
-      caveat: [caveat, desmame.caveat && 'A taxa de desmame ainda tem poucos dados.'].filter(Boolean).join(' ') || undefined,
-      caveatTag: desmame.caveat ? 'poucos dados' : 'estimado',
+      caveat: desmame.caveat ? 'A taxa de desmame ainda tem poucos dados.' : undefined,
     }
     if (calfPrice != null) perCalf.belowTarget = perCalf.value! > calfPrice
   }

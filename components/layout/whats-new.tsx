@@ -54,7 +54,7 @@ export function WhatsNew() {
               <li>
                 Lance as <strong>despesas da fazenda</strong> em Financeiro, Despesas: salário do caseiro, energia, água,
                 diesel do trator, limpeza de pasto. No que você paga todo mês, marque <strong>Pago todo mês</strong> e
-                diga desde quando: o sistema lança os meses que passaram e lembra dos próximos.
+                diga desde quando: lança uma vez só e o sistema conta todo mês sozinho.
               </li>
             </ol>
           </div>

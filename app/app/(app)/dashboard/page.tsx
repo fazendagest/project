@@ -136,14 +136,15 @@ export default async function DashboardPage() {
       action: 'Corrigir em Configurações',
     })
   }
-  const calvesNoMother = active.filter(a => a.species === 'bovino' && !a.mother_id && (monthsOld(a.birth_date) ?? 99) < 12)
+  const calvesNoMother = active.filter(a => a.species === 'bovino' && !a.mother_id && a.entry_type !== 'compra' && (monthsOld(a.birth_date) ?? 99) < 12)
   if (calvesNoMother.length > 0) {
     tasks.push({
-      key: 'maes-bezerros',
+      key: `maes-bezerros-${calvesNoMother.map(a => a.id).sort().join('-')}`,
       title: calvesNoMother.length === 1 ? `Escolher a mãe de ${nameOf(calvesNoMother[0])}` : `Escolher a mãe de ${calvesNoMother.length} bezerros`,
-      detail: calvesNoMother.length > 1 ? calvesNoMother.map(nameOf).join(', ') : 'Assim o sistema sabe quais vacas estão parindo.',
+      detail: `${calvesNoMother.length > 1 ? calvesNoMother.map(nameOf).join(', ') + '. ' : ''}Se ${calvesNoMother.length > 1 ? 'algum foi comprado já bezerro, a mãe não está aqui: no cadastro dele, troque "Tipo de Entrada" para Compra' : 'foi comprado já bezerro, a mãe não está aqui: no cadastro, troque "Tipo de Entrada" para Compra'}.`,
       href: `/app/animals/${calvesNoMother[0].id}/edit`,
       action: calvesNoMother.length > 1 ? `Começar por ${nameOf(calvesNoMother[0])}` : 'Escolher a mãe',
+      dismissLabel: calvesNoMother.length > 1 ? 'Foram comprados, sem mãe aqui' : 'Foi comprado, sem mãe aqui',
     })
   }
   for (const m of active.filter(a => a.species === 'bovino' && a.sex === 'M' && !a.is_breeder && (monthsOld(a.birth_date) ?? 99) >= 12)) {

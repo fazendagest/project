@@ -619,7 +619,7 @@ export function ExpensesClient({
               <p className="text-xs text-muted-foreground">
                 {expForm.category === 'fora_do_gado'
                   ? 'Não entra no custo dos animais. Ex.: poleiro das galinhas, lavoura para vender, gasto da casa.'
-                  : 'Entra no custo dos animais, dividido por cabeça. Ex.: caseiro, diesel do trator, energia, limpeza de pasto.'}
+                  : 'Entra no custo dos animais, dividido pelo tamanho de cada um (vaca conta mais que bezerro). Ex.: caseiro, diesel do trator, energia, limpeza de pasto.'}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3">

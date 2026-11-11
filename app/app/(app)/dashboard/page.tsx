@@ -78,6 +78,7 @@ export default async function DashboardPage() {
     { data: milkToday },
     { data: pregnancyChecks },
     { data: reproRecords },
+    { data: yearHealth },
     ifag,
   ] = await Promise.all([
     supabase.from('animals').select('id, code, name, species, sex, birth_date, breed, is_breeder, is_fat, weight_arrobas, market_value, mother_id, status, entry_type, entry_date').eq('farm_id', farmId),
@@ -91,12 +92,13 @@ export default async function DashboardPage() {
     supabase.from('milk_production').select('liters').eq('farm_id', farmId).eq('date', todayStr),
     supabase.from('pregnancy_checks').select('animal_id, exam_date, result').eq('farm_id', farmId).gte('exam_date', format(subDays(now, 365), 'yyyy-MM-dd')),
     supabase.from('reproduction_records').select('female_id, actual_birth_date, status').eq('farm_id', farmId),
+    supabase.from('health_records').select('cost').eq('farm_id', farmId).gte('application_date', yearStart),
     getIfagPrices(),
   ])
 
   const allAnimals = animals ?? []
   const active = allAnimals.filter(a => a.status === 'ativo')
-  const invested = computeInvested(costs ?? [], feeds ?? [], allExpenses ?? [])
+  const invested = computeInvested(costs ?? [], feeds ?? [], allExpenses ?? [], allAnimals)
   const herd = computeHerdValue(active, invested, ifag)
   const birthsYear = allAnimals.filter(a => a.entry_type === 'nascimento' && a.entry_date >= yearStart).length
 
@@ -151,6 +153,14 @@ export default async function DashboardPage() {
       action: 'Lançar despesa',
     })
   }
+
+  // A fazenda se pagou no ano? (Tião, P2, 11/11/2026): vendas do ano menos o custo de tocar a fazenda.
+  // Compra de animal fica de fora (é investimento); "Fora dos animais" (casa, galinha) também.
+  const yearFeed = (feeds ?? []).filter(f => f.purchase_date && f.purchase_date >= yearStart && f.purchase_date <= todayStr).reduce((s, f) => s + Number(f.total_cost || 0), 0)
+  const yearFarmExpenses = sumExpensesInRange((allExpenses ?? []).filter(e => e.category !== OUTSIDE_HERD_CATEGORY), yearStart, todayStr, todayStr)
+  const yearHealthCost = (yearHealth ?? []).reduce((s, r) => s + Number(r.cost || 0), 0)
+  const yearResult = soldTotal - yearFeed - yearFarmExpenses - yearHealthCost
+  const yearAnything = soldTotal > 0 || yearFeed > 0 || yearFarmExpenses > 0 || yearHealthCost > 0
 
   // Animal que entrou por compra sem preço: o investido e o lucro dele ficam errados.
   const costById = new Map((costs ?? []).map(c => [c.animal_id, c]))
@@ -335,6 +345,42 @@ export default async function DashboardPage() {
                     {' '}O lucro real é menor do que o mostrado aqui.
                   </p>
                 )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        {/* 2b. A fazenda se pagou no ano? */}
+        <Card>
+          <CardHeader className="pb-0">
+            <CardTitle className="text-base">A fazenda se pagou em {year}?</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!yearAnything ? (
+              <p className="text-sm text-muted-foreground py-2">Nenhuma venda nem despesa lançada este ano.</p>
+            ) : (
+              <>
+                <p className={`text-lg font-semibold ${missingCosts.length > 0 && yearResult > 0 ? '' : yearResult >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                  {yearResult < 0 ? 'Não, as vendas não pagaram o custo do ano' : missingCosts.length > 0 ? 'Por enquanto sim, mas falta lançar custo' : 'Sim, as vendas pagaram o custo do ano'}
+                </p>
+                <div className="divide-y mt-1">
+                  <Row label="Vendas" value={money(soldTotal)} />
+                  <Row label="Sal, milho e ração" value={yearFeed > 0 ? `-${money(yearFeed)}` : money(0)} />
+                  <Row label="Despesas da fazenda" hint="Caseiro, energia, diesel e o que mais foi lançado" value={yearFarmExpenses > 0 ? `-${money(yearFarmExpenses)}` : money(0)} />
+                  <Row label="Vacina e remédio" value={yearHealthCost > 0 ? `-${money(yearHealthCost)}` : money(0)} />
+                  <Row
+                    label={yearResult >= 0 ? 'Sobrou' : 'Faltou'}
+                    value={signedMoney(yearResult)}
+                    strong
+                    tone={missingCosts.length > 0 && yearResult > 0 ? undefined : tone(yearResult)}
+                    warn={missingCosts.length > 0 && yearResult > 0 ? `Pode ser menor: falta lançar ${missingCosts.join(' e ')}.` : undefined}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Compra de animal fica fora: é investimento, não custo de tocar a fazenda. Despesas marcadas &quot;Fora dos animais&quot; também.
+                </p>
               </>
             )}
           </CardContent>

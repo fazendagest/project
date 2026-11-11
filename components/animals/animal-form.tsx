@@ -177,7 +177,7 @@ function MarketHint({ ifag, animal, onUse }: {
     <div className={`rounded-lg border p-3 text-sm space-y-2 ${ref.stale ? 'border-amber-300 bg-amber-50' : 'bg-muted/40'}`}>
       {ref.perHead != null ? (
         <p>
-          Preço em Goiás: <span className="font-semibold tabular-nums">{formatCurrencyCard(ref.perHead)}</span>
+          Média de Goiás (IFAG): <span className="font-semibold tabular-nums">{formatCurrencyCard(ref.perHead)}</span>
           {ref.fat && ref.fat.carcassArrobas != null ? (
             <span className="text-muted-foreground tabular-nums"> ({ref.fat.liveArrobas}&nbsp;@ vivas, cerca de {String(ref.fat.carcassArrobas).replace('.', ',')}&nbsp;@ de carcaça, a R$&nbsp;{ref.fat.perArroba.toFixed(2).replace('.', ',')} a arroba)</span>
           ) : ref.perKg != null && animal.weight_arrobas ? (
@@ -188,12 +188,12 @@ function MarketHint({ ifag, animal, onUse }: {
         </p>
       ) : ref.fat ? (
         <p>
-          Arroba em Goiás: <span className="font-semibold tabular-nums">R$&nbsp;{ref.fat.perArroba.toFixed(2).replace('.', ',')}</span>.
+          Arroba, média de Goiás (IFAG): <span className="font-semibold tabular-nums">R$&nbsp;{ref.fat.perArroba.toFixed(2).replace('.', ',')}</span>.
           Informe o peso vivo para calcular o valor do animal gordo.
         </p>
       ) : (
         <p>
-          Porco em Goiás: <span className="font-semibold tabular-nums">R$&nbsp;{ref.perKg?.toFixed(2).replace('.', ',')}</span> o quilo vivo.
+          Porco, média de Goiás (IFAG): <span className="font-semibold tabular-nums">R$&nbsp;{ref.perKg?.toFixed(2).replace('.', ',')}</span> o quilo vivo.
           Se pesou o porco, informe o peso para calcular o valor.
         </p>
       )}
@@ -203,7 +203,7 @@ function MarketHint({ ifag, animal, onUse }: {
       </p>
       {ref.fat ? (
         <p className="text-xs text-muted-foreground">
-          O frigorífico paga a arroba da carcaça, que é cerca de metade do peso vivo. Ele confirma o rendimento na hora do abate.
+          O frigorífico paga a arroba da carcaça. Conta usada: {Math.round(ref.fat.yieldPct * 100)}% do peso vivo ({animal.sex === 'M' ? 'boi e garrote 52%' : 'novilha 50%, vaca 48%'}). Ele confirma o rendimento na hora do abate.
         </p>
       ) : animal.species === 'bovino' && ref.min != null && ref.max != null && ref.min !== ref.max && (
         <p className="text-xs text-muted-foreground">

@@ -32,6 +32,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
     { data: feeds },
     { data: expenses },
     { data: lastChecks },
+    { data: farmAnimals },
   ] = await Promise.all([
     supabase.from('animals').select('*').eq('id', params.id).eq('farm_id', farmId).single(),
     supabase.from('health_records').select('*').eq('animal_id', params.id).order('application_date', { ascending: false }),
@@ -43,6 +44,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
     supabase.from('feed_stock').select('purchase_date, total_cost').eq('farm_id', farmId),
     supabase.from('operational_expenses').select('*').eq('farm_id', farmId),
     supabase.from('pregnancy_checks').select('exam_date, result, expected_birth_date').eq('animal_id', params.id).eq('farm_id', farmId).order('exam_date', { ascending: false }).limit(1),
+    supabase.from('animals').select('id, species, sex, birth_date, is_breeder, weight_arrobas, mother_id').eq('farm_id', farmId),
   ])
 
   if (!animal) notFound()
@@ -53,7 +55,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
     : { data: null }
 
   const totalHealthCost = health?.reduce((s, r) => s + (r.cost || 0), 0) ?? 0
-  const shares = computeInvested(farmCosts ?? [], feeds ?? [], expenses ?? [])[params.id]
+  const shares = computeInvested(farmCosts ?? [], feeds ?? [], expenses ?? [], farmAnimals ?? [])[params.id]
   const feedShare = shares?.feed ?? 0
   const generalShare = shares?.general ?? 0
   const totalCost = (purchase?.purchase_price || 0) + totalHealthCost + feedShare + generalShare
@@ -121,8 +123,8 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
           <CardContent className="space-y-2 text-sm">
             <Row label="Preço de Compra" value={formatCurrency(purchase?.purchase_price)} />
             <Row label="Custo de Saúde" value={formatCurrency(totalHealthCost)} />
-            {feedShare > 0 && <Row label="Alimentação (estimado, por cabeça)" value={formatCurrency(feedShare)} />}
-            {generalShare > 0 && <Row label="Despesas da fazenda (estimado, por cabeça)" value={formatCurrency(generalShare)} />}
+            {feedShare > 0 && <Row label="Alimentação (estimado, pelo tamanho do animal)" value={formatCurrency(feedShare)} />}
+            {generalShare > 0 && <Row label="Despesas da fazenda (estimado, pelo tamanho do animal)" value={formatCurrency(generalShare)} />}
             <Row label="Total investido" value={formatCurrency(totalCost)} bold />
             {sale && (
               <>

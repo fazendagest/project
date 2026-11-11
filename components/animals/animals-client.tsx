@@ -146,7 +146,7 @@ export function AnimalsClient({ initialAnimals, invested, feedIncluded, missingC
 
       {filtered.length > 0 && (
         <p className="text-xs text-muted-foreground mb-4">
-          Investido: compra + saúde{feedIncluded ? ' + sal, milho e ração divididos por cabeça (estimado)' : ''}. Mercado: o valor digitado no cadastro; sem valor digitado, o preço do IFAG (média de Goiás).
+          Investido: compra + saúde{feedIncluded ? ' + sal, milho, ração e despesas da fazenda divididos pelo tamanho de cada animal (estimado)' : ''}. Mercado: o valor digitado no cadastro; sem valor digitado, o preço do IFAG (média de Goiás).
           {missingCosts.length > 0 && <span className="font-medium text-amber-800"> O ganho pode ser menor: falta lançar {missingCosts.join(' e ')}.</span>}
         </p>
       )}
@@ -207,7 +207,7 @@ export function AnimalsClient({ initialAnimals, invested, feedIncluded, missingC
                   <TableCell className="text-right tabular-nums">
                     {a.mv.value != null ? formatMoney(a.mv.value) : ''}
                     {a.mv.source === 'ifag' && <span className="text-xs text-muted-foreground"> IFAG</span>}
-                    {a.mv.farFromMarket && <AlertTriangle className="inline h-3.5 w-3.5 ml-1 text-amber-600" aria-label="Longe do preço da região" />}
+                    {a.mv.farFromMarket && <AlertTriangle className="inline h-3.5 w-3.5 ml-1 text-amber-600" aria-label="Longe da média de Goiás (IFAG)" />}
                   </TableCell>
                   <TableCell><Badge className={statusColor(a.status)}>{statusLabel(a.status)}</Badge></TableCell>
                 </TableRow>
@@ -259,7 +259,7 @@ function AnimalCard({ a }: { a: Row }) {
             </dl>
           ) : null}
           {a.mv.farFromMarket && a.mv.ifag != null && (
-            <p className="text-xs text-amber-800 mt-1">Longe do preço da região: IFAG {formatMoney(a.mv.ifag)}</p>
+            <p className="text-xs text-amber-800 mt-1">Longe da média de Goiás (IFAG): {formatMoney(a.mv.ifag)}</p>
           )}
           {(a.to_discard || a.status !== 'ativo') && (
             <div className="flex gap-1 mt-1">

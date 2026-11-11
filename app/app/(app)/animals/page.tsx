@@ -22,7 +22,7 @@ export default async function AnimalsPage() {
     supabase.from('operational_expenses').select('*').eq('farm_id', farmId),
     getIfagPrices(),
   ])
-  const invested = computeInvested(costs ?? [], feeds ?? [], expenses ?? [])
+  const invested = computeInvested(costs ?? [], feeds ?? [], expenses ?? [], animals ?? [])
   const feedIncluded = (feeds ?? []).some(f => Number(f.total_cost ?? 0) > 0)
   // Mesma regra do Dashboard: sem alimentação ou sem despesa em 60 dias, o ganho no papel sai maior que o real.
   const today = todaySP()

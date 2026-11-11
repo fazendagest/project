@@ -9,7 +9,7 @@ import { PendingTasks, type PendingTask } from '@/components/dashboard/pending-t
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDate } from '@/lib/helpers'
-import { computeInvested } from '@/lib/investment'
+import { computeInvested, monthlyReturn, BANK_MONTHLY } from '@/lib/investment'
 import { computeHerdValue } from '@/lib/herd-value'
 import { getIfagPrices } from '@/lib/ifag'
 import { IFAG_SOURCE_URL } from '@/lib/market-reference'
@@ -23,6 +23,12 @@ function money(v: number) {
 
 function signedMoney(v: number) {
   return `${v > 0 ? '+' : ''}${money(v)}`
+}
+
+/** Porcentagem com uma casa, com sinal quando pedido: +1,8%. */
+function pct(v: number, signed = true) {
+  const t = (v * 100).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+  return `${signed && v > 0 ? '+' : ''}${t}%`
 }
 
 function tone(v: number): 'pos' | 'neg' | undefined {
@@ -93,6 +99,7 @@ export default async function DashboardPage() {
   const soldTotal = sales.reduce((s, r) => s + Number(r.sale_price || 0), 0)
   const soldInvested = sales.reduce((s, r) => s + (invested[r.animal_id]?.total ?? 0), 0)
   const salesWithoutCost = sales.filter(r => (invested[r.animal_id]?.total ?? 0) === 0).length
+  const ret = monthlyReturn(sales, costs ?? [], invested)
 
   // Este mês: o que entrou e o que saiu.
   const monthIn = sales.filter(r => r.sale_date >= monthStart && r.sale_date <= monthEnd).reduce((s, r) => s + Number(r.sale_price || 0), 0)
@@ -215,6 +222,27 @@ export default async function DashboardPage() {
                   <Row label="Investido nesses animais" value={money(soldInvested)} />
                   <Row label="Lucro" value={signedMoney(soldTotal - soldInvested)} strong tone={tone(soldTotal - soldInvested)} />
                 </div>
+                {ret && (
+                  <div className="rounded-lg border p-3 mt-3">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <p className="text-sm">Rendeu ao mês</p>
+                      <p className={`text-xl font-bold tabular-nums ${ret.rate >= BANK_MONTHLY ? 'text-green-700' : ret.rate < 0 ? 'text-red-700' : ''}`}>{pct(ret.rate)}</p>
+                    </div>
+                    <p className="text-sm mt-1">
+                      {ret.rate >= BANK_MONTHLY
+                        ? 'Rendeu mais do que deixar o dinheiro no banco'
+                        : ret.rate >= 0
+                          ? 'Rendeu menos do que deixar o dinheiro no banco'
+                          : 'Perdeu dinheiro: no banco teria rendido'}{' '}
+                      (cerca de {pct(BANK_MONTHLY, false)}{' '}ao mês).
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Lucro dividido pelo dinheiro parado nos animais, em média {Math.round(ret.avgMonths)}{' '}{Math.round(ret.avgMonths) === 1 ? 'mês' : 'meses'} na fazenda.
+                      {ret.skipped > 0 && ` ${ret.skipped} ${ret.skipped === 1 ? 'venda sem custo lançado ficou' : 'vendas sem custo lançado ficaram'} fora dessa conta.`}
+                      {!anyFeed && ' Estimado: falta lançar a alimentação.'}
+                    </p>
+                  </div>
+                )}
                 {salesWithoutCost > 0 && (
                   <p className="text-xs text-amber-800 bg-amber-50 border border-amber-300 rounded-lg p-2.5 mt-3">
                     {salesWithoutCost === sales.length ? 'Nenhuma' : `${salesWithoutCost} de ${sales.length}`} {salesWithoutCost === 1 && salesWithoutCost !== sales.length ? 'venda não tem' : 'dessas vendas têm'} custo lançado.

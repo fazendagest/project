@@ -13,10 +13,10 @@ export default async function MovementsPage() {
   const [{ data: expenses }, { data: purchases }, { data: sales }, { data: feedStock }, { data: healthRecords }, { data: animals }, { data: costs }, { data: allAnimals }, ifag] = await Promise.all([
     supabase.from('operational_expenses').select('*').eq('farm_id', farmId).order('date', { ascending: false }),
     supabase.from('animal_purchases').select('*, animal:animal_id(code, name)').eq('farm_id', farmId).order('purchase_date', { ascending: false }),
-    supabase.from('animal_sales').select('*, animal:animal_id(code, name, sex, birth_date)').eq('farm_id', farmId).order('sale_date', { ascending: false }),
+    supabase.from('animal_sales').select('*, animal:animal_id(code, name, species, sex, birth_date, breed, is_breeder, is_fat)').eq('farm_id', farmId).order('sale_date', { ascending: false }),
     supabase.from('feed_stock').select('*').eq('farm_id', farmId).order('purchase_date', { ascending: false }),
     supabase.from('health_records').select('*, animal:animal_id(code, name)').eq('farm_id', farmId).order('application_date', { ascending: false }),
-    supabase.from('animals').select('id, code, name, species, sex, birth_date, is_breeder').eq('farm_id', farmId).eq('status', 'ativo').order('code'),
+    supabase.from('animals').select('id, code, name, species, sex, birth_date, breed, is_breeder, is_fat').eq('farm_id', farmId).eq('status', 'ativo').order('code'),
     supabase.from('animal_costs').select('animal_id, entry_date, sale_date, purchase_cost, health_cost, species').eq('farm_id', farmId),
     supabase.from('animals').select('id, species, sex, birth_date, is_breeder, weight_arrobas, mother_id').eq('farm_id', farmId),
     getIfagPrices(),

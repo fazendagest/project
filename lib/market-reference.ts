@@ -174,7 +174,14 @@ export function marketReference(
   }
 }
 
-/** Nome curto da referência, para lista e ficha. */
-export function referenceName(ref: Pick<MarketReference, 'source' | 'estimate'>) {
+/** Aviso cinza quando o digitado está mais de 25% abaixo da referência (Tião, auditoria do 0a6f2d3). */
+export const TYPED_BELOW_LIMIT = 0.25
+
+/**
+ * Nome da referência, para lista e ficha. A vaca de leite usa a vaca boiadeira mestiça de corte, que costuma
+ * valer mais que a Gir ou Girolando magra: o rótulo diz que é aproximada e de onde veio (Tião).
+ */
+export function referenceName(ref: Pick<MarketReference, 'source' | 'estimate' | 'quotedAt'>) {
+  if (ref.source === 'scot') return `Referência aproximada: vaca boiadeira mestiça GO (Scot, ${ref.quotedAt.slice(8, 10)}/${ref.quotedAt.slice(5, 7)})`
   return ref.estimate ? 'Goiás (estimativa)' : 'Goiás (IFAG)'
 }

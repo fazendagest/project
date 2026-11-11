@@ -144,12 +144,18 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
               <Row label="Valor de mercado (digitado)" value={formatCurrency(mv.value)} />
             )}
             {mv.ifag != null && mv.refName && (
-              <Row label={mv.source === 'digitado' ? `Referência de ${mv.refName}` : `Valor de mercado, ${mv.refName}`} value={formatCurrency(mv.ifag)} />
+              <Row label={mv.refName.startsWith('Referência') ? mv.refName : mv.source === 'digitado' ? `Referência de ${mv.refName}` : `Valor de mercado, ${mv.refName}`} value={formatCurrency(mv.ifag)} />
             )}
             {mv.farFromMarket && mv.ifag != null && mv.value != null && (
               <p className="text-xs font-medium text-amber-800 pt-1">
                 O valor digitado está {Math.round((mv.value / mv.ifag - 1) * 100)}% acima da referência de Goiás. Confira se esse é mesmo o preço de venda na região.
               </p>
+            )}
+            {mv.belowPct != null && (
+              <p className="text-xs text-muted-foreground pt-1">Digitado {mv.belowPct}% abaixo de Goiás. Se é o preço que pagou, troque pelo valor de hoje.</p>
+            )}
+            {mv.fat && (
+              <Row label={`Se vender gorda ao frigorífico (${mv.fat.liveArrobas} @ vivas, cerca de ${String(mv.fat.carcassArrobas).replace('.', ',')} @ de carcaça, vaca gorda IFAG)`} value={formatCurrency(mv.fat.value)} />
             )}
           </CardContent>
         </Card>

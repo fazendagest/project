@@ -2,7 +2,7 @@
 // por animal ativo vale o valor digitado; sem valor digitado, o preço do IFAG.
 // Cavalos são de trabalho e ficam fora da soma. Nunca chamar isto de lucro.
 import { animalCategory, ANIMAL_GROUPS } from '@/lib/helpers'
-import { marketReference, referenceName, TYPED_ABOVE_LIMIT, type IfagPrices } from '@/lib/market-reference'
+import { marketReference, referenceName, TYPED_ABOVE_LIMIT, TYPED_BELOW_LIMIT, type IfagPrices } from '@/lib/market-reference'
 import type { Invested } from '@/lib/investment'
 
 export type HerdAnimal = {
@@ -30,6 +30,13 @@ export type AnimalValue = {
   refName: string | null
   /** Digitado mais de 20% acima da referência (Tião, P6 item 5). */
   farFromMarket: boolean
+  /** Digitado mais de 25% abaixo da referência: % abaixo, aviso cinza, fora da contagem "acima". */
+  belowPct: number | null
+  /**
+   * Vaca adulta com peso e sem "Gordo": quanto daria gorda ao frigorífico (peso vivo × rendimento × arroba
+   * da vaca gorda do IFAG). Conta certa para a vaca de descarte (Tião). Só mostra; não entra na soma.
+   */
+  fat: { value: number; liveArrobas: number; carcassArrobas: number; perArroba: number } | null
   /** Data da cotação do IFAG usada. */
   ifagDate: string | null
 }
@@ -64,13 +71,24 @@ export function animalValue(a: HerdAnimal, ifag: IfagPrices | null): AnimalValue
   const ifagValue = ref?.perHead ?? null
   const ifagDate = ref?.quotedAt ?? null
   const refName = ref && ifagValue != null ? referenceName(ref) : null
+  const fat = fatCow(a, ifag)
   const typed = a.market_value != null && Number(a.market_value) > 0 ? Number(a.market_value) : null
   if (typed != null) {
     const far = ifagValue != null && ifagValue > 0 && typed > ifagValue * (1 + TYPED_ABOVE_LIMIT)
-    return { value: typed, source: 'digitado', ifag: ifagValue, refName, farFromMarket: far, ifagDate }
+    const below = ifagValue != null && ifagValue > 0 && typed < ifagValue * (1 - TYPED_BELOW_LIMIT) ? Math.round((1 - typed / ifagValue) * 100) : null
+    return { value: typed, source: 'digitado', ifag: ifagValue, refName, farFromMarket: far, belowPct: below, ifagDate, fat }
   }
-  if (ifagValue != null) return { value: ifagValue, source: ref?.estimate ? 'estimativa' : 'ifag', ifag: ifagValue, refName, farFromMarket: false, ifagDate }
-  return { value: null, source: 'sem_preco', ifag: null, refName: null, farFromMarket: false, ifagDate: null }
+  if (ifagValue != null) return { value: ifagValue, source: ref?.estimate ? 'estimativa' : 'ifag', ifag: ifagValue, refName, farFromMarket: false, belowPct: null, ifagDate, fat }
+  return { value: null, source: 'sem_preco', ifag: null, refName: null, farFromMarket: false, belowPct: null, ifagDate: null, fat }
+}
+
+/** Vaca (fêmea bovina com mais de 36 meses ou sem data) com peso lançado e sem "Gordo". */
+function fatCow(a: HerdAnimal, ifag: IfagPrices | null): AnimalValue['fat'] {
+  if (a.species !== 'bovino' || a.sex !== 'F' || a.is_fat || !a.weight_arrobas) return null
+  if (a.birth_date && (Date.now() - new Date(a.birth_date + 'T12:00:00').getTime()) / 86_400_000 / 30.44 <= 36) return null
+  const r = marketReference({ ...a, is_fat: true }, ifag)
+  if (!r?.fat || r.perHead == null || r.fat.carcassArrobas == null) return null
+  return { value: r.perHead, liveArrobas: a.weight_arrobas, carcassArrobas: r.fat.carcassArrobas, perArroba: r.fat.perArroba }
 }
 
 export function computeHerdValue(

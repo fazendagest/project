@@ -218,6 +218,8 @@ export function AnimalsClient({ initialAnimals, invested, feedIncluded, missingC
                     {a.mv.source === 'digitado' && a.mv.ifag != null && (
                       <span className={cn('block text-xs', a.mv.farFromMarket ? 'text-amber-800' : 'text-muted-foreground')}>{a.mv.refName}: {formatMoney(a.mv.ifag)}</span>
                     )}
+                    {a.mv.belowPct != null && <span className="block text-xs text-muted-foreground">{a.mv.belowPct}% abaixo de Goiás</span>}
+                    {a.mv.fat && <span className="block text-xs text-muted-foreground">Gorda: {formatMoney(a.mv.fat.value)}</span>}
                   </TableCell>
                   <TableCell><Badge className={statusColor(a.status)}>{statusLabel(a.status)}</Badge></TableCell>
                 </TableRow>
@@ -277,6 +279,12 @@ function AnimalCard({ a }: { a: Row }) {
           {a.mv.farFromMarket && a.mv.ifag != null && (
             <p className="text-xs font-medium text-amber-800 mt-1">Digitado {Math.round((a.mv.value! / a.mv.ifag - 1) * 100)}% acima da referência de Goiás</p>
           )}
+          {a.mv.belowPct != null && (
+            <p className="text-xs text-muted-foreground mt-1">Digitado {a.mv.belowPct}% abaixo de Goiás. Se é o preço que pagou, troque pelo valor de hoje.</p>
+          )}
+          {a.mv.fat && (
+            <p className="text-xs text-muted-foreground mt-1">{fatText(a.mv.fat)}</p>
+          )}
           {(a.to_discard || a.status !== 'ativo') && (
             <div className="flex gap-1 mt-1">
               {a.status !== 'ativo' && <Badge className={statusColor(a.status)}>{statusLabel(a.status)}</Badge>}
@@ -288,6 +296,11 @@ function AnimalCard({ a }: { a: Row }) {
       </Link>
     </li>
   )
+}
+
+/** Conta da vaca de descarte gorda ao frigorífico (Tião, item 5). */
+function fatText(f: NonNullable<AnimalValue['fat']>) {
+  return `Se vender gorda ao frigorífico: ${formatMoney(f.value)} (${f.liveArrobas}\u00a0@ vivas, cerca de ${String(f.carcassArrobas).replace('.', ',')}\u00a0@ de carcaça a R$\u00a0${f.perArroba.toFixed(2).replace('.', ',')}, vaca gorda IFAG)`
 }
 
 /** Valor sem centavos, que é como o fazendeiro fala de preço de animal. */

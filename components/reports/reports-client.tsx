@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { SearchInput } from '@/components/ui/search-input'
 import {
   formatDate, formatCurrency, calcAge, speciesLabel,
-  statusLabel, statusColor, sexLabel, healthTypeLabel
+  statusLabel, statusColor, sexLabel, healthTypeLabel, animalCategory
 } from '@/lib/helpers'
 import { Download } from 'lucide-react'
 import { CardList, RecordCard } from '@/components/ui/record-card'
@@ -34,6 +34,8 @@ export function ReportsClient({
   const [healthSearch, setHealthSearch] = useState('')
   const [rentSearch, setRentSearch] = useState('')
 
+  // Categoria (vaca, garrote, potra...) já diz a espécie e o sexo (Henrique, 11/11/2026).
+  const mothers = new Set(animals.map(a => a.mother_id).filter(Boolean) as string[])
   const filteredInv = animals.filter(a => {
     const q = invSearch.toLowerCase()
     return (
@@ -123,7 +125,7 @@ export function ReportsClient({
               href={`/app/animals/${a.id}`}
               title={a.name ?? a.code}
               titleNote={a.name ? a.code : undefined}
-              subtitle={`${speciesLabel(a.species)}, ${sexLabel(a.sex)}${a.breed ? `, ${a.breed}` : ''}`}
+              subtitle={`${animalCategory(a, mothers.has(a.id))}${a.breed ? `, ${a.breed}` : ''}`}
               fields={[
                 { label: 'Idade', value: a.birth_date ? calcAge(a.birth_date) : 'sem data de nascimento' },
                 { label: 'Entrada', value: a.entry_date ? formatDate(a.entry_date) : 'sem data' },

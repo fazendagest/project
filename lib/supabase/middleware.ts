@@ -33,13 +33,25 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  const isPublicPath =
+  // Anúncios e eventos (marketplace) ficam escondidos por enquanto: é outro negócio, ainda sem uso
+  // (Henrique, 11/11/2026). O código continua no projeto; a página inicial cai no login do sistema.
+  const isHiddenMarketplace =
     pathname === '/' ||
+    pathname.startsWith('/anunciar') ||
+    pathname.startsWith('/anuncio') ||
+    pathname.startsWith('/eventos') ||
+    pathname.startsWith('/admin/marketplace')
+  if (isHiddenMarketplace) {
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.search = ''
+    const isAdmin = !!user && user.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL
+    redirectUrl.pathname = !user ? '/login' : isAdmin ? '/admin/dashboard' : '/app/dashboard'
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  const isPublicPath =
     pathname.startsWith('/login') ||
     pathname.startsWith('/register') ||
-    pathname.startsWith('/anunciar') ||
-    pathname.startsWith('/anuncio/') ||
-    pathname.startsWith('/eventos/') ||
     pathname.startsWith('/api/')
 
   if (!user && !isPublicPath) {

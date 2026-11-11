@@ -136,7 +136,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
 
         <TabsContent value="health">
           <Card>
-            <CardContent className="pt-4">
+            <CardContent>
               {!health?.length ? (
                 <p className="text-center text-muted-foreground py-6">Nenhum registro de saúde</p>
               ) : (
@@ -169,7 +169,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
         {animal.sex === 'F' && (
           <TabsContent value="repro">
             <Card>
-              <CardContent className="pt-4">
+              <CardContent>
                 {!repro?.length ? (
                   <p className="text-center text-muted-foreground py-6">Nenhum registro reprodutivo</p>
                 ) : (
@@ -202,7 +202,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
         {animal.notes && (
           <TabsContent value="notes">
             <Card>
-              <CardContent className="pt-4">
+              <CardContent>
                 <p className="text-sm whitespace-pre-wrap">{animal.notes}</p>
               </CardContent>
             </Card>

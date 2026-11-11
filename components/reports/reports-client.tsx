@@ -108,7 +108,7 @@ export function ReportsClient({
         <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4">
           {['bovino', 'equino', 'suino'].map(s => (
             <Card key={s}>
-              <CardContent className="pt-4">
+              <CardContent>
                 <p className="text-sm text-muted-foreground capitalize">{speciesLabel(s)}</p>
                 <p className="text-2xl font-bold">{filteredInv.filter(a => a.species === s).length}</p>
               </CardContent>

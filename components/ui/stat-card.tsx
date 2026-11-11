@@ -27,7 +27,7 @@ export function StatCard({
 }: StatCardProps) {
   return (
     <Card className="overflow-hidden">
-      <CardContent className="pt-6">
+      <CardContent>
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-muted-foreground truncate">{title}</p>

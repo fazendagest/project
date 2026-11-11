@@ -240,7 +240,7 @@ export function HealthForm({ farmId, animals, record, mode }: HealthFormProps) {
                 value={form.notes}
                 onChange={e => set('notes', e.target.value)}
                 rows={2}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-base md:text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 resize-none"
                 placeholder="Notas adicionais..."
               />
             </div>

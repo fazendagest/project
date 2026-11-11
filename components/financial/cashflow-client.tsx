@@ -75,19 +75,19 @@ export function CashflowClient({ farmId }: { farmId: string }) {
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="overflow-hidden">
-          <CardContent className="pt-4">
+          <CardContent>
             <p className="text-sm text-muted-foreground">Total Entradas</p>
             <p className="text-sm lg:text-2xl font-bold text-green-700 break-words leading-tight">{formatCurrencyCard(totalInflow)}</p>
           </CardContent>
         </Card>
         <Card className="overflow-hidden">
-          <CardContent className="pt-4">
+          <CardContent>
             <p className="text-sm text-muted-foreground">Total Saídas</p>
             <p className="text-sm lg:text-2xl font-bold text-red-700 break-words leading-tight">{formatCurrencyCard(totalOutflow)}</p>
           </CardContent>
         </Card>
         <Card className="overflow-hidden">
-          <CardContent className="pt-4">
+          <CardContent>
             <p className="text-sm text-muted-foreground">Saldo Acumulado</p>
             <p className={`text-sm lg:text-2xl font-bold break-words leading-tight ${totalBalance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
               {formatCurrencyCard(totalBalance)}

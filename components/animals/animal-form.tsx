@@ -107,7 +107,7 @@ function BreedCombobox({ value, onChange, options }: {
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex h-11 md:h-9 w-full items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-3 py-1 text-base md:text-sm text-left outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
       >
         <span className={value ? 'text-foreground' : 'text-muted-foreground'}>
           {value || 'Buscar raça...'}
@@ -122,7 +122,7 @@ function BreedCombobox({ value, onChange, options }: {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Buscar raça..."
-              className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              className="w-full bg-transparent text-base md:text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>
           <div className="max-h-52 overflow-y-auto p-1">
@@ -406,8 +406,8 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag }: Ani
                     const c = SPECIES_CHOICES.find(x => x.key === form.species)!
                     return (
                       <>
-                        <ChoiceButton selected={form.sex === 'F'} onClick={() => set('sex', 'F')}>{c.female} (fêmea)</ChoiceButton>
-                        <ChoiceButton selected={form.sex === 'M'} onClick={() => set('sex', 'M')}>{c.male} (macho)</ChoiceButton>
+                        <ChoiceButton selected={form.sex === 'F'} onClick={() => set('sex', 'F')}>{c.female}</ChoiceButton>
+                        <ChoiceButton selected={form.sex === 'M'} onClick={() => set('sex', 'M')}>{c.male}</ChoiceButton>
                       </>
                     )
                   })()}
@@ -554,7 +554,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag }: Ani
                   value={form.notes}
                   onChange={e => set('notes', e.target.value)}
                   rows={3}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+                  className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-base md:text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 resize-none"
                   placeholder="Notas adicionais..."
                 />
               </div>

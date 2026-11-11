@@ -207,7 +207,7 @@ export function MilkClient({
         <TabsContent value="producao" className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Card className="overflow-hidden">
-              <CardContent className="pt-4">
+              <CardContent>
                 <div className="flex items-center gap-2 text-muted-foreground mb-1">
                   <Droplets className="h-4 w-4" />
                   <p className="text-sm">Produção hoje</p>
@@ -216,7 +216,7 @@ export function MilkClient({
               </CardContent>
             </Card>
             <Card className="overflow-hidden">
-              <CardContent className="pt-4">
+              <CardContent>
                 <div className="flex items-center gap-2 text-muted-foreground mb-1">
                   <TrendingUp className="h-4 w-4" />
                   <p className="text-sm">Média diária do mês</p>
@@ -225,7 +225,7 @@ export function MilkClient({
               </CardContent>
             </Card>
             <Card className="overflow-hidden">
-              <CardContent className="pt-4">
+              <CardContent>
                 <div className="flex items-center gap-2 text-muted-foreground mb-1">
                   <Droplets className="h-4 w-4" />
                   <p className="text-sm">Total do mês</p>
@@ -293,7 +293,7 @@ export function MilkClient({
         <TabsContent value="pagamentos" className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Card className="overflow-hidden">
-              <CardContent className="pt-4">
+              <CardContent>
                 <div className="flex items-center gap-2 text-muted-foreground mb-1">
                   <DollarSign className="h-4 w-4" />
                   <p className="text-sm">Receita do mês</p>
@@ -302,7 +302,7 @@ export function MilkClient({
               </CardContent>
             </Card>
             <Card className="overflow-hidden">
-              <CardContent className="pt-4">
+              <CardContent>
                 <div className="flex items-center gap-2 text-muted-foreground mb-1">
                   <TrendingUp className="h-4 w-4" />
                   <p className="text-sm">Receita acumulada do ano</p>
@@ -311,7 +311,7 @@ export function MilkClient({
               </CardContent>
             </Card>
             <Card className="overflow-hidden">
-              <CardContent className="pt-4">
+              <CardContent>
                 <div className="flex items-center gap-2 text-muted-foreground mb-1">
                   <Droplets className="h-4 w-4" />
                   <p className="text-sm">Preço médio / litro</p>

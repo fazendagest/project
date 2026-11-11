@@ -21,7 +21,7 @@
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
     --border: 100 10% 86%;
-    --input: 100 10% 86%;
+    --input: 100 6% 52%; /* borda de campo: 3:1 contra o fundo e o cartão (11/11/2026) */
     --ring: 155 45% 28%;
     --radius: 0.5rem;
     --sidebar: 155 40% 22%;

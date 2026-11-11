@@ -15,10 +15,9 @@ import { DataCard } from '@/components/ui/data-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { CardList, RecordCard } from '@/components/ui/record-card'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { FormActions } from '@/components/ui/form-actions'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import { Trash2 } from 'lucide-react'
+import { Loader2, Trash2 } from 'lucide-react'
 import { formatDate } from '@/lib/helpers'
 import { cn } from '@/lib/utils'
 
@@ -88,12 +87,23 @@ export function PregnancyChecks({
   const [saving, setSaving] = useState(false)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  /** Lançadas desde que abriu o formulário (toque em série no curral; Tião, revisão do sistema, item 3). */
+  const [batch, setBatch] = useState<string[]>([])
 
   const name = (a?: { code: string; name?: string | null }) => a?.name || a?.code || 'animal não informado'
   const selected = females.find(f => f.id === form.animal_id)
   const coverage = form.animal_id ? coverageFor(coverages[form.animal_id], form.exam_date) : undefined
   const suggestion = birthSuggestion(coverage, form.exam_date, form.months)
   const suggestedBirth = suggestion?.date ?? null
+
+  // Quem já tem toque nos últimos 12 meses antes da data do exame vai para o fim da lista.
+  const lastExam = new Map<string, string>()
+  for (const c of checks) {
+    if (c.exam_date <= form.exam_date && c.exam_date > addDays(form.exam_date, -365) && c.exam_date > (lastExam.get(c.animal_id) ?? '')) {
+      lastExam.set(c.animal_id, c.exam_date)
+    }
+  }
+  const orderedFemales = [...females].sort((a, b) => Number(lastExam.has(a.id)) - Number(lastExam.has(b.id)))
 
   // Prenhe: sugere o parto se o campo estiver vazio ou ainda com a sugestão anterior (não apaga o que foi digitado).
   function pick(patch: Partial<typeof form>) {
@@ -111,9 +121,11 @@ export function PregnancyChecks({
 
   function reset() {
     setForm({ animal_id: '', exam_date: today(), result: '', months: '', expected_birth_date: '', notes: '' })
+    setBatch([])
   }
 
-  async function save(e: React.FormEvent) {
+  /** next: guarda e deixa o formulário aberto com a mesma data e observação, para a próxima vaca. */
+  async function save(e: React.FormEvent, mode: 'next' | 'close' = 'close') {
     e.preventDefault()
     if (!form.animal_id) return toast.error('Escolha a vaca ou a novilha')
     if (!form.result) return toast.error('Diga se está prenhe ou vazia')
@@ -130,9 +142,14 @@ export function PregnancyChecks({
     if (error) return toast.error('Erro: ' + error.message)
     setChecks(prev => [data, ...prev].sort((a, b) => b.exam_date.localeCompare(a.exam_date)))
     toast.success(`Diagnóstico de ${name(selected)} registrado`)
+    router.refresh()
+    if (mode === 'next') {
+      setBatch(prev => [...prev, name(selected)])
+      setForm(p => ({ ...p, animal_id: '', result: '', months: '', expected_birth_date: '' }))
+      return
+    }
     reset()
     onOpenChange(false)
-    router.refresh()
   }
 
   async function remove(id: string) {
@@ -206,13 +223,23 @@ export function PregnancyChecks({
             <DialogTitle>Novo diagnóstico</DialogTitle>
             <DialogDescription>Resultado do toque ou do ultrassom.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={save} className="space-y-4 py-2">
+          <form onSubmit={e => save(e, 'next')} className="space-y-4 py-2">
+            {batch.length > 0 && (
+              <p className="rounded-lg border bg-muted/40 px-3 py-2 text-sm">
+                Lançadas agora ({batch.length}): {batch.join(', ')}.
+              </p>
+            )}
             <div className="space-y-2">
               <Label>Vaca ou novilha *</Label>
               <Select value={form.animal_id} onValueChange={v => pick({ animal_id: String(v ?? ''), expected_birth_date: '' })}>
                 <SelectTrigger><SelectValue placeholder="Escolha" /></SelectTrigger>
                 <SelectContent>
-                  {females.map(f => <SelectItem key={f.id} value={f.id}>{f.name || f.code}{f.name ? ` (${f.code})` : ''}</SelectItem>)}
+                  {orderedFemales.map(f => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.name || f.code}{f.name ? ` (${f.code})` : ''}
+                      {lastExam.has(f.id) ? `, já tem toque em ${formatDate(lastExam.get(f.id)!)}` : ''}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {females.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma vaca ou novilha ativa com 1 ano ou mais.</p>}
@@ -270,7 +297,17 @@ export function PregnancyChecks({
               <Label htmlFor="check_notes">Observação</Label>
               <Input id="check_notes" value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} />
             </div>
-            <FormActions onCancel={() => { reset(); onOpenChange(false) }} isLoading={saving} />
+            {/* Dois botões do mesmo tamanho (regra de modal); fechar sem salvar fica no X do diálogo. */}
+            <div className="grid grid-cols-2 gap-2 pt-2">
+              <Button type="button" variant="outline" className="h-11 whitespace-normal leading-tight" disabled={saving}
+                onClick={e => save(e as unknown as React.FormEvent, 'close')}>
+                Salvar e fechar
+              </Button>
+              <Button type="submit" className="h-11 whitespace-normal leading-tight" disabled={saving}>
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Salvar e lançar a próxima
+              </Button>
+            </div>
           </form>
         </DialogContent>
       </Dialog>

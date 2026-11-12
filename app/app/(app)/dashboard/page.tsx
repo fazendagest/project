@@ -8,7 +8,7 @@ import { LowStock } from '@/components/dashboard/low-stock'
 import type { PendingTask } from '@/components/dashboard/pending-tasks'
 import { BruceloseCard } from '@/components/health/brucelose-card'
 import { DineuvanCard } from '@/components/dashboard/dineuvan-card'
-import { dineuvanTodo } from '@/lib/dineuvan-todo'
+import { dineuvanTodo, lateBirthItems } from '@/lib/dineuvan-todo'
 import { bruceloseStatus } from '@/lib/brucelose'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -104,7 +104,7 @@ export default async function DashboardPage() {
     supabase.from('health_records').select('cost').eq('farm_id', farmId).gte('application_date', monthStart).lte('application_date', monthEnd),
     supabase.from('milk_production').select('liters').eq('farm_id', farmId).eq('date', todayStr),
     supabase.from('pregnancy_checks').select('animal_id, exam_date, result').eq('farm_id', farmId).gte('exam_date', format(subDays(now, 365), 'yyyy-MM-dd')),
-    supabase.from('reproduction_records').select('female_id, actual_birth_date, status').eq('farm_id', farmId),
+    supabase.from('reproduction_records').select('female_id, actual_birth_date, expected_birth_date, status').eq('farm_id', farmId),
     supabase.from('health_records').select('cost').eq('farm_id', farmId).gte('application_date', yearStart),
     supabase.from('third_party_herds').select('*').eq('farm_id', farmId),
     supabase.from('animal_purchases').select('purchase_price').eq('farm_id', farmId).gte('purchase_date', yearStart),
@@ -115,7 +115,7 @@ export default async function DashboardPage() {
     supabase.from('animal_sales').select('animal_id, sale_date, weight_kg, arroba_basis, buyer_name, price_per_kg').eq('farm_id', farmId),
     getIfagPrices(),
     // Todos os diagnósticos prenhes, para a perda entre prenhez e parto (P8 item 3).
-    supabase.from('pregnancy_checks').select('animal_id, exam_date, result').eq('farm_id', farmId).eq('result', 'prenhe'),
+    supabase.from('pregnancy_checks').select('animal_id, exam_date, result, expected_birth_date').eq('farm_id', farmId).eq('result', 'prenhe'),
   ])
 
   const allAnimals = animals ?? []
@@ -322,6 +322,19 @@ export default async function DashboardPage() {
     boughtNoPrice,
     salesNoReason: sales.filter(r => !r.sale_reason).map(r => animalById.get(r.animal_id)).filter(Boolean) as { id: string; code: string; name?: string | null }[],
   })
+  // Parto atrasado (Tião, P11 B8): logo depois do aviso de repetir aplicação.
+  const lateBirths = lateBirthItems({
+    animals: allAnimals,
+    expected: [
+      ...(pregnantChecks ?? []).filter(c => c.expected_birth_date).map(c => ({ animal_id: c.animal_id, date: c.expected_birth_date as string, exam_date: c.exam_date })),
+      ...(reproRecords ?? []).filter(r => r.expected_birth_date && !r.actual_birth_date && (r.status === 'coberta' || r.status === 'prenha')).map(r => ({ animal_id: r.female_id, date: r.expected_birth_date as string })),
+    ],
+    calvings,
+    lastCheck,
+    today: todayStr,
+  })
+  const repeatCount = todo.filter(t => t.key.startsWith('repetir-')).length
+  todo.splice(repeatCount, 0, ...lateBirths)
 
   const milkLiters = milkToday?.reduce((s, r) => s + (r.liters || 0), 0) ?? 0
 

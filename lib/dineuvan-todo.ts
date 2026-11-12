@@ -131,6 +131,60 @@ export function repeatItems(
     })
 }
 
+/** Parto atrasado: avisa 20 dias depois da data prevista; depois de 180 dias sai (Ravi, a validar com o Tião). */
+const LATE_BIRTH_DAYS = 20
+const LATE_BIRTH_STALE_DAYS = 180
+/** Bezerro nascido até 60 dias antes da data prevista conta como esse parto (a previsão erra). */
+const BIRTH_EARLY_DAYS = 60
+
+const LATE_BIRTH_WHY = {
+  paragraphs: [
+    'A data prevista saiu do toque ou da cobertura lançada. Passados 20 dias sem bezerro, ou o parto aconteceu e não foi lançado, ou a vaca perdeu a cria.',
+    'Sem o parto lançado, o desmame, a prenhez e a perda entre prenhez e parto ficam errados no Dashboard. Se ela não pariu, só o veterinário confirma o que aconteceu.',
+  ],
+}
+
+/**
+ * P11 B8 (Tião): parto previsto que passou mais de 20 dias sem parto lançado.
+ * Previsão = a mais recente entre o toque prenhe e a cobertura (coberta ou prenha) da vaca.
+ * Sai quando há parto com data a partir de 60 dias antes da previsão, ou toque vazia depois da previsão usada.
+ */
+export function lateBirthItems(input: {
+  animals: TodoAnimal[]
+  /** Datas previstas: do toque prenhe (com a data do exame) e da cobertura em Reprodução. */
+  expected: { animal_id: string; date: string; exam_date?: string | null }[]
+  calvings: Map<string, string[]>
+  lastCheck: Map<string, { exam_date: string; result: string }>
+  today: string
+}): TodoItem[] {
+  const byId = new Map(input.animals.map(a => [a.id, a]))
+  const latest = new Map<string, { date: string; exam_date?: string | null }>()
+  for (const e of input.expected) {
+    const prev = latest.get(e.animal_id)
+    if (!prev || e.date > prev.date) latest.set(e.animal_id, e)
+  }
+  const items: TodoItem[] = []
+  for (const [id, e] of latest) {
+    const a = byId.get(id)
+    if (!a || a.status !== 'ativo') continue
+    const late = addDaysIso(e.date, LATE_BIRTH_DAYS)
+    if (late >= input.today || addDaysIso(e.date, LATE_BIRTH_STALE_DAYS) < input.today) continue
+    const from = addDaysIso(e.date, -BIRTH_EARLY_DAYS)
+    if ((input.calvings.get(id) ?? []).some(d => d >= from)) continue
+    const check = input.lastCheck.get(id)
+    if (check?.result === 'vazia' && check.exam_date > (e.exam_date ?? from)) continue
+    items.push({
+      key: `parto-atrasado-${id}-${e.date}`,
+      title: `${nameOf(a)} devia ter parido em ${ddmm(e.date)}`,
+      detail: 'Pariu? Lance o bezerro com a mãe. Se não pariu, chame o veterinário.',
+      href: '/app/reproduction',
+      action: 'Lançar o parto',
+      why: LATE_BIRTH_WHY,
+    })
+  }
+  return items.sort((x, y) => x.key.localeCompare(y.key))
+}
+
 export function dineuvanTodo(input: {
   today: string
   animals: TodoAnimal[]

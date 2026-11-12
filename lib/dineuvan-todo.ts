@@ -76,7 +76,7 @@ export function declarationPeriod(today: string): { period: string; deadline: st
   return null
 }
 
-/** Próxima aplicação: avisa 7 dias antes; vencida há mais de 60 dias sai da lista (Ravi, a validar com o Tião). */
+/** Próxima aplicação: avisa 7 dias antes; vencida há mais de 60 dias fica em cinza, com o jeito de tirar (Tião, auditoria do 2cd774d). */
 const REPEAT_AHEAD_DAYS = 7
 const REPEAT_STALE_DAYS = 60
 const normProduct = (s?: string | null) => (s ?? '').trim().toLowerCase()
@@ -93,7 +93,8 @@ const REPEAT_WHY = {
 /**
  * P11 B7 (Tião): vacina ou remédio com "Próxima aplicação" vencida ou nos próximos 7 dias.
  * Resolvido quando há aplicação do mesmo produto no mesmo animal depois da anterior.
- * Um item por produto e data, com os animais juntos.
+ * Um item por produto e data, com os animais juntos. Nunca some sozinho: depois de 60 dias vencido fica brando
+ * e o texto ensina a tirar (perguntar ao veterinário ou apagar a data da próxima).
  */
 export function repeatItems(
   health: { animal_id: string; product_name?: string | null; application_date?: string | null; next_due_date?: string | null }[],
@@ -112,7 +113,7 @@ export function repeatItems(
   const groups = new Map<string, { product: string; due: string; list: TodoAnimal[] }>()
   for (const h of health) {
     const due = h.next_due_date
-    if (!due || !h.application_date || !h.product_name?.trim() || due > limit || due < stale) continue
+    if (!due || !h.application_date || !h.product_name?.trim() || due > limit) continue
     const a = byId.get(h.animal_id)
     if (!a || a.status !== 'ativo') continue
     if ((lastByKey.get(`${h.animal_id}|${normProduct(h.product_name)}`) ?? '') > h.application_date) continue
@@ -125,10 +126,14 @@ export function repeatItems(
     .sort((x, y) => x.due.localeCompare(y.due))
     .map(g => {
       const late = g.due < today
+      const old = g.due < stale
       return {
         key: `repetir-${normProduct(g.product)}-${g.due}`,
         title: `Repetir ${g.product} em ${g.list.length === 1 ? nameOf(g.list[0]) : `${g.list.length} animais`}, ${late ? 'era dia' : 'dia'} ${ddmm(g.due)}`,
-        detail: `${late ? 'Passou do dia. ' : ''}${g.list.length > 1 ? `${names(g.list)}. ` : ''}Quando aplicar, lance em Saúde.`,
+        detail: old
+          ? `${g.list.length > 1 ? `${names(g.list)}. ` : ''}Passou há mais de 2 meses. Pergunte ao veterinário se ainda vale aplicar; se não vai repetir, apague a data da próxima no lançamento.`
+          : `${late ? 'Passou do dia. ' : ''}${g.list.length > 1 ? `${names(g.list)}. ` : ''}Quando aplicar, lance em Saúde.`,
+        soft: old || undefined,
         href: '/app/health',
         action: 'Lançar em Saúde',
         why: REPEAT_WHY,

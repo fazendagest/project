@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Plus } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -201,6 +201,7 @@ export function OffersClient({ initialOffers, animals, farmId, ifag, today }: {
         })}
       </CardList>
 
+      {/* Tabela cabe em 1366 px (achado b do teste do Tião): as colunas de palavras quebram linha. */}
       <DataCard className="hidden md:block">
         {visible.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted-foreground">Nenhuma oferta anotada. Quando um comprador fizer uma oferta, anote aqui para comparar.</p>
@@ -223,13 +224,13 @@ export function OffersClient({ initialOffers, animals, farmId, ifag, today }: {
                 const r = results.get(o.id)!
                 return (
                   <TableRow key={o.id}>
-                    <TableCell className="font-medium">
+                    <TableCell className="min-w-[140px] whitespace-normal font-medium">
                       {o.buyer_name}
                       {best.has(o.id) && <Badge className="ml-2">Melhor líquido</Badge>}
                       <span className="block text-xs font-normal text-muted-foreground">{formatDate(o.offer_date)}, {paymentText(o)}</span>
                     </TableCell>
-                    <TableCell className="max-w-[220px]">{animalsText(r)}</TableCell>
-                    <TableCell>
+                    <TableCell className="max-w-[160px] whitespace-normal">{animalsText(r)}</TableCell>
+                    <TableCell className="max-w-[150px] whitespace-normal">
                       {priceText(o)}
                       {r.noWeight > 0 && o.price_kind === 'arroba' && <span className="block text-xs text-muted-foreground">peso estimado: {o.est_arrobas}&nbsp;@ vivo</span>}
                     </TableCell>
@@ -242,10 +243,12 @@ export function OffersClient({ initialOffers, animals, farmId, ifag, today }: {
                       {r.net != null ? money(r.net) : 'sem conta'}
                       {r.netPerHead != null && <span className="block text-xs font-normal text-muted-foreground">{money(r.netPerHead)} por cabeça</span>}
                     </TableCell>
-                    <TableCell className="text-sm">{refText(r)}</TableCell>
-                    <TableCell className="whitespace-nowrap text-right">
-                      <Link href={closeLink(o)}><Button variant="outline" size="sm">Fechar com esta</Button></Link>
-                      <Button variant="ghost" size="sm" className="ml-1 text-destructive" onClick={() => setConfirmId(o.id)}>Excluir</Button>
+                    <TableCell className="max-w-[150px] whitespace-normal text-sm">{refText(r)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-1">
+                        <Link href={closeLink(o)}><Button variant="outline" size="sm">Fechar com esta</Button></Link>
+                        <Button variant="ghost" size="icon" className="text-destructive" aria-label={`Excluir a oferta de ${o.buyer_name}`} onClick={() => setConfirmId(o.id)}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )

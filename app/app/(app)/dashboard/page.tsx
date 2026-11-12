@@ -8,7 +8,7 @@ import { LowStock } from '@/components/dashboard/low-stock'
 import type { PendingTask } from '@/components/dashboard/pending-tasks'
 import { BruceloseCard } from '@/components/health/brucelose-card'
 import { DineuvanCard } from '@/components/dashboard/dineuvan-card'
-import { dineuvanTodo, lateBirthItems } from '@/lib/dineuvan-todo'
+import { dineuvanTodo, lateBirthItems, emptyBeforeDryItem } from '@/lib/dineuvan-todo'
 import { bruceloseStatus } from '@/lib/brucelose'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -335,6 +335,9 @@ export default async function DashboardPage() {
   })
   const repeatCount = todo.filter(t => t.key.startsWith('repetir-')).length
   todo.splice(repeatCount, 0, ...lateBirths)
+  // Vaca vazia depois de 31/05 (Tião, P11 B9): logo depois do parto atrasado.
+  const emptyDry = emptyBeforeDryItem(emptyToReview, calvings, todayStr)
+  if (emptyDry) todo.splice(repeatCount + lateBirths.length, 0, emptyDry)
 
   const milkLiters = milkToday?.reduce((s, r) => s + (r.liters || 0), 0) ?? 0
 

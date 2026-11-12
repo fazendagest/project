@@ -185,6 +185,42 @@ export function lateBirthItems(input: {
   return items.sort((x, y) => x.key.localeCompare(y.key))
 }
 
+const EMPTY_DRY_WHY = {
+  paragraphs: [
+    'A vaca vazia que entra na seca perde peso e come o pasto que as prenhes vão precisar. Vendida logo depois das águas, ainda gorda, ela vale mais.',
+    'Antes de vender, compare as ofertas com a referência de Goiás.',
+  ],
+}
+
+/**
+ * P11 B9 (Tião): vaca com o último toque "vazia" ainda no rebanho depois de 31/05.
+ * Vale o toque da temporada: de 01/06 do ano anterior a 31/05 deste ano; sai com venda, morte,
+ * parto depois do toque ou novo toque. Recebe a lista "Vazias: avaliar venda" do Dashboard
+ * (já sem a vaca que pariu há menos de 90 dias do toque).
+ */
+export function emptyBeforeDryItem(
+  empties: { a: { id: string; code: string; name?: string | null }; exam: string }[],
+  calvings: Map<string, string[]>,
+  today: string,
+): TodoItem | null {
+  const year = Number(today.slice(0, 4))
+  const cut = `${year}-05-31`
+  if (today <= cut) return null
+  const from = `${year - 1}-06-01`
+  const list = empties
+    .filter(e => e.exam >= from && e.exam <= cut && !(calvings.get(e.a.id) ?? []).some(d => d > e.exam))
+    .map(e => e.a)
+  if (list.length === 0) return null
+  return {
+    key: `vazia-seca-${year}`,
+    title: list.length === 1 ? `${nameOf(list[0])} vazia desde o toque: vender antes da seca` : `${list.length} vacas vazias desde o toque: vender antes da seca`,
+    detail: list.length === 1 ? 'Vaca vazia come o pasto sem dar bezerro.' : `${names(list)}. Vaca vazia come o pasto sem dar bezerro.`,
+    href: '/app/financial/offers',
+    action: 'Comparar ofertas',
+    why: EMPTY_DRY_WHY,
+  }
+}
+
 export function dineuvanTodo(input: {
   today: string
   animals: TodoAnimal[]

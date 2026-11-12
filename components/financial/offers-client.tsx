@@ -167,10 +167,10 @@ export function OffersClient({ initialOffers, animals, farmId, ifag, today }: {
   return (
     <div>
       <div className="mb-4 hidden items-center justify-between md:flex">
-        <p className="text-sm text-muted-foreground">Cada oferta some depois de {OFFER_DAYS} dias ou quando os animais dela forem vendidos.</p>
+        <p className="text-sm text-muted-foreground">Só você vê. Nada é enviado ao comprador. Cada oferta some depois de {OFFER_DAYS} dias ou quando os animais dela forem vendidos.</p>
         <Button onClick={openNew} className="gap-2"><Plus className="h-4 w-4" /> Anotar oferta</Button>
       </div>
-      <p className="mb-3 text-sm text-muted-foreground md:hidden">Cada oferta some depois de {OFFER_DAYS} dias ou quando os animais dela forem vendidos.</p>
+      <p className="mb-3 text-sm text-muted-foreground md:hidden">Só você vê. Nada é enviado ao comprador. Cada oferta some depois de {OFFER_DAYS} dias ou quando os animais dela forem vendidos.</p>
 
       <CardList empty="Nenhuma oferta anotada. Quando um comprador fizer uma oferta, anote aqui para comparar.">
         {visible.map(o => {
@@ -306,7 +306,7 @@ export function OffersClient({ initialOffers, animals, farmId, ifag, today }: {
             </div>
             {missingWeight > 0 && (
               <div className="space-y-2">
-                <Label htmlFor="est">Peso estimado de cada animal sem peso (@ vivo) *</Label>
+                <Label htmlFor="est">Peso médio estimado por cabeça (@ vivo) *</Label>
                 <Input id="est" inputMode="decimal" value={form.est_arrobas} onChange={e => set('est_arrobas', e.target.value)} />
                 <p className="text-xs text-muted-foreground">{missingWeight === 1 ? '1 animal não tem peso' : `${missingWeight} animais não têm peso`} no cadastro. Se não pesou, estime.</p>
               </div>

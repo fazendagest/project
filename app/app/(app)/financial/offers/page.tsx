@@ -24,7 +24,7 @@ export default async function OffersPage() {
     <div>
       <PageHeader
         title="Ofertas recebidas"
-        description="Compare o que cada comprador ofereceu antes de fechar. Fica só aqui: nada é enviado a ninguém."
+        description="Compare o que cada comprador ofereceu antes de fechar."
         back={{ href: '/app/financial/movements?aba=vendas', label: 'Vendas' }}
       />
       <OffersClient initialOffers={(offers ?? []) as SaleOffer[]} animals={animals ?? []} farmId={farmId} ifag={ifag} today={today} />

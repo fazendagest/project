@@ -92,7 +92,7 @@ export default async function DashboardPage() {
     { data: declRow },
     { data: allSales },
     ifag,
-    { data: pregnantChecks },
+    { data: allChecks },
   ] = await Promise.all([
     supabase.from('animals').select('id, code, name, species, sex, birth_date, breed, is_breeder, is_fat, weight_arrobas, market_value, mother_id, status, entry_type, entry_date, death_date, death_cause, weaned_at, weaning_weight_kg').eq('farm_id', farmId),
     supabase.from('farms').select('milk_active, area_hectares, pasture_hectares').eq('id', farmId).single(),
@@ -114,11 +114,13 @@ export default async function DashboardPage() {
     // Todas as vendas: data de saída da vaca e peso do bezerro vendido na desmama (P4).
     supabase.from('animal_sales').select('animal_id, sale_date, weight_kg, arroba_basis, buyer_name, price_per_kg').eq('farm_id', farmId),
     getIfagPrices(),
-    // Todos os diagnósticos prenhes, para a perda entre prenhez e parto (P8 item 3).
-    supabase.from('pregnancy_checks').select('animal_id, exam_date, result, expected_birth_date').eq('farm_id', farmId).eq('result', 'prenhe'),
+    // Todos os diagnósticos, de qualquer data (P8 item 3 e P11 B9).
+    supabase.from('pregnancy_checks').select('animal_id, exam_date, result, expected_birth_date').eq('farm_id', farmId),
   ])
 
   const allAnimals = animals ?? []
+  // Todos os toques (qualquer data): os prenhes servem à perda e ao parto previsto; o último de cada vaca, ao B9.
+  const pregnantChecks = (allChecks ?? []).filter(c => c.result === 'prenhe')
   const active = allAnimals.filter(a => a.status === 'ativo')
   const invested = computeInvested(costs ?? [], feeds ?? [], allExpenses ?? [], allAnimals)
   const herd = computeHerdValue(active, invested, ifag)
@@ -341,7 +343,7 @@ export default async function DashboardPage() {
   const repeatCount = todo.filter(t => t.key.startsWith('repetir-')).length
   todo.splice(repeatCount, 0, ...lateBirths)
   // Vaca vazia depois de 31/05 (Tião, P11 B9): logo depois do parto atrasado.
-  const emptyDry = emptyBeforeDryItem(emptyToReview, calvings, todayStr)
+  const emptyDry = emptyBeforeDryItem({ animals: allAnimals, checks: allChecks ?? [], calvings, today: todayStr })
   if (emptyDry) todo.splice(repeatCount + lateBirths.length, 0, emptyDry)
   // Cobertura fora da estação (Tião, P11 B10): aviso brando, no fim da lista.
   const offSeason = offSeasonItem(reproRecords ?? [], allAnimals, todayStr)

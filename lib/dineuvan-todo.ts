@@ -208,27 +208,45 @@ const EMPTY_DRY_WHY = {
   ],
 }
 
+/** Prazo da vaca vazia: o 31/05 seguinte ao toque (toque de jun a dez: 31/05 do ano seguinte). */
+export function dryDeadline(exam: string): string {
+  const y = Number(exam.slice(0, 4))
+  return Number(exam.slice(5, 7)) >= 6 ? `${y + 1}-05-31` : `${y}-05-31`
+}
+
+/** Vazia até 90 dias depois do parto é normal (Tião): não entra no aviso. Mesma regra da lista "Vazias: avaliar venda". */
+const RECENT_CALVING_DAYS = 90
+
 /**
- * P11 B9 (Tião): vaca com o último toque "vazia" ainda no rebanho depois de 31/05.
- * Vale o toque da temporada: de 01/06 do ano anterior a 31/05 deste ano; sai com venda, morte,
- * parto depois do toque ou novo toque. Recebe a lista "Vazias: avaliar venda" do Dashboard
- * (já sem a vaca que pariu há menos de 90 dias do toque).
+ * P11 B9 (Tião, corrigido na auditoria do a4cacca): vaca ativa cujo ÚLTIMO toque (de qualquer ano) deu
+ * "vazia", passado o 31/05 seguinte ao toque. Fica até ela parir depois do toque, ser vendida, morrer ou
+ * ter um toque novo. Sem limite de ano: conta a partir do toque, não de hoje.
  */
-export function emptyBeforeDryItem(
-  empties: { a: { id: string; code: string; name?: string | null }; exam: string }[],
-  calvings: Map<string, string[]>,
-  today: string,
-): TodoItem | null {
-  const year = Number(today.slice(0, 4))
-  const cut = `${year}-05-31`
-  if (today <= cut) return null
-  const from = `${year - 1}-06-01`
-  const list = empties
-    .filter(e => e.exam >= from && e.exam <= cut && !(calvings.get(e.a.id) ?? []).some(d => d > e.exam))
-    .map(e => e.a)
+export function emptyBeforeDryItem(input: {
+  animals: TodoAnimal[]
+  /** Todos os toques lançados, de qualquer data e resultado. */
+  checks: { animal_id: string; exam_date: string; result: string }[]
+  calvings: Map<string, string[]>
+  today: string
+}): TodoItem | null {
+  const last = new Map<string, { exam_date: string; result: string }>()
+  for (const c of input.checks) {
+    const prev = last.get(c.animal_id)
+    if (!prev || c.exam_date > prev.exam_date) last.set(c.animal_id, c)
+  }
+  const list = input.animals.filter(a => {
+    if (a.status !== 'ativo' || a.species !== 'bovino' || a.sex !== 'F') return false
+    const c = last.get(a.id)
+    if (!c || c.result !== 'vazia' || input.today <= dryDeadline(c.exam_date)) return false
+    const calv = input.calvings.get(a.id) ?? []
+    if (calv.some(d => d > c.exam_date)) return false
+    // Pariu pouco antes do toque: vazia é normal (mesma regra da lista do Dashboard).
+    const recent = addDaysIso(c.exam_date, -RECENT_CALVING_DAYS)
+    return !calv.some(d => d > recent && d <= c.exam_date)
+  })
   if (list.length === 0) return null
   return {
-    key: `vazia-seca-${year}`,
+    key: `vazia-seca-${list.map(a => a.id).sort().join('-')}`,
     title: list.length === 1 ? `${nameOf(list[0])} vazia desde o toque: vender antes da seca` : `${list.length} vacas vazias desde o toque: vender antes da seca`,
     detail: list.length === 1 ? 'Vaca vazia come o pasto sem dar bezerro.' : `${names(list)}. Vaca vazia come o pasto sem dar bezerro.`,
     href: '/app/financial/offers',

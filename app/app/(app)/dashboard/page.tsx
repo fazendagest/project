@@ -341,8 +341,9 @@ export default async function DashboardPage() {
       {/* Uma lista só do que o dono resolve (Tião, revisão do sistema, item 1): custos que faltam primeiro. */}
       <DineuvanCard items={[...tasks.map(t => ({ ...t, detail: t.detail ?? '' })), ...todo]} farmId={farmId} declaredPeriods={declaredPeriods} />
 
-      {/* Coluna da direita empilha Vendas e "A fazenda se pagou", para não sobrar buraco ao lado do rebanho. */}
+      {/* Duas colunas, cada uma empilhada: o gado à esquerda, o dinheiro à direita. Sem buraco quando a altura muda. */}
       <div className="grid grid-cols-1 lg:grid-cols-2 lg:items-start gap-4 mb-4">
+        <div className="space-y-4">
         {/* 1. O rebanho hoje */}
         <Card>
           <CardHeader className="pb-0">
@@ -386,6 +387,73 @@ export default async function DashboardPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* 3. Onde está o dinheiro */}
+        <Card>
+          <CardHeader className="pb-0">
+            <CardTitle className="text-base">
+              {active.length} {active.length === 1 ? 'animal' : 'animais'}
+              {birthsYear > 0 && <span className="font-normal text-muted-foreground">, {birthsYear} {birthsYear === 1 ? 'nasceu' : 'nasceram'} em {year}</span>}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`rounded-lg p-3 mb-2 text-sm ${perHa != null && (perHa < 0.02 || perHa > DRY_SEASON_ALERT_UA_HA) ? 'border border-amber-300 bg-amber-50' : 'bg-muted/40'}`}>
+              {perHa != null && perHa < 0.02 ? (
+                <p className="text-amber-800">
+                  A área cadastrada é de {area.toLocaleString('pt-BR')}&nbsp;ha, o que parece um engano.
+                  {' '}Confira em <Link href="/app/settings" className="underline underline-offset-2">Configurações</Link> (1 alqueire goiano = 4,84&nbsp;ha).
+                </p>
+              ) : perHa != null ? (
+                <>
+                  <p>
+                    <span className="font-semibold tabular-nums">{perHa.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span> UA por hectare
+                    <span className="text-muted-foreground tabular-nums"> ({totalUA.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;UA em {area.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;ha{usingTotalArea ? '' : ' de pasto'})</span>
+                  </p>
+                  {perHa > DRY_SEASON_ALERT_UA_HA && (
+                    <p className="text-amber-800 font-medium mt-1">Pasto pode faltar na seca: confira com o técnico antes de receber mais gado.</p>
+                  )}
+                  {usingTotalArea && (
+                    <p className="text-xs text-amber-800 mt-1">
+                      Conta com a fazenda toda: informe a área de pasto em{' '}
+                      <Link href="/app/settings" className="underline underline-offset-2">Configurações</Link> para ficar certo.
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground tabular-nums mt-1">
+                    Seu gado: {ownUA.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;UA{uaParts.length > 0 ? ` (${uaParts.join('; ')})` : ''}.
+                    {' '}De terceiros: {thirdHeads > 0 ? <>{thirdUA.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;UA ({thirdHeads} {thirdHeads === 1 ? 'cabeça' : 'cabeças'})</> : 'nenhum'}.
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    1 UA é um animal de 450&nbsp;kg, perto de uma vaca adulta. Fazendas de cria bem manejadas, com pasto adubado, chegam a 1,2&nbsp;UA por hectare (Inttegra). Sem adubação, o seguro é até 1,0.
+                    {perHa < 0.8 && ' Pelo número, cabe mais gado no pasto. Confira com o técnico se o capim está bom antes de receber mais.'}
+                  </p>
+                </>
+              ) : (
+                <p className="text-muted-foreground">
+                  Informe a área de pasto em <Link href="/app/settings" className="underline underline-offset-2">Configurações</Link> para ver quantos animais o pasto carrega por hectare.
+                </p>
+              )}
+            </div>
+            <div className="divide-y">
+              {herd.groups.map(g => (
+                <Link key={g.key} href="/app/animals" className="flex items-center justify-between gap-3 py-2.5 min-h-11 hover:bg-muted/40 -mx-2 px-2 rounded-md">
+                  <div className="min-w-0">
+                    <p className="font-medium">{g.label} <span className="font-normal text-muted-foreground">({g.count})</span></p>
+                    <p className="text-xs text-muted-foreground">
+                      {g.excluded ? 'Trabalho, fora da soma' : g.missing > 0 ? `${g.missing} sem preço` : g.invested > 0 ? `Investido ${money(g.invested)}` : 'Sem custo lançado'}
+                    </p>
+                  </div>
+                  <span className="flex items-center gap-1 tabular-nums whitespace-nowrap">
+                    {g.excluded ? '' : money(g.value)}
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </span>
+                </Link>
+              ))}
+              {herd.groups.length === 0 && <p className="text-sm text-muted-foreground py-2">Nenhum animal cadastrado.</p>}
+            </div>
+          </CardContent>
+        </Card>
+
+        </div>
 
         <div className="space-y-4">
         {/* 2. Vendas do ano: o lucro de verdade */}
@@ -489,74 +557,6 @@ export default async function DashboardPage() {
             )}
           </CardContent>
         </Card>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 lg:items-start gap-4 mb-4">
-        {/* 3. Onde está o dinheiro */}
-        <Card>
-          <CardHeader className="pb-0">
-            <CardTitle className="text-base">
-              {active.length} {active.length === 1 ? 'animal' : 'animais'}
-              {birthsYear > 0 && <span className="font-normal text-muted-foreground">, {birthsYear} {birthsYear === 1 ? 'nasceu' : 'nasceram'} em {year}</span>}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`rounded-lg p-3 mb-2 text-sm ${perHa != null && (perHa < 0.02 || perHa > DRY_SEASON_ALERT_UA_HA) ? 'border border-amber-300 bg-amber-50' : 'bg-muted/40'}`}>
-              {perHa != null && perHa < 0.02 ? (
-                <p className="text-amber-800">
-                  A área cadastrada é de {area.toLocaleString('pt-BR')}&nbsp;ha, o que parece um engano.
-                  {' '}Confira em <Link href="/app/settings" className="underline underline-offset-2">Configurações</Link> (1 alqueire goiano = 4,84&nbsp;ha).
-                </p>
-              ) : perHa != null ? (
-                <>
-                  <p>
-                    <span className="font-semibold tabular-nums">{perHa.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</span> UA por hectare
-                    <span className="text-muted-foreground tabular-nums"> ({totalUA.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;UA em {area.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;ha{usingTotalArea ? '' : ' de pasto'})</span>
-                  </p>
-                  {perHa > DRY_SEASON_ALERT_UA_HA && (
-                    <p className="text-amber-800 font-medium mt-1">Pasto pode faltar na seca: confira com o técnico antes de receber mais gado.</p>
-                  )}
-                  {usingTotalArea && (
-                    <p className="text-xs text-amber-800 mt-1">
-                      Conta com a fazenda toda: informe a área de pasto em{' '}
-                      <Link href="/app/settings" className="underline underline-offset-2">Configurações</Link> para ficar certo.
-                    </p>
-                  )}
-                  <p className="text-xs text-muted-foreground tabular-nums mt-1">
-                    Seu gado: {ownUA.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;UA{uaParts.length > 0 ? ` (${uaParts.join('; ')})` : ''}.
-                    {' '}De terceiros: {thirdHeads > 0 ? <>{thirdUA.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}&nbsp;UA ({thirdHeads} {thirdHeads === 1 ? 'cabeça' : 'cabeças'})</> : 'nenhum'}.
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    1 UA é um animal de 450&nbsp;kg, perto de uma vaca adulta. Fazendas de cria bem manejadas, com pasto adubado, chegam a 1,2&nbsp;UA por hectare (Inttegra). Sem adubação, o seguro é até 1,0.
-                    {perHa < 0.8 && ' Pelo número, cabe mais gado no pasto. Confira com o técnico se o capim está bom antes de receber mais.'}
-                  </p>
-                </>
-              ) : (
-                <p className="text-muted-foreground">
-                  Informe a área de pasto em <Link href="/app/settings" className="underline underline-offset-2">Configurações</Link> para ver quantos animais o pasto carrega por hectare.
-                </p>
-              )}
-            </div>
-            <div className="divide-y">
-              {herd.groups.map(g => (
-                <Link key={g.key} href="/app/animals" className="flex items-center justify-between gap-3 py-2.5 min-h-11 hover:bg-muted/40 -mx-2 px-2 rounded-md">
-                  <div className="min-w-0">
-                    <p className="font-medium">{g.label} <span className="font-normal text-muted-foreground">({g.count})</span></p>
-                    <p className="text-xs text-muted-foreground">
-                      {g.excluded ? 'Trabalho, fora da soma' : g.missing > 0 ? `${g.missing} sem preço` : g.invested > 0 ? `Investido ${money(g.invested)}` : 'Sem custo lançado'}
-                    </p>
-                  </div>
-                  <span className="flex items-center gap-1 tabular-nums whitespace-nowrap">
-                    {g.excluded ? '' : money(g.value)}
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </span>
-                </Link>
-              ))}
-              {herd.groups.length === 0 && <p className="text-sm text-muted-foreground py-2">Nenhum animal cadastrado.</p>}
-            </div>
-          </CardContent>
-        </Card>
 
         {/* 4. Este mês */}
         <Card>
@@ -582,6 +582,7 @@ export default async function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
 
       <CriaCard
@@ -598,7 +599,8 @@ export default async function DashboardPage() {
             }}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+      {/* Três cartões curtos numa fileira só (antes o Estoque Baixo ficava sozinho com meia tela vazia). */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-4">
         {/* 5. Prenhez das vacas */}
         <Card>
           <CardHeader className="pb-0">
@@ -645,9 +647,6 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
         <UpcomingBirths farmId={farmId} />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         <LowStock farmId={farmId} />
       </div>
 

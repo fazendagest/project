@@ -16,7 +16,8 @@ import { CardList, RecordCard } from '@/components/ui/record-card'
 import { BirthDialog } from '@/components/reproduction/birth-dialog'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import { Pencil, Trash2, Baby } from 'lucide-react'
+import { Pencil, Trash2 } from 'lucide-react'
+import { CowCalfIcon } from '@/components/icons/cattle-icons'
 import { formatDate, reproStatusLabel } from '@/lib/helpers'
 
 const PAGE_SIZE = 20
@@ -122,7 +123,7 @@ export function ReproductionClient({
               footer={<Badge className={statusColors[r.status]}>{reproStatusLabel(r.status)}</Badge>}
               extraActions={(r.status === 'coberta' || r.status === 'prenha') && (
                 <Button variant="outline" className="h-11 gap-1 mr-auto" onClick={() => setBirthRecord(r)}>
-                  <Baby className="h-4 w-4 text-pink-500" /> Registrar parto
+                  <CowCalfIcon className="h-4 w-4 text-pink-500" /> Registrar parto
                 </Button>
               )}
               editHref={`/app/reproduction/${r.id}/edit`}
@@ -175,7 +176,7 @@ export function ReproductionClient({
                   <div className="flex justify-end gap-1">
                     {(r.status === 'coberta' || r.status === 'prenha') && (
                       <Button size="icon" variant="ghost" title="Registrar parto" onClick={() => setBirthRecord(r)}>
-                        <Baby className="h-4 w-4 text-pink-500" />
+                        <CowCalfIcon className="h-4 w-4 text-pink-500" />
                       </Button>
                     )}
                     <Link href={`/app/reproduction/${r.id}/edit`}>

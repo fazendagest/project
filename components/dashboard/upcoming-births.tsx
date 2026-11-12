@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { formatDate } from '@/lib/helpers'
-import { Baby } from 'lucide-react'
+import { CowCalfIcon } from '@/components/icons/cattle-icons'
 import { format, addDays } from 'date-fns'
 
 export async function UpcomingBirths({ farmId }: { farmId: string }) {
@@ -24,7 +24,7 @@ export async function UpcomingBirths({ farmId }: { farmId: string }) {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
-          <Baby className="h-4 w-4 text-pink-500" />
+          <CowCalfIcon className="h-4 w-4 text-pink-500" />
           Partos nos próximos 30 dias
         </CardTitle>
       </CardHeader>

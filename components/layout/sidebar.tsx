@@ -8,9 +8,7 @@ import { toast } from 'sonner'
 import { useState } from 'react'
 import {
   LayoutDashboard,
-  PawPrint,
   Heart,
-  Baby,
   Wheat,
   Milk,
   DollarSign,
@@ -25,14 +23,15 @@ import {
   BookOpen,
 } from 'lucide-react'
 import { CowIcon } from '@/components/icons/cow-icon'
+import { CowLineIcon, CowCalfIcon } from '@/components/icons/cattle-icons'
 import { Button } from '@/components/ui/button'
 
 const navItems = [
   { href: '/app/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/app/guide', label: 'Guia da cria', icon: BookOpen },
-  { href: '/app/animals', label: 'Animais', icon: PawPrint },
+  { href: '/app/animals', label: 'Animais', icon: CowLineIcon },
   { href: '/app/health', label: 'Saúde', icon: Heart },
-  { href: '/app/reproduction', label: 'Reprodução', icon: Baby },
+  { href: '/app/reproduction', label: 'Reprodução', icon: CowCalfIcon },
   { href: '/app/feeding', label: 'Alimentação', icon: Wheat },
   { href: '/app/pasture', label: 'Gado de terceiros', icon: Handshake },
   {

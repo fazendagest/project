@@ -99,12 +99,12 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
           <CardHeader className="pb-2"><CardTitle>Informações</CardTitle></CardHeader>
           <CardContent className="space-y-2 text-sm">
             <Row label="Código" value={animal.code} />
-            <Row label="Nome" value={animal.name ?? '—'} />
+            <Row label="Nome" value={animal.name ?? 'sem nome'} />
             <Row label="Categoria" value={category} />
             {mother && <Row label="Mãe" value={mother.name ? `${mother.name} (${mother.code})` : mother.code} />}
-            <Row label="Raça" value={animal.breed ?? '—'} />
+            <Row label="Raça" value={animal.breed ?? 'não informada'} />
             <Row label="Nascimento" value={formatDate(animal.birth_date)} />
-            <Row label="Idade" value={animal.birth_date ? calcAge(animal.birth_date) : '—'} />
+            <Row label="Idade" value={animal.birth_date ? calcAge(animal.birth_date) : 'sem data de nascimento'} />
             <Row label="Entrada" value={`${formatDate(animal.entry_date)} (${animal.entry_type})`} />
             {(animal as any).weight_arrobas != null && (
               <Row label="Peso" value={`${(animal as any).weight_arrobas} @`} />

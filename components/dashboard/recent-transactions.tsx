@@ -62,7 +62,7 @@ export async function RecentTransactions({ farmId }: { farmId: string }) {
                   </div>
                   <div>
                     <p className="text-sm font-medium">
-                      {t.label} · {t.animal?.code ?? '—'}
+                      {t.label} · {t.animal?.code ?? 'sem código'}
                       {t.animal?.name ? ` (${t.animal.name})` : ''}
                     </p>
                     <p className="text-xs text-muted-foreground">{formatDate(t.date)}</p>

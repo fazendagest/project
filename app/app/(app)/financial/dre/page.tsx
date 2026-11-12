@@ -9,7 +9,7 @@ export default async function DREPage() {
 
   return (
     <div>
-      <PageHeader title="DRE — Demonstrativo de Resultado" description="Análise de receita, custo e lucro por período" />
+      <PageHeader title="DRE: Demonstrativo de Resultado" description="Análise de receita, custo e lucro por período" />
       <DREClient farmId={farmId} />
     </div>
   )

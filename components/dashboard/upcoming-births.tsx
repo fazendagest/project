@@ -38,7 +38,7 @@ export async function UpcomingBirths({ farmId }: { farmId: string }) {
               <li key={r.id} className="flex items-center justify-between text-sm">
                 <div>
                   <span className="font-medium">
-                    {(r.female as any)?.code ?? '—'}
+                    {(r.female as any)?.code ?? 'sem código'}
                     {(r.female as any)?.name ? ` · ${(r.female as any).name}` : ''}
                   </span>
                   <span className="text-muted-foreground ml-2 capitalize">

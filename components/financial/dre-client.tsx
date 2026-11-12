@@ -80,7 +80,7 @@ export function DREClient({ farmId }: { farmId: string }) {
         { label: 'Receita Bruta Total', value: totalRevenue, isTotal: true },
         { label: '  · Vendas de Animais', value: revenue },
         { label: '  · Receita de Leite', value: milkRevenue },
-        { label: 'CMV — Custo dos Animais Vendidos', value: -cmv },
+        { label: 'CMV: Custo dos Animais Vendidos', value: -cmv },
         { label: '  · Custo de Compra', value: -cmvPurchase },
         { label: '  · Custo de Ração (animais vendidos)', value: -cmvFeed },
         { label: '  · Custo de Saúde (animais vendidos)', value: -cmvHealth },
@@ -115,7 +115,7 @@ export function DREClient({ farmId }: { farmId: string }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>DRE — {monthLabel(selectedMonth)}</CardTitle>
+          <CardTitle>DRE de {monthLabel(selectedMonth)}</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (

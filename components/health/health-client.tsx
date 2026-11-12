@@ -131,14 +131,14 @@ export function HealthClient({
                 <TableCell>
                   <div>
                     <Link href={`/app/animals/${r.animal_id}`} className="font-mono font-semibold text-primary hover:underline">
-                      {(r.animal as any)?.code ?? '—'}
+                      {(r.animal as any)?.code ?? 'sem código'}
                     </Link>
                     <p className="text-xs text-muted-foreground">{(r.animal as any)?.name ?? ''}</p>
                   </div>
                 </TableCell>
                 <TableCell><Badge variant="outline">{healthTypeLabel(r.type)}</Badge></TableCell>
                 <TableCell className="font-medium">{r.product_name}</TableCell>
-                <TableCell>{r.dose ?? '—'}</TableCell>
+                <TableCell>{r.dose || 'não informada'}</TableCell>
                 <TableCell>{formatDate(r.application_date)}</TableCell>
                 <TableCell>
                   {r.next_due_date ? (
@@ -146,7 +146,7 @@ export function HealthClient({
                       {isDueSoon(r.next_due_date) && <AlertTriangle className="h-3 w-3" />}
                       {formatDate(r.next_due_date)}
                     </span>
-                  ) : '—'}
+                  ) : 'sem próxima'}
                 </TableCell>
                 <TableCell>{formatCurrency(r.cost)}</TableCell>
                 <TableCell>

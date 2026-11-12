@@ -507,13 +507,13 @@ export function ExpensesClient({
                     <TableCell>
                       <div>
                         <Link href={`/app/animals/${p.animal_id}`} className="font-mono font-semibold text-sm text-primary hover:underline">
-                          {(p.animal as any)?.code ?? '—'}
+                          {(p.animal as any)?.code ?? 'sem código'}
                         </Link>
                         {(p.animal as any)?.name && <span className="text-xs text-gray-500 block">{(p.animal as any)?.name}</span>}
                       </div>
                     </TableCell>
-                    <TableCell>{p.seller_name ?? '—'}</TableCell>
-                    <TableCell>{p.weight_kg != null ? `${p.weight_kg} @` : '—'}</TableCell>
+                    <TableCell>{p.seller_name || 'não informado'}</TableCell>
+                    <TableCell>{p.weight_kg != null ? `${p.weight_kg} @` : 'não pesado'}</TableCell>
                     <TableCell className="font-semibold text-red-600">{formatCurrency(p.purchase_price)}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
@@ -565,7 +565,7 @@ export function ExpensesClient({
                 {feedStock.length === 0 && <EmptyState colSpan={5} message="Nenhuma entrada de estoque registrada" />}
                 {feedStock.map(r => (
                   <TableRow key={r.id}>
-                    <TableCell>{r.purchase_date ? formatDate(r.purchase_date) : '—'}</TableCell>
+                    <TableCell>{r.purchase_date ? formatDate(r.purchase_date) : 'sem data'}</TableCell>
                     <TableCell>{r.product_name}</TableCell>
                     <TableCell>{formatNumber(r.current_quantity)} {r.unit}</TableCell>
                     <TableCell>{formatCurrency(r.cost_per_unit)}/{r.unit}</TableCell>
@@ -614,7 +614,7 @@ export function ExpensesClient({
                     <TableCell>
                       <div>
                         <Link href={`/app/animals/${r.animal_id}`} className="font-mono font-semibold text-sm text-primary hover:underline">
-                          {(r.animal as any)?.code ?? '—'}
+                          {(r.animal as any)?.code ?? 'sem código'}
                         </Link>
                         {(r.animal as any)?.name && <span className="text-xs text-gray-500 block">{(r.animal as any)?.name}</span>}
                       </div>
@@ -974,7 +974,7 @@ export function ExpensesClient({
             <div className="space-y-1">
               <Label>Animal</Label>
               <p className="text-sm font-mono font-semibold">
-                {(editingPurchase?.animal as any)?.code ?? '—'}
+                {(editingPurchase?.animal as any)?.code ?? 'sem código'}
                 {(editingPurchase?.animal as any)?.name ? ` · ${(editingPurchase?.animal as any)?.name}` : ''}
               </p>
             </div>

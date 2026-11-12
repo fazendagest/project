@@ -153,7 +153,7 @@ export function ReproductionClient({
               <TableRow key={r.id}>
                 <TableCell>
                   <Link href={`/app/animals/${r.female_id}`} className="font-mono font-semibold text-primary hover:underline">
-                    {(r.female as any)?.code ?? '—'}
+                    {(r.female as any)?.code ?? 'sem código'}
                   </Link>
                   <p className="text-xs text-muted-foreground">{(r.female as any)?.name ?? ''}</p>
                 </TableCell>
@@ -168,7 +168,7 @@ export function ReproductionClient({
                 <TableCell>{formatDate(r.coverage_date)}</TableCell>
                 <TableCell>{formatDate(r.expected_birth_date)}</TableCell>
                 <TableCell>{formatDate(r.actual_birth_date)}</TableCell>
-                <TableCell>{r.offspring_count || '—'}</TableCell>
+                <TableCell>{r.offspring_count || 'não informado'}</TableCell>
                 <TableCell>
                   <Badge className={statusColors[r.status]}>{reproStatusLabel(r.status)}</Badge>
                 </TableCell>

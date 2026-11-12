@@ -23,17 +23,18 @@ export function calcExpectedBirth(coverageDate: string, species: Species): strin
   return format(date, 'yyyy-MM-dd')
 }
 
+// Valor ausente sai em palavras, nunca travessão (regra da casa; achado c do teste do Tião, 11/11/2026).
 export function formatDate(date: string | null | undefined, fmt = 'dd/MM/yyyy'): string {
-  if (!date) return '—'
+  if (!date) return 'sem data'
   try {
     return format(parseISO(date), fmt, { locale: ptBR })
   } catch {
-    return '—'
+    return 'data inválida'
   }
 }
 
 export function formatCurrency(value: number | null | undefined): string {
-  if (value == null) return '—'
+  if (value == null) return 'não informado'
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
@@ -41,7 +42,7 @@ export function formatCurrency(value: number | null | undefined): string {
 }
 
 export function formatCurrencyCard(value: number | null | undefined): string {
-  if (value == null) return '—'
+  if (value == null) return 'não informado'
   const abs = Math.abs(value)
   const digits = abs >= 1000 ? 0 : 2
   return new Intl.NumberFormat('pt-BR', {
@@ -53,7 +54,7 @@ export function formatCurrencyCard(value: number | null | undefined): string {
 }
 
 export function formatNumber(value: number | null | undefined, decimals = 2): string {
-  if (value == null) return '—'
+  if (value == null) return 'não informado'
   return new Intl.NumberFormat('pt-BR', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,

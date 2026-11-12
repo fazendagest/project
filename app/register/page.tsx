@@ -207,11 +207,11 @@ export default function RegisterPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Função</span>
-                  <span className="font-medium text-gray-800">{ROLE_LABELS[form.farm_role] ?? '—'}</span>
+                  <span className="font-medium text-gray-800">{ROLE_LABELS[form.farm_role] ?? 'não informado'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Animais</span>
-                  <span className="font-medium text-gray-800">{ANIMAL_COUNT_LABELS[form.animal_count] ?? '—'}</span>
+                  <span className="font-medium text-gray-800">{ANIMAL_COUNT_LABELS[form.animal_count] ?? 'não informado'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Módulo leite</span>

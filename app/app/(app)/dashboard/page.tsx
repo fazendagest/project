@@ -341,7 +341,8 @@ export default async function DashboardPage() {
       {/* Uma lista só do que o dono resolve (Tião, revisão do sistema, item 1): custos que faltam primeiro. */}
       <DineuvanCard items={[...tasks.map(t => ({ ...t, detail: t.detail ?? '' })), ...todo]} farmId={farmId} declaredPeriods={declaredPeriods} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+      {/* Coluna da direita empilha Vendas e "A fazenda se pagou", para não sobrar buraco ao lado do rebanho. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 lg:items-start gap-4 mb-4">
         {/* 1. O rebanho hoje */}
         <Card>
           <CardHeader className="pb-0">
@@ -386,6 +387,7 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
+        <div className="space-y-4">
         {/* 2. Vendas do ano: o lucro de verdade */}
         <Card>
           <CardHeader className="pb-0">
@@ -432,9 +434,7 @@ export default async function DashboardPage() {
             )}
           </CardContent>
         </Card>
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         {/* 2b. A fazenda se pagou no ano? */}
         <Card>
           <CardHeader className="pb-0">
@@ -489,9 +489,10 @@ export default async function DashboardPage() {
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 lg:items-start gap-4 mb-4">
         {/* 3. Onde está o dinheiro */}
         <Card>
           <CardHeader className="pb-0">

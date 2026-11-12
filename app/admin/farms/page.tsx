@@ -16,6 +16,14 @@ export default async function AdminFarmsPage() {
   const { data: { users } } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
   const emailByUserId = Object.fromEntries(users.map(u => [u.id, u.email ?? '']))
 
+  // Dias com acesso do dono nos últimos 30 (Tião, P11): para decidir depois se os avisos vão também por WhatsApp.
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
+  const since = new Date(new Date(today + 'T12:00:00Z').getTime() - 29 * 86_400_000).toISOString().slice(0, 10)
+  const { data: access } = await admin.from('farm_access_days').select('farm_id, day').gte('day', since).order('day')
+  const daysByFarm = new Map<string, string[]>()
+  for (const r of access ?? []) daysByFarm.set(r.farm_id, [...(daysByFarm.get(r.farm_id) ?? []), r.day])
+  const ddmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
+
   const farmsWithEmail = (farms ?? []).map(f => ({
     ...f,
     ownerEmail: emailByUserId[f.owner_id] ?? '',
@@ -40,6 +48,25 @@ export default async function AdminFarmsPage() {
       </div>
 
       <FarmsTable farms={farmsWithEmail} adminEmail={process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? ''} />
+
+      <section className="rounded-xl border bg-white p-6" aria-labelledby="acessos-titulo">
+        <h2 id="acessos-titulo" className="text-lg font-semibold text-gray-900">Dias com acesso do dono</h2>
+        <p className="text-sm text-gray-600 mt-1">Últimos 30 dias, de {ddmm(since)} a {ddmm(today)}. Conta um dia quando o dono abre qualquer tela.</p>
+        <ul className="mt-4 divide-y">
+          {farmsWithEmail.map(f => {
+            const days = daysByFarm.get(f.id) ?? []
+            return (
+              <li key={f.id} className="py-3">
+                <p className="font-medium text-gray-900">{f.name}</p>
+                <p className="text-sm text-gray-700">
+                  Dias com acesso nos últimos 30: <span className="font-semibold tabular-nums">{days.length}</span>
+                  {days.length > 0 && <span className="block text-gray-600 tabular-nums">{days.map(ddmm).join(', ')}</span>}
+                </p>
+              </li>
+            )
+          })}
+        </ul>
+      </section>
     </div>
   )
 }

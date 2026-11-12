@@ -8,6 +8,9 @@ import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
+/** Data de hoje em São Paulo (AAAA-MM-DD): o servidor da Vercel roda em UTC. */
+const todaySaoPaulo = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -34,10 +37,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   } else if (!isAdmin) {
     const { data: farm } = await supabase
       .from('farms')
-      .select('milk_active')
+      .select('id, milk_active')
       .eq('owner_id', user.id)
       .maybeSingle()
     milkActive = farm?.milk_active ?? false
+    // Dia de acesso do dono (Tião, P11; medição de 30 dias escolhida pelo Henrique): fazenda e data, uma linha
+    // por dia. Erro aqui nunca derruba a tela (ex.: antes de rodar supabase/add_dias_de_acesso.sql).
+    // Só no ar (Vercel produção): o localhost usa o mesmo banco e logado como dono contaria dia falso.
+    if (farm?.id && process.env.VERCEL_ENV === 'production') {
+      await supabase
+        .from('farm_access_days')
+        .upsert({ farm_id: farm.id, day: todaySaoPaulo() }, { onConflict: 'farm_id,day', ignoreDuplicates: true })
+        .then(() => undefined, () => undefined)
+    }
   }
 
   return (

@@ -93,7 +93,10 @@ export function ExpensesClient({
   const [saleEditLoading, setSaleEditLoading] = useState(false)
   const [expEditLoading, setExpEditLoading] = useState(false)
 
-  const [expForm, setExpForm] = useState({ category: 'mao_de_obra', date: today, amount: '', description: '', notes: '', fixed: false, since: monthOf(today) })
+  // Nova despesa abre sempre sem categoria: guardar a anterior levava a lançar na categoria errada (Tião, teste de 11/11/2026).
+  const emptyExpense = () => ({ category: '', date: today, amount: '', description: '', notes: '', fixed: false, since: monthOf(today) })
+  const [expForm, setExpForm] = useState(emptyExpense)
+  const openNewExpense = () => { setExpForm(emptyExpense()); setExpDialog(true) }
   const [stopConfirm, setStopConfirm] = useState<OperationalExpense | null>(null)
   const [stopping, setStopping] = useState(false)
   const [saleForm, setSaleForm] = useState(() => saleDraft
@@ -156,6 +159,7 @@ export function ExpensesClient({
 
   async function saveExpense(e: React.FormEvent) {
     e.preventDefault()
+    if (!expForm.category) return toast.error('Escolha a categoria da despesa')
     if (!expForm.description || !expForm.amount) return toast.error('Preencha todos os campos obrigatórios')
     setExpLoading(true)
     // Fixa: uma linha só, que vale todo mês a partir do primeiro pagamento (decisão de 11/11/2026).
@@ -173,7 +177,7 @@ export function ExpensesClient({
     else {
       setExpenses(prev => [data, ...prev].sort((a, b) => b.date.localeCompare(a.date)))
       setExpDialog(false)
-      setExpForm(p => ({ ...p, amount: '', description: '', notes: '', fixed: false, since: monthOf(today) }))
+      setExpForm(emptyExpense())
       toast.success(expForm.fixed ? 'Despesa fixa registrada! Ela conta todo mês sozinha.' : 'Despesa registrada!')
       router.refresh()
     }
@@ -343,7 +347,7 @@ export function ExpensesClient({
             <p className="text-sm text-muted-foreground">
               Total: {formatCurrency(sumExpensesInRange(expenses, '0000-01-01', todayLocal, todayLocal))}
             </p>
-            <Button onClick={() => setExpDialog(true)} className="gap-2 hidden md:inline-flex"><Plus className="h-4 w-4" /> Nova Despesa</Button>
+            <Button onClick={openNewExpense} className="gap-2 hidden md:inline-flex"><Plus className="h-4 w-4" /> Nova Despesa</Button>
           </div>
           <CardList empty="Nenhuma despesa">
             {expenses.map(e => (
@@ -633,7 +637,7 @@ export function ExpensesClient({
       {(tab === 'expenses' || tab === 'sales') && (
         <MobileActionBar>
           {tab === 'expenses'
-            ? <Button className="h-12 w-full gap-2 text-base" onClick={() => setExpDialog(true)}><Plus className="h-5 w-5" /> Nova despesa</Button>
+            ? <Button className="h-12 w-full gap-2 text-base" onClick={openNewExpense}><Plus className="h-5 w-5" /> Nova despesa</Button>
             : (
               <div className="grid grid-cols-2 gap-2">
                 <Link href="/app/financial/offers"><Button variant="outline" className="h-12 w-full text-base">Comparar ofertas</Button></Link>
@@ -649,9 +653,9 @@ export function ExpensesClient({
           <DialogHeader><DialogTitle>Nova Despesa Operacional</DialogTitle></DialogHeader>
           <form onSubmit={saveExpense} className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Categoria</Label>
-              <Select value={expForm.category} onValueChange={v => v && setExpForm(p => ({ ...p, category: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Label>Categoria *</Label>
+              <Select value={expForm.category} onValueChange={v => v && setExpForm(p => ({ ...p, category: String(v) }))}>
+                <SelectTrigger><SelectValue placeholder="Escolha a categoria" /></SelectTrigger>
                 <SelectContent>
                   {['mao_de_obra','maquina','energia','manutencao','transporte','equipamento','veterinario','outro','fora_do_gado'].map(c => (
                     <SelectItem key={c} value={c}>{expenseCategoryLabel(c)}</SelectItem>
@@ -659,7 +663,9 @@ export function ExpensesClient({
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                {expForm.category === 'fora_do_gado'
+                {!expForm.category
+                  ? 'Escolha onde o gasto entra: quase tudo conta no custo dos animais.'
+                  : expForm.category === 'fora_do_gado'
                   ? 'Não entra no custo dos animais. Ex.: poleiro das galinhas, lavoura para vender, gasto da casa. Lavoura que vira comida do gado (milho, capineira, silagem) conta como gado: escolha outra categoria.'
                   : 'Entra no custo dos animais, dividido pelo tamanho de cada um (vaca conta mais que bezerro). Ex.: caseiro, diesel do trator, energia, limpeza de pasto.'}
               </p>

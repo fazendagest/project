@@ -108,7 +108,7 @@ export default async function DashboardPage() {
     supabase.from('health_records').select('cost').eq('farm_id', farmId).gte('application_date', yearStart),
     supabase.from('third_party_herds').select('*').eq('farm_id', farmId),
     supabase.from('animal_purchases').select('purchase_price').eq('farm_id', farmId).gte('purchase_date', yearStart),
-    supabase.from('health_records').select('animal_id, product_name, notes, cost, application_date').eq('farm_id', farmId),
+    supabase.from('health_records').select('animal_id, product_name, notes, cost, application_date, next_due_date').eq('farm_id', farmId),
     // Declaração de Rebanho marcada como feita (P7). Consulta à parte: sem a coluna, o painel continua de pé.
     supabase.from('farms').select('herd_declarations').eq('id', farmId).maybeSingle(),
     // Todas as vendas: data de saída da vaca e peso do bezerro vendido na desmama (P4).

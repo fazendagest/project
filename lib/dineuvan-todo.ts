@@ -71,12 +71,72 @@ export function declarationPeriod(today: string): { period: string; deadline: st
   return null
 }
 
+/** Próxima aplicação: avisa 7 dias antes; vencida há mais de 60 dias sai da lista (Ravi, a validar com o Tião). */
+const REPEAT_AHEAD_DAYS = 7
+const REPEAT_STALE_DAYS = 60
+const normProduct = (s?: string | null) => (s ?? '').trim().toLowerCase()
+const ddmm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
+const addDaysIso = (iso: string, days: number) => new Date(new Date(iso + 'T12:00:00').getTime() + days * DAY).toISOString().slice(0, 10)
+
+const REPEAT_WHY = {
+  paragraphs: [
+    'Você marcou esta data como a próxima aplicação quando lançou em Saúde. Repetir no dia certo é o que mantém o gado protegido.',
+    'O aviso some quando a nova aplicação do mesmo produto é lançada no animal. Se não vai repetir, apague a data da próxima no lançamento. Em dúvida, pergunte ao veterinário.',
+  ],
+}
+
+/**
+ * P11 B7 (Tião): vacina ou remédio com "Próxima aplicação" vencida ou nos próximos 7 dias.
+ * Resolvido quando há aplicação do mesmo produto no mesmo animal depois da anterior.
+ * Um item por produto e data, com os animais juntos.
+ */
+export function repeatItems(
+  health: { animal_id: string; product_name?: string | null; application_date?: string | null; next_due_date?: string | null }[],
+  animals: TodoAnimal[],
+  today: string,
+): TodoItem[] {
+  const byId = new Map(animals.map(a => [a.id, a]))
+  const lastByKey = new Map<string, string>()
+  for (const h of health) {
+    if (!h.application_date) continue
+    const k = `${h.animal_id}|${normProduct(h.product_name)}`
+    if ((lastByKey.get(k) ?? '') < h.application_date) lastByKey.set(k, h.application_date)
+  }
+  const limit = addDaysIso(today, REPEAT_AHEAD_DAYS)
+  const stale = addDaysIso(today, -REPEAT_STALE_DAYS)
+  const groups = new Map<string, { product: string; due: string; list: TodoAnimal[] }>()
+  for (const h of health) {
+    const due = h.next_due_date
+    if (!due || !h.application_date || !h.product_name?.trim() || due > limit || due < stale) continue
+    const a = byId.get(h.animal_id)
+    if (!a || a.status !== 'ativo') continue
+    if ((lastByKey.get(`${h.animal_id}|${normProduct(h.product_name)}`) ?? '') > h.application_date) continue
+    const k = `${normProduct(h.product_name)}|${due}`
+    const g = groups.get(k) ?? { product: h.product_name.trim(), due, list: [] }
+    if (!g.list.some(x => x.id === a.id)) g.list.push(a)
+    groups.set(k, g)
+  }
+  return [...groups.values()]
+    .sort((x, y) => x.due.localeCompare(y.due))
+    .map(g => {
+      const late = g.due < today
+      return {
+        key: `repetir-${normProduct(g.product)}-${g.due}`,
+        title: `Repetir ${g.product} em ${g.list.length === 1 ? nameOf(g.list[0]) : `${g.list.length} animais`}, ${late ? 'era dia' : 'dia'} ${ddmm(g.due)}`,
+        detail: `${late ? 'Passou do dia. ' : ''}${g.list.length > 1 ? `${names(g.list)}. ` : ''}Quando aplicar, lance em Saúde.`,
+        href: '/app/health',
+        action: 'Lançar em Saúde',
+        why: REPEAT_WHY,
+      }
+    })
+}
+
 export function dineuvanTodo(input: {
   today: string
   animals: TodoAnimal[]
   /** Último diagnóstico de gestação de cada fêmea nos últimos 12 meses. */
   checkedIds: Set<string>
-  health: { animal_id: string; product_name?: string | null; notes?: string | null }[]
+  health: { animal_id: string; product_name?: string | null; notes?: string | null; application_date?: string | null; next_due_date?: string | null }[]
   declaredPeriods: string[]
   /** Título do item da área de pasto, ou null quando a área está certa. */
   pastureTitle: string | null
@@ -86,6 +146,8 @@ export function dineuvanTodo(input: {
   const { today, animals } = input
   const active = animals.filter(a => a.status === 'ativo')
   const items: TodoItem[] = []
+
+  items.push(...repeatItems(input.health, animals, today))
 
   // 1. Diagnóstico de gestação: vaca e novilha com 18 meses ou mais, sem toque lançado em 12 meses.
   const noCheck = active.filter(a => a.species === 'bovino' && a.sex === 'F' && (monthsOld(a.birth_date, today) ?? 99) >= MIN_MONTHS && !input.checkedIds.has(a.id))

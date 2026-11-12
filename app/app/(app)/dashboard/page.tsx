@@ -282,8 +282,8 @@ export default async function DashboardPage() {
   // Vazia até 90 dias depois do parto é normal (Tião): sai da lista de avaliar venda.
   const RECENT_CALVING_DAYS = 90
   const lastCalvingBefore = (id: string, exam: string) => (calvings.get(id) ?? []).filter(d => d <= exam).sort().at(-1)
+  // Vazias para avaliar venda e "sem exame": só quem está no rebanho hoje.
   const examined = cowsAndHeifers.filter(a => lastCheck.has(a.id))
-  const pregnant = examined.filter(a => lastCheck.get(a.id)!.result === 'prenhe')
   const empty = examined.filter(a => lastCheck.get(a.id)!.result === 'vazia')
   const emptyToReview = empty
     .map(a => {
@@ -291,7 +291,13 @@ export default async function DashboardPage() {
       return { a, exam, calving: lastCalvingBefore(a.id, exam) }
     })
     .filter(r => !r.calving || differenceInDays(parseISO(r.exam), parseISO(r.calving)) >= RECENT_CALVING_DAYS)
-  const pregnancyRate = examined.length > 0 ? pregnant.length / examined.length : null
+  // Taxa de prenhez (Tião, teste de preenchimento de 11/11/2026): a base é toda fêmea examinada nos últimos 12 meses,
+  // viva, vendida ou morta hoje. Se a vendida saísse da conta, vender as vazias faria a prenhez subir sozinha.
+  const examinedAll = allAnimals.filter(a => a.species === 'bovino' && a.sex === 'F' && lastCheck.has(a.id))
+  const pregnant = examinedAll.filter(a => lastCheck.get(a.id)!.result === 'prenhe')
+  const examinedGone = examinedAll.length - examined.length
+  const pregnancyRate = examinedAll.length > 0 ? pregnant.length / examinedAll.length : null
+  const examinedText = `${examinedAll.length} ${examinedAll.length === 1 ? 'examinada' : 'examinadas'}${examinedGone > 0 ? ` (${examinedGone} já ${examinedGone === 1 ? 'saiu' : 'saíram'} do rebanho)` : ''}`
   // Índices da cria com a meta da fazenda (Tião, P4).
   const cria = criaIndicators(allAnimals, allSales ?? [], todayStr)
   // Idade ao primeiro parto e novilhas passadas da idade (Tião, P8 item 2).
@@ -630,7 +636,7 @@ export default async function DashboardPage() {
           ? { value: null, missing: 'Nenhuma vaca ou novilha examinada nos últimos 12 meses. Lance o toque ou o ultrassom em Reprodução.' }
           : {
               value: pregnancyRate,
-              detail: `${pregnant.length} de ${examined.length} ${examined.length === 1 ? 'examinada' : 'examinadas'}${cowsAndHeifers.length > examined.length ? `, ${cowsAndHeifers.length - examined.length} sem exame` : ''}`,
+              detail: `${pregnant.length} de ${examinedText}${cowsAndHeifers.length > examined.length ? `, ${cowsAndHeifers.length - examined.length} sem exame` : ''}`,
               belowTarget: pregnancyRate < CRIA_TARGETS.prenhez.target,
             }}
       />
@@ -652,7 +658,7 @@ export default async function DashboardPage() {
               <>
                 <p className="text-3xl font-bold tabular-nums">{Math.round(pregnancyRate * 100)}%</p>
                 <p className="text-sm text-muted-foreground">
-                  {pregnant.length} prenhe{pregnant.length === 1 ? '' : 's'} de {examined.length} examinada{examined.length === 1 ? '' : 's'}
+                  {pregnant.length} prenhe{pregnant.length === 1 ? '' : 's'} de {examinedText}
                   {cowsAndHeifers.length > examined.length && `, ${cowsAndHeifers.length - examined.length} sem exame`}
                 </p>
                 {emptyToReview.length > 0 && (

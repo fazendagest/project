@@ -34,6 +34,8 @@ export type TodoItem = {
   why?: { paragraphs: string[]; source?: string }
   /** Aviso brando, em cinza (P11 B10). */
   soft?: boolean
+  /** Prazo ou data do item (AAAA-MM-DD): ordena o vencido antes do que vai vencer. */
+  due?: string
 }
 
 /** Texto do Tião (pedido do Henrique, 11/11/2026). Conta da GTA conferida: 18,07 + 4 × 0,38 = 19,59. */
@@ -130,6 +132,7 @@ export function repeatItems(
       const old = g.due < stale
       return {
         key: `repetir-${normProduct(g.product)}-${g.due}`,
+        due: g.due,
         title: `Repetir ${g.product} em ${g.list.length === 1 ? nameOf(g.list[0]) : `${g.list.length} animais`}, ${late ? 'era dia' : 'dia'} ${ddmm(g.due)}`,
         detail: old
           ? `${g.list.length > 1 ? `${names(g.list)}. ` : ''}Passou há mais de 2 meses. Pergunte ao veterinário se ainda vale aplicar; se não vai repetir, apague a data da próxima no lançamento.`
@@ -191,6 +194,7 @@ export function lateBirthItems(input: {
     if (check?.result === 'vazia' && check.exam_date > (e.exam_date ?? from)) continue
     items.push({
       key: `parto-atrasado-${id}-${e.date}`,
+      due: e.date,
       title: `${nameOf(a)} devia ter parido em ${ddmm(e.date)}`,
       detail: 'Pariu? Lance o bezerro com a mãe. Se não pariu, chame o veterinário.',
       href: '/app/reproduction',
@@ -271,8 +275,8 @@ type CalendarEntry = {
 const CALENDAR: CalendarEntry[] = [
   {
     id: 'monta', from: '10-25', to: '11-15',
-    title: 'Estação de monta: solte o touro com as vacas e as novilhas de 24 meses ou mais, depois do exame andrológico',
-    detail: 'A estação vai de novembro a janeiro.',
+    title: 'Estação de monta: solte o touro com as vacas',
+    detail: 'Com as vacas e as novilhas de 24 meses ou mais, depois do exame andrológico. A estação vai de novembro a janeiro.',
     href: '/app/reproduction', action: 'Abrir Reprodução',
     why: ['Os bezerros nascem juntos de agosto a outubro, desmamam juntos e são vendidos num lote igual, que vale mais.'],
   },
@@ -340,7 +344,8 @@ export function calendarItems(input: {
     if (c.id === 'touro' && input.hasBullItem) continue
     items.push({
       key: `calendario-${period}`,
-      title: c.title,
+      title: `${c.title}, até ${c.to.slice(3)}/${c.to.slice(0, 2)}`,
+      due: `${year}-${c.to}`,
       detail: c.detail,
       href: c.href,
       action: c.action,
@@ -478,6 +483,7 @@ export function dineuvanTodo(input: {
     const { period, deadline, late } = decl
     items.push({
       key: `declaracao-${period}`,
+      due: period.endsWith('-11') ? `${period}-30` : `${period}-31`,
       title: late ? 'Declaração de Rebanho no SIDAGO: passou do prazo' : `Declaração de Rebanho no SIDAGO, até ${deadline}`,
       // [V] Portaria Agrodefesa 173/2026: 2ª etapa de 1º a 30/11/2026, pela internet no SIDAGO ou numa unidade da Agrodefesa.
       detail: late
@@ -548,4 +554,24 @@ export function dineuvanTodo(input: {
   items.splice(repeats.length, 0, ...calendar)
 
   return items
+}
+
+/**
+ * Ordem por urgência do «O que só você resolve» (Henrique, opção A, pelo Tião):
+ * 1. prazo legal ou sanitário; 2. o que tem época; 3. cadastro; 4. avisos brandos (B10, B11); 5. custos não lançados.
+ * Dentro do grupo, o que tem data vem primeiro, do mais vencido ao que vai vencer; o resto mantém a ordem.
+ */
+const URGENCY: [number, (key: string) => boolean][] = [
+  [0, k => k.startsWith('declaracao-') || k.startsWith('repetir-') || k.startsWith('parto-atrasado-')],
+  [1, k => k.startsWith('calendario-') || k.startsWith('vazia-seca-') || k === 'diagnostico' || k === 'andrologico'],
+  [3, k => k.startsWith('fora-estacao-') || k.startsWith('sem-lancamento-')],
+  [4, k => k === 'custo-alimentacao' || k === 'despesas-fazenda'],
+]
+const urgencyOf = (key: string) => URGENCY.find(([, test]) => test(key))?.[0] ?? 2
+
+export function orderByUrgency<T extends { key: string; due?: string }>(items: T[]): T[] {
+  return items
+    .map((item, i) => ({ item, i, g: urgencyOf(item.key) }))
+    .sort((a, b) => a.g - b.g || (a.item.due && b.item.due ? a.item.due.localeCompare(b.item.due) : a.item.due ? -1 : b.item.due ? 1 : a.i - b.i))
+    .map(x => x.item)
 }

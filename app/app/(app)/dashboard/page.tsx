@@ -8,7 +8,7 @@ import { LowStock } from '@/components/dashboard/low-stock'
 import type { PendingTask } from '@/components/dashboard/pending-tasks'
 import { BruceloseCard } from '@/components/health/brucelose-card'
 import { DineuvanCard } from '@/components/dashboard/dineuvan-card'
-import { dineuvanTodo, lateBirthItems, emptyBeforeDryItem, offSeasonItem, idleItem } from '@/lib/dineuvan-todo'
+import { dineuvanTodo, lateBirthItems, emptyBeforeDryItem, offSeasonItem, idleItem, orderByUrgency } from '@/lib/dineuvan-todo'
 import { bruceloseStatus } from '@/lib/brucelose'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -373,7 +373,7 @@ export default async function DashboardPage() {
       {/* Brucelose curta no topo (obrigação legal); os nomes ficam em Saúde. */}
       <BruceloseCard {...bruceloseStatus(allAnimals, bruceloseRecords ?? [], todayStr)} summary />
       {/* Uma lista só do que o dono resolve (Tião, revisão do sistema, item 1): custos que faltam primeiro. */}
-      <DineuvanCard items={[...tasks.map(t => ({ ...t, detail: t.detail ?? '' })), ...todo]} farmId={farmId} declaredPeriods={declaredPeriods} />
+      <DineuvanCard items={orderByUrgency([...tasks.map(t => ({ ...t, detail: t.detail ?? '' })), ...todo])} farmId={farmId} declaredPeriods={declaredPeriods} />
 
       {/* Duas colunas, cada uma empilhada: o gado à esquerda, o dinheiro à direita. Sem buraco quando a altura muda. */}
       <div className="grid grid-cols-1 lg:grid-cols-2 lg:items-start gap-4 mb-4">

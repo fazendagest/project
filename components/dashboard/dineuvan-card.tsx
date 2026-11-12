@@ -53,8 +53,10 @@ export function DineuvanCard({ items, farmId, declaredPeriods }: { items: TodoIt
     <section className="rounded-xl border border-amber-300 bg-amber-50 p-4 mb-4" aria-labelledby="dineuvan-titulo">
       <h2 id="dineuvan-titulo" className="font-semibold text-amber-900">O que só você resolve ({visible.length})</h2>
       <p className="text-sm text-amber-900 mt-1">Sem isso, os números da fazenda ficam no achismo. Cada item sai sozinho quando é lançado.</p>
+      {/* Cada item é uma linha que abre e fecha (Henrique, opção A). Só o primeiro começa aberto, para mostrar que a
+          linha abre; o sistema não guarda qual foi aberto. A ordem vem pronta do Dashboard (orderByUrgency). */}
       <ul className="mt-3 space-y-2">
-        {visible.map(t => {
+        {visible.map((t, i) => {
           const external = t.href.startsWith('http')
           const button = (
             <Button className="h-11 md:h-9 w-full gap-1">
@@ -62,38 +64,49 @@ export function DineuvanCard({ items, farmId, declaredPeriods }: { items: TodoIt
             </Button>
           )
           return (
-            <li key={t.key} className={t.soft ? 'rounded-lg border border-border bg-background p-3' : 'rounded-lg border border-amber-200 bg-background p-3'}>
-              <p className="font-medium">{t.title}</p>
-              {t.detail && <p className="text-sm text-muted-foreground mt-0.5">{t.detail}</p>}
-              {t.why && (
-                <details className="group mt-2 text-sm">
-                  <summary className="inline-flex min-h-[44px] md:min-h-0 cursor-pointer list-none items-center gap-1 font-medium text-primary underline underline-offset-2 [&::-webkit-details-marker]:hidden">
-                    Por que fazer?
-                    <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden />
-                  </summary>
-                  <div className="mt-2 space-y-2 text-foreground">
-                    {t.why.paragraphs.map(p => <p key={p}>{p}</p>)}
-                    {t.why.source && <p className="text-xs text-muted-foreground">{t.why.source}</p>}
+            <li key={t.key} className={t.soft ? 'rounded-lg border border-border bg-background' : 'rounded-lg border border-amber-200 bg-background'}>
+              <details className="group/item" open={i === 0}>
+                <summary className="flex min-h-[44px] cursor-pointer list-none items-center gap-3 rounded-lg px-3 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground [&::-webkit-details-marker]:hidden">
+                  <span className="flex-1 font-medium">{t.title}</span>
+                  <span className="flex shrink-0 items-center gap-1 text-sm text-primary">
+                    <span className="group-open/item:hidden">ver</span>
+                    <span className="hidden group-open/item:inline">fechar</span>
+                    <ChevronDown className="h-4 w-4 transition-transform group-open/item:rotate-180" aria-hidden />
+                  </span>
+                </summary>
+                <div className="px-3 pb-3">
+                  {t.detail && <p className="text-sm text-muted-foreground">{t.detail}</p>}
+                  {t.why && (
+                    <details className="group mt-2 text-sm">
+                      <summary className="inline-flex min-h-[44px] md:min-h-0 cursor-pointer list-none items-center gap-1 font-medium text-primary underline underline-offset-2 [&::-webkit-details-marker]:hidden">
+                        Por que fazer?
+                        <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" aria-hidden />
+                      </summary>
+                      <div className="mt-2 space-y-2 text-foreground">
+                        {t.why.paragraphs.map(p => <p key={p}>{p}</p>)}
+                        {t.why.source && <p className="text-xs text-muted-foreground">{t.why.source}</p>}
+                      </div>
+                    </details>
+                  )}
+                  <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                    {external ? (
+                      <a href={t.href} target="_blank" rel="noopener noreferrer" className="sm:flex-none">{button}</a>
+                    ) : (
+                      <Link href={t.href} className="sm:flex-none">{button}</Link>
+                    )}
+                    {t.declarationPeriod && (
+                      <Button type="button" variant="outline" className="h-11 md:h-9" disabled={saving} onClick={() => markDeclared(t.declarationPeriod!)}>
+                        Já fiz
+                      </Button>
+                    )}
+                    {t.dismissLabel && (
+                      <Button type="button" variant="outline" className="h-11 md:h-9" onClick={() => dismiss(t.key)}>
+                        {t.dismissLabel}
+                      </Button>
+                    )}
                   </div>
-                </details>
-              )}
-              <div className="flex flex-col sm:flex-row gap-2 mt-2">
-                {external ? (
-                  <a href={t.href} target="_blank" rel="noopener noreferrer" className="sm:flex-none">{button}</a>
-                ) : (
-                  <Link href={t.href} className="sm:flex-none">{button}</Link>
-                )}
-                {t.declarationPeriod && (
-                  <Button type="button" variant="outline" className="h-11 md:h-9" disabled={saving} onClick={() => markDeclared(t.declarationPeriod!)}>
-                    Já fiz
-                  </Button>
-                )}
-                {t.dismissLabel && (
-                  <Button type="button" variant="outline" className="h-11 md:h-9" onClick={() => dismiss(t.key)}>
-                    {t.dismissLabel}
-                  </Button>
-                )}
-              </div>
+                </div>
+              </details>
             </li>
           )
         })}

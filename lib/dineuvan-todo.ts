@@ -26,7 +26,8 @@ export type TodoItem = {
   dismissLabel?: string
   /**
    * Período que o botão "Já fiz" grava em farms.herd_declarations: '2026-11' (Declaração de Rebanho)
-   * ou 'monta-2026' (calendário da cria, P11). A declaração só lê os períodos dela.
+   * ou 'monta-2026' (calendário da cria, P11). Apesar do nome, essa coluna guarda TODOS os "Já fiz"
+   * por período (declaração e calendário); a declaração só lê os períodos dela ('AAAA-MM').
    */
   declarationPeriod?: string
   /** "Por que fazer?" que abre e fecha, com a fonte em letra pequena. */

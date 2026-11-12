@@ -62,7 +62,7 @@ export function DineuvanCard({ items, farmId, declaredPeriods }: { items: TodoIt
             </Button>
           )
           return (
-            <li key={t.key} className="rounded-lg border border-amber-200 bg-background p-3">
+            <li key={t.key} className={t.soft ? 'rounded-lg border border-border bg-background p-3' : 'rounded-lg border border-amber-200 bg-background p-3'}>
               <p className="font-medium">{t.title}</p>
               {t.detail && <p className="text-sm text-muted-foreground mt-0.5">{t.detail}</p>}
               {t.why && (

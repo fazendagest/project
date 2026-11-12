@@ -8,7 +8,7 @@ import { LowStock } from '@/components/dashboard/low-stock'
 import type { PendingTask } from '@/components/dashboard/pending-tasks'
 import { BruceloseCard } from '@/components/health/brucelose-card'
 import { DineuvanCard } from '@/components/dashboard/dineuvan-card'
-import { dineuvanTodo, lateBirthItems, emptyBeforeDryItem } from '@/lib/dineuvan-todo'
+import { dineuvanTodo, lateBirthItems, emptyBeforeDryItem, offSeasonItem } from '@/lib/dineuvan-todo'
 import { bruceloseStatus } from '@/lib/brucelose'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -104,7 +104,7 @@ export default async function DashboardPage() {
     supabase.from('health_records').select('cost').eq('farm_id', farmId).gte('application_date', monthStart).lte('application_date', monthEnd),
     supabase.from('milk_production').select('liters').eq('farm_id', farmId).eq('date', todayStr),
     supabase.from('pregnancy_checks').select('animal_id, exam_date, result').eq('farm_id', farmId).gte('exam_date', format(subDays(now, 365), 'yyyy-MM-dd')),
-    supabase.from('reproduction_records').select('female_id, actual_birth_date, expected_birth_date, status').eq('farm_id', farmId),
+    supabase.from('reproduction_records').select('female_id, coverage_date, actual_birth_date, expected_birth_date, status').eq('farm_id', farmId),
     supabase.from('health_records').select('cost').eq('farm_id', farmId).gte('application_date', yearStart),
     supabase.from('third_party_herds').select('*').eq('farm_id', farmId),
     supabase.from('animal_purchases').select('purchase_price').eq('farm_id', farmId).gte('purchase_date', yearStart),
@@ -343,6 +343,9 @@ export default async function DashboardPage() {
   // Vaca vazia depois de 31/05 (Tião, P11 B9): logo depois do parto atrasado.
   const emptyDry = emptyBeforeDryItem(emptyToReview, calvings, todayStr)
   if (emptyDry) todo.splice(repeatCount + lateBirths.length, 0, emptyDry)
+  // Cobertura fora da estação (Tião, P11 B10): aviso brando, no fim da lista.
+  const offSeason = offSeasonItem(reproRecords ?? [], allAnimals, todayStr)
+  if (offSeason) todo.push(offSeason)
 
   const milkLiters = milkToday?.reduce((s, r) => s + (r.liters || 0), 0) ?? 0
 

@@ -31,6 +31,8 @@ export type TodoItem = {
   declarationPeriod?: string
   /** "Por que fazer?" que abre e fecha, com a fonte em letra pequena. */
   why?: { paragraphs: string[]; source?: string }
+  /** Aviso brando, em cinza (P11 B10). */
+  soft?: boolean
 }
 
 /** Texto do Tião (pedido do Henrique, 11/11/2026). Conta da GTA conferida: 18,07 + 4 × 0,38 = 19,59. */
@@ -318,6 +320,41 @@ export function calendarItems(input: {
     })
   }
   return items
+}
+
+/** Cobertura fora da estação: olha as dos últimos 60 dias (Ravi, a validar com o Tião). */
+const OFF_SEASON_LOOKBACK_DAYS = 60
+const inSeason = (iso: string) => ['11', '12', '01'].includes(iso.slice(5, 7))
+
+/**
+ * P11 B10 (Tião): cobertura lançada fora de novembro a janeiro. Aviso brando, em cinza, com
+ * "Está certo assim" (inseminação fora de época pode ser de propósito). Um item com as vacas juntas.
+ */
+export function offSeasonItem(
+  coverages: { female_id: string; coverage_date: string }[],
+  animals: TodoAnimal[],
+  today: string,
+): TodoItem | null {
+  const byId = new Map(animals.map(a => [a.id, a]))
+  const from = addDaysIso(today, -OFF_SEASON_LOOKBACK_DAYS)
+  const recent = coverages.filter(c => c.coverage_date >= from && c.coverage_date <= today && !inSeason(c.coverage_date))
+  const cows = [...new Set(recent.map(c => c.female_id))].map(id => byId.get(id)).filter((a): a is TodoAnimal => !!a && a.status === 'ativo')
+  if (cows.length === 0) return null
+  const last = recent.filter(c => cows.some(a => a.id === c.female_id)).map(c => c.coverage_date).sort().at(-1)!
+  return {
+    key: `fora-estacao-${last}`,
+    title: 'Cobertura fora da estação: o touro está solto com as vacas?',
+    detail: `${names(cows)}: coberta${cows.length > 1 ? 's' : ''} fora de novembro a janeiro.`,
+    href: '/app/reproduction',
+    action: 'Abrir Reprodução',
+    dismissLabel: 'Está certo assim',
+    soft: true,
+    why: {
+      paragraphs: [
+        'Vaca coberta fora da estação pare fora de época, e o bezerro dela fica pequeno no lote. Se o touro está solto o ano todo, separe-o até novembro.',
+      ],
+    },
+  }
 }
 
 export function dineuvanTodo(input: {

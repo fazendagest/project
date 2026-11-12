@@ -357,6 +357,32 @@ export function offSeasonItem(
   }
 }
 
+/** Sem lançamento nenhum há esse tempo, o sistema pergunta (Tião, P11 B11). */
+export const IDLE_DAYS = 45
+
+/**
+ * P11 B11 (Tião): nenhum lançamento de nenhum tipo há 45 dias. Conta a data em que o registro foi
+ * gravado (created_at), não a data do fato: lançar hoje uma compra antiga também conta.
+ * Sem nenhum lançamento ainda (fazenda nova), não aparece.
+ */
+export function idleItem(lastCreatedAt: string | null, today: string): TodoItem | null {
+  if (!lastCreatedAt) return null
+  const last = lastCreatedAt.slice(0, 10)
+  if (addDaysIso(last, IDLE_DAYS) > today) return null
+  return {
+    key: `sem-lancamento-${last}`,
+    title: `Faz ${Math.round((new Date(today + 'T12:00:00').getTime() - new Date(last + 'T12:00:00').getTime()) / DAY)} dias que nada é lançado`,
+    detail: 'Comprou sal? Pagou o caseiro? Nasceu bezerro?',
+    href: '/app/animals',
+    action: 'Abrir Animais',
+    why: {
+      paragraphs: [
+        `O último lançamento foi em ${ddmm(last)}. Sem o que aconteceu na fazenda, os números do Dashboard param no tempo e ficam no achismo.`,
+      ],
+    },
+  }
+}
+
 export function dineuvanTodo(input: {
   today: string
   animals: TodoAnimal[]

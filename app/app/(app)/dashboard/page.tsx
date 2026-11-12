@@ -8,7 +8,7 @@ import { LowStock } from '@/components/dashboard/low-stock'
 import type { PendingTask } from '@/components/dashboard/pending-tasks'
 import { BruceloseCard } from '@/components/health/brucelose-card'
 import { DineuvanCard } from '@/components/dashboard/dineuvan-card'
-import { dineuvanTodo, lateBirthItems, emptyBeforeDryItem, offSeasonItem } from '@/lib/dineuvan-todo'
+import { dineuvanTodo, lateBirthItems, emptyBeforeDryItem, offSeasonItem, idleItem } from '@/lib/dineuvan-todo'
 import { bruceloseStatus } from '@/lib/brucelose'
 import { RecentTransactions } from '@/components/dashboard/recent-transactions'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -346,6 +346,14 @@ export default async function DashboardPage() {
   // Cobertura fora da estação (Tião, P11 B10): aviso brando, no fim da lista.
   const offSeason = offSeasonItem(reproRecords ?? [], allAnimals, todayStr)
   if (offSeason) todo.push(offSeason)
+  // Nada lançado há 45 dias (Tião, P11 B11): último registro gravado em qualquer tabela.
+  const lastCreated = (await Promise.all(
+    ['animals', 'health_records', 'feed_stock', 'operational_expenses', 'animal_sales', 'animal_purchases', 'pregnancy_checks', 'reproduction_records'].map(table =>
+      supabase.from(table).select('created_at').eq('farm_id', farmId).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    ),
+  )).map(r => (r.data as { created_at?: string } | null)?.created_at ?? '').sort().at(-1) || null
+  const idle = idleItem(lastCreated, todayStr)
+  if (idle) todo.push(idle)
 
   const milkLiters = milkToday?.reduce((s, r) => s + (r.liters || 0), 0) ?? 0
 

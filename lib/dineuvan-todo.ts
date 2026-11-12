@@ -142,7 +142,12 @@ export function repeatItems(
     })
 }
 
-/** Parto atrasado: avisa 20 dias depois da data prevista; depois de 180 dias sai (Ravi, a validar com o Tião). */
+/**
+ * Parto atrasado: avisa 20 dias depois da data prevista; depois de 180 dias sai (aprovado pelo Tião).
+ * ATENÇÃO: os 180 dias dependem do item "Diagnóstico de gestação: sem toque" (toque nos últimos 12 meses,
+ * em dineuvanTodo). Nessa altura o toque que deu a previsão já passou de 12 meses e a vaca volta sozinha a esse
+ * item, então ela não se perde. Não mude uma regra sem a outra.
+ */
 const LATE_BIRTH_DAYS = 20
 const LATE_BIRTH_STALE_DAYS = 180
 /** Bezerro nascido até 60 dias antes da data prevista conta como esse parto (a previsão erra). */

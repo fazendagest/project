@@ -260,7 +260,7 @@ export function OffersClient({ initialOffers, animals, farmId, ifag, today }: {
       </MobileActionBar>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader><DialogTitle>Anotar oferta</DialogTitle></DialogHeader>
           <form onSubmit={save} className="space-y-4 py-2">
             <div className="space-y-2">

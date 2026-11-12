@@ -12,6 +12,7 @@ import { Plus } from 'lucide-react'
 import { HerdAlertsCard } from '@/components/animals/herd-alerts-card'
 import { herdAlerts } from '@/lib/herd-alerts'
 import { isBruceloseProduct } from '@/lib/brucelose'
+import { feedGap } from '@/lib/missing-costs'
 
 export default async function AnimalsPage() {
   const supabase = await createClient()
@@ -29,11 +30,12 @@ export default async function AnimalsPage() {
   const vaccinated = new Set((health ?? []).filter(r => isBruceloseProduct(r.product_name)).map(r => r.animal_id))
   const invested = computeInvested(costs ?? [], feeds ?? [], expenses ?? [], animals ?? [])
   const feedIncluded = (feeds ?? []).some(f => !f.for_pigs && Number(f.total_cost ?? 0) > 0)
-  // Mesma regra do Dashboard: sem alimentação ou sem despesa em 60 dias, o ganho no papel sai maior que o real.
+  // Mesma regra do Dashboard: sem alimentação em 45 dias (lib/missing-costs.ts) ou sem despesa em 60 dias,
+  // o ganho no papel sai maior que o real.
   const today = todaySP()
   const cut = new Date(new Date(today + 'T12:00:00').getTime() - 60 * 86_400_000).toISOString().slice(0, 10)
   const recentExpense = expandExpenses((expenses ?? []).filter(e => e.category !== OUTSIDE_HERD_CATEGORY), today).some(e => e.date >= cut)
-  const missingCosts = [!feedIncluded && 'sal, milho e ração', !recentExpense && 'despesas da fazenda'].filter(Boolean) as string[]
+  const missingCosts = [feedGap(feeds ?? [], today).missing && 'sal, milho e ração', !recentExpense && 'despesas da fazenda'].filter(Boolean) as string[]
 
   return (
     <div className="pb-24 md:pb-0">

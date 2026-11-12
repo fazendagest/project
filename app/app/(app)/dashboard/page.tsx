@@ -24,6 +24,7 @@ import { incomeInRange, isOnFarm, herdUA, type ThirdPartyHerd } from '@/lib/thir
 import { ChevronRight, Droplet } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, differenceInMonths, differenceInDays, parseISO, subDays } from 'date-fns'
 import { todaySPDate } from '@/lib/today'
+import { feedGap, FEED_GAP_DAYS } from '@/lib/missing-costs'
 
 /** Sem centavos, que é como o fazendeiro fala de preço de animal. */
 function money(v: number) {
@@ -150,12 +151,15 @@ export default async function DashboardPage() {
   const nameOf = (a: { name?: string | null; code: string }) => a.name || a.code
   const monthsOld = (d?: string | null) => (d ? differenceInMonths(now, parseISO(d)) : null)
   const tasks: PendingTask[] = []
-  const anyFeed = (feeds ?? []).some(f => !f.for_pigs && Number(f.total_cost ?? 0) > 0)
-  if (!anyFeed && active.some(a => a.species !== 'equino')) {
+  // Regra única de custo que falta (Tião, teste de 11/11): sem compra de alimentação do gado em 45 dias.
+  const feedMissing = feedGap(feeds ?? [], todayStr)
+  if (feedMissing.missing && active.some(a => a.species !== 'equino')) {
     tasks.push({
       key: 'custo-alimentacao',
       title: 'Lançar o que você compra de sal, milho e ração',
-      detail: 'Até hoje nenhuma compra foi lançada. Sem isso, o lucro mostrado é maior do que o real.',
+      detail: feedMissing.last
+        ? `A última compra lançada foi em ${formatDate(feedMissing.last)}, há mais de ${FEED_GAP_DAYS} dias. Sem isso, o lucro mostrado é maior do que o real.`
+        : 'Até hoje nenhuma compra foi lançada. Sem isso, o lucro mostrado é maior do que o real.',
       href: '/app/feeding',
       action: 'Lançar compra',
     })
@@ -167,7 +171,7 @@ export default async function DashboardPage() {
   const anyRecentExpense = herdExpenses.some(e => e.date >= recentCut)
   // Custo que falta lançar: o investido fica menor que o real e o ganho no papel, maior.
   const missingCosts = [
-    !anyFeed && 'sal, milho e ração',
+    feedMissing.missing && 'sal, milho e ração',
     !anyRecentExpense && 'despesas da fazenda (caseiro, energia)',
   ].filter(Boolean) as string[]
   if (!anyRecentExpense) {
@@ -530,7 +534,7 @@ export default async function DashboardPage() {
                     <p className="text-xs text-muted-foreground mt-1">
                       Lucro dividido pelo dinheiro parado nos animais, em média {Math.round(ret.avgMonths)}{' '}{Math.round(ret.avgMonths) === 1 ? 'mês' : 'meses'} na fazenda.
                       {ret.skipped > 0 && ` ${ret.skipped} ${ret.skipped === 1 ? 'venda sem custo lançado ficou' : 'vendas sem custo lançado ficaram'} fora dessa conta.`}
-                      {!anyFeed && ' Estimado: falta lançar a alimentação.'}
+                      {feedMissing.missing && ' Estimado: falta lançar a alimentação.'}
                     </p>
                   </div>
                 )}

@@ -5,11 +5,10 @@ import { WhatsNew } from '@/components/layout/whats-new'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
+import { todaySP } from '@/lib/today'
 
 export const dynamic = 'force-dynamic'
 
-/** Data de hoje em São Paulo (AAAA-MM-DD): o servidor da Vercel roda em UTC. */
-const todaySaoPaulo = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -47,7 +46,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (farm?.id && process.env.VERCEL_ENV === 'production') {
       await supabase
         .from('farm_access_days')
-        .upsert({ farm_id: farm.id, day: todaySaoPaulo() }, { onConflict: 'farm_id,day', ignoreDuplicates: true })
+        .upsert({ farm_id: farm.id, day: todaySP() }, { onConflict: 'farm_id,day', ignoreDuplicates: true })
         .then(() => undefined, () => undefined)
     }
   }

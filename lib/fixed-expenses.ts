@@ -66,7 +66,8 @@ export function sumExpensesInRange(rows: ExpenseLike[], start: string, end: stri
 }
 
 /** Data de hoje em São Paulo, no formato AAAA-MM-DD. */
-export const todaySP = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
+/** Mora em lib/today.ts; exportado aqui para quem já importava daqui. */
+export { todaySP } from './today'
 
 export const MONTH_NAMES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
 

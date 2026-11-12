@@ -24,8 +24,9 @@ import {
   DEAL_TYPES, HERD_KINDS, INPUTS_BY, herdUA, isOnFarm, monthlyRent,
   type DealType, type HerdKind, type InputsBy, type ThirdPartyHerd,
 } from '@/lib/third-party'
+import { todaySP } from '@/lib/today'
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = todaySP
 const num = (v: number, d = 1) => v.toLocaleString('pt-BR', { maximumFractionDigits: d })
 
 type FormState = {

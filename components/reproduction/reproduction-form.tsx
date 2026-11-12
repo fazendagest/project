@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { calcExpectedBirth } from '@/lib/helpers'
 import { toTitleCase } from '@/lib/utils'
 import { SIRE_BREEDS } from '@/lib/herd-role'
+import { todaySP } from '@/lib/today'
 
 /** Raça do touro do plantel na lista de raças do pai; senão "Outra". */
 function sireBreedOf(breed?: string | null) {
@@ -41,7 +42,7 @@ export function ReproductionForm({ farmId, females, males, record, mode }: Repro
     male_id: record?.male_id ?? '',
     external_male_name: record?.external_male_name ?? '',
     sire_breed: record?.sire_breed ?? '',
-    coverage_date: record?.coverage_date ?? new Date().toISOString().slice(0, 10),
+    coverage_date: record?.coverage_date ?? todaySP(),
     expected_birth_date: record?.expected_birth_date ?? '',
     status: record?.status ?? 'coberta',
     notes: record?.notes ?? '',

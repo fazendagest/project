@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
+import { todaySP } from '@/lib/today'
 
 interface BirthDialogProps {
   record: ReproductionRecord & { female?: any }
@@ -23,7 +24,7 @@ interface BirthDialogProps {
 export function BirthDialog({ record, farmId, onSuccess, onClose }: BirthDialogProps) {
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
-  const [birthDate, setBirthDate] = useState(new Date().toISOString().slice(0, 10))
+  const [birthDate, setBirthDate] = useState(todaySP)
   const [offspringCount, setOffspringCount] = useState(1)
   const [offspringSex, setOffspringSex] = useState<'M' | 'F'>('M')
 

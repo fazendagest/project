@@ -3,6 +3,7 @@ import { getFarmId } from '@/lib/farm'
 import { PageHeader } from '@/components/layout/page-header'
 import { MilkClient } from '@/components/milk/milk-client'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
+import { todaySPDate } from '@/lib/today'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +12,7 @@ export default async function MilkPage() {
   const farmId = await getFarmId()
   if (!farmId) return null
 
-  const now = new Date()
+  const now = todaySPDate()
 
   const [{ data: production }, { data: payments }] = await Promise.all([
     supabase.from('milk_production').select('*').eq('farm_id', farmId).order('date', { ascending: false }),

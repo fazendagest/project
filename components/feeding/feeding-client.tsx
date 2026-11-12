@@ -22,6 +22,7 @@ import { toTitleCase } from '@/lib/utils'
 import { formatDate, formatCurrency, formatNumber, speciesLabel, parseBRL, formatBRL } from '@/lib/helpers'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { FormActions } from '@/components/ui/form-actions'
+import { todaySP } from '@/lib/today'
 
 /**
  * Cada linha de feed_stock é UMA compra (data, quantidade, preço). O estoque de um
@@ -43,7 +44,7 @@ type ProductGroup = {
   rows: FeedStock[]
 }
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = todaySP
 
 /** Quantidade comprada (o estoque da linha cai com o consumo; o total pago não). */
 function boughtQuantity(p: FeedStock) {

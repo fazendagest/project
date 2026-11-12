@@ -20,13 +20,14 @@ import Link from 'next/link'
 import { Loader2, Trash2 } from 'lucide-react'
 import { formatDate } from '@/lib/helpers'
 import { cn } from '@/lib/utils'
+import { todaySP } from '@/lib/today'
 
 export type CheckFemale = { id: string; code: string; name?: string | null }
 
 const resultColor = { prenhe: 'bg-blue-100 text-blue-800', vazia: 'bg-amber-100 text-amber-900' } as const
 const resultLabel = { prenhe: 'Prenhe', vazia: 'Vazia' } as const
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = todaySP
 
 /** Gestação média de vaca de corte, para sugerir a previsão do parto (estimativa do Tião, 11/11/2026). */
 export const GESTATION_DAYS = 290

@@ -15,6 +15,7 @@ import { FormActions } from '@/components/ui/form-actions'
 import { toast } from 'sonner'
 import { parseBRL, formatBRL } from '@/lib/helpers'
 import { toTitleCase } from '@/lib/utils'
+import { todaySP } from '@/lib/today'
 
 interface HealthFormProps {
   farmId: string
@@ -35,7 +36,7 @@ export function HealthForm({ farmId, animals, record, mode }: HealthFormProps) {
     type: record?.type ?? 'vacina',
     product_name: record?.product_name ?? '',
     dose: record?.dose ?? '',
-    application_date: record?.application_date ?? new Date().toISOString().slice(0, 10),
+    application_date: record?.application_date ?? todaySP(),
     next_due_date: record?.next_due_date ?? '',
     applied_by: record?.applied_by ?? '',
     cost: record?.cost != null ? formatBRL(record.cost) : '',

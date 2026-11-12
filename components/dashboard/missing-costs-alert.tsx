@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { formatDate } from '@/lib/helpers'
+import { daysAgoSP } from '@/lib/today'
 
 /**
  * Aviso de atenção quando a fazenda tem animais ativos e não lançou compra de
@@ -10,7 +11,7 @@ import { formatDate } from '@/lib/helpers'
  */
 export async function MissingCostsAlert({ farmId }: { farmId: string }) {
   const supabase = await createClient()
-  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  const since = daysAgoSP(30)
 
   const [{ count: activeAnimals }, { data: lastFeed }] = await Promise.all([
     supabase.from('animals').select('id', { count: 'exact', head: true }).eq('farm_id', farmId).eq('status', 'ativo'),

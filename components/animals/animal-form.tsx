@@ -20,6 +20,7 @@ import {
   calfBreedName, monthsOld, type HerdRole, type CalfDestination,
 } from '@/lib/herd-role'
 import { marketReference, isDairyBreed, hasNoOfficialQuote, NO_QUOTE_TEXT, IFAG_SOURCE_URL, SCOT_SOURCE_URL, type IfagPrices } from '@/lib/market-reference'
+import { todaySP } from '@/lib/today'
 
 const BREED_OPTIONS: Record<string, string[]> = {
   bovino: [
@@ -262,7 +263,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
     breed: animal?.breed ?? '',
     sex: animal?.sex ?? 'M',
     birth_date: animal?.birth_date ?? '',
-    entry_date: animal?.entry_date ?? new Date().toISOString().slice(0, 10),
+    entry_date: animal?.entry_date ?? todaySP(),
     entry_type: animal?.entry_type ?? defaultEntryType ?? 'compra',
     status: animal?.status ?? 'ativo',
     death_date: animal?.death_date ?? '',
@@ -672,7 +673,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
                   <Label htmlFor="weaning_weight_kg">Desmama: data e peso</Label>
                   <div className="grid grid-cols-2 gap-2">
                     <Input id="weaned_at" type="date" aria-label="Data da desmama" value={form.weaned_at}
-                      min={form.birth_date || undefined} max={new Date().toISOString().slice(0, 10)}
+                      min={form.birth_date || undefined} max={todaySP()}
                       onChange={e => set('weaned_at', e.target.value)} />
                     <Input id="weaning_weight_kg" type="text" inputMode="decimal" placeholder="kg" value={form.weaning_weight_kg}
                       onChange={e => set('weaning_weight_kg', e.target.value)} />
@@ -779,7 +780,7 @@ export function AnimalForm({ farmId, animal, existingPurchase, mode, ifag, defau
                 <>
                   <div className="space-y-2">
                     <Label htmlFor="death_date">{form.death_cause === 'sumiu' ? 'Data em que sumiu' : 'Data da morte'}</Label>
-                    <Input id="death_date" type="date" value={form.death_date} max={new Date().toISOString().slice(0, 10)}
+                    <Input id="death_date" type="date" value={form.death_date} max={todaySP()}
                       onChange={e => set('death_date', e.target.value)} />
                   </div>
                   <div className="space-y-2">

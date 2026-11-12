@@ -23,6 +23,7 @@ import { IFAG_SOURCE_URL, marketReference } from '@/lib/market-reference'
 import { incomeInRange, isOnFarm, herdUA, type ThirdPartyHerd } from '@/lib/third-party'
 import { ChevronRight, Droplet } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, differenceInMonths, differenceInDays, parseISO, subDays } from 'date-fns'
+import { todaySPDate } from '@/lib/today'
 
 /** Sem centavos, que é como o fazendeiro fala de preço de animal. */
 function money(v: number) {
@@ -65,7 +66,8 @@ export default async function DashboardPage() {
     return <div className="p-8 text-center text-muted-foreground">Inicializando fazenda...</div>
   }
 
-  const now = new Date()
+  // Hoje de São Paulo ao meio-dia: o servidor roda em UTC (lib/today.ts).
+  const now = todaySPDate()
   const monthStart = format(startOfMonth(now), 'yyyy-MM-dd')
   const monthEnd = format(endOfMonth(now), 'yyyy-MM-dd')
   const yearStart = format(new Date(now.getFullYear(), 0, 1), 'yyyy-MM-dd')

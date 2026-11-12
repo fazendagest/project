@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner'
 import { Loader2, Leaf, Download, Milk } from 'lucide-react'
 import { toTitleCase } from '@/lib/utils'
+import { todaySP } from '@/lib/today'
 
 type AreaUnit = 'alq' | 'ha'
 const HA_PER_ALQ = 4.84
@@ -125,7 +126,7 @@ export function SettingsClient({ farm, userEmail }: { farm: Farm | null; userEma
 
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
-      const date = new Date().toISOString().slice(0, 10)
+      const date = todaySP()
       const a = document.createElement('a')
       a.href = url
       a.download = `fazendagest-backup-${date}.json`

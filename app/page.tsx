@@ -9,6 +9,7 @@ import {
   Tractor, Stethoscope, Home, LayoutGrid, ArrowRight,
   Shield, CheckCircle2, ChevronRight, Search,
 } from 'lucide-react'
+import { todaySP } from '@/lib/today'
 
 const CATEGORIES = [
   { key: '', label: 'Todos', icon: LayoutGrid },
@@ -75,7 +76,7 @@ export default async function MarketplacePage({
     .from('events')
     .select('id, title, type, start_date, city, state')
     .eq('status', 'published')
-    .gte('start_date', new Date().toISOString().slice(0, 10))
+    .gte('start_date', todaySP())
     .order('start_date', { ascending: true })
     .limit(6)
 

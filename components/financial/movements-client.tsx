@@ -28,7 +28,7 @@ import { monthOf, sameDayIn, fixedDates, sumExpensesInRange, todaySP, monthLabel
 import type { IfagPrices } from '@/lib/market-reference'
 import { saleArroba, ARROBA_BASIS, DEFAULT_BASIS, type ArrobaBasis, type SaleArroba, type SaleRef } from '@/lib/sale-arroba'
 
-const today = new Date().toISOString().slice(0, 10)
+const today = todaySP()
 
 export type SaleDraft = {
   animal_ids: string[]

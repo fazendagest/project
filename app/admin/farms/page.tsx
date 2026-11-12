@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { FarmsTable } from './farms-table'
+import { todaySP } from '@/lib/today'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +18,7 @@ export default async function AdminFarmsPage() {
   const emailByUserId = Object.fromEntries(users.map(u => [u.id, u.email ?? '']))
 
   // Dias com acesso do dono nos últimos 30 (Tião, P11): para decidir depois se os avisos vão também por WhatsApp.
-  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
+  const today = todaySP()
   const since = new Date(new Date(today + 'T12:00:00Z').getTime() - 29 * 86_400_000).toISOString().slice(0, 10)
   const { data: access } = await admin.from('farm_access_days').select('farm_id, day').gte('day', since).order('day')
   const daysByFarm = new Map<string, string[]>()

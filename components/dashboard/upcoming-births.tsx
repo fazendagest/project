@@ -4,11 +4,12 @@ import { Badge } from '@/components/ui/badge'
 import { formatDate } from '@/lib/helpers'
 import { CowCalfIcon } from '@/components/icons/cattle-icons'
 import { format, addDays } from 'date-fns'
+import { todaySP, todaySPDate } from '@/lib/today'
 
 export async function UpcomingBirths({ farmId }: { farmId: string }) {
   const supabase = await createClient()
-  const today = format(new Date(), 'yyyy-MM-dd')
-  const in30 = format(addDays(new Date(), 30), 'yyyy-MM-dd')
+  const today = todaySP()
+  const in30 = format(addDays(todaySPDate(), 30), 'yyyy-MM-dd')
 
   const { data } = await supabase
     .from('reproduction_records')

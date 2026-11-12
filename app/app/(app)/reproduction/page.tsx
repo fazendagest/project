@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { ReproductionClient } from '@/components/reproduction/reproduction-client'
 import { ReproductionTabs } from '@/components/reproduction/reproduction-tabs'
 import { differenceInMonths, parseISO } from 'date-fns'
+import { todaySPDate } from '@/lib/today'
 
 export default async function ReproductionPage() {
   const supabase = await createClient()
@@ -38,7 +39,7 @@ export default async function ReproductionPage() {
   ])
 
   // Diagnóstico: vacas e novilhas de gado com 1 ano ou mais (sem data de nascimento entra, para não esconder vaca antiga).
-  const now = new Date()
+  const now = todaySPDate()
   const checkFemales = (females ?? [])
     .filter(f => f.species === 'bovino' && (!f.birth_date || differenceInMonths(now, parseISO(f.birth_date)) >= 12))
     .map(f => ({ id: f.id, code: f.code, name: f.name }))

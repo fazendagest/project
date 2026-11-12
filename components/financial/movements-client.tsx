@@ -30,6 +30,16 @@ import { saleArroba, ARROBA_BASIS, DEFAULT_BASIS, type ArrobaBasis, type SaleArr
 
 const today = new Date().toISOString().slice(0, 10)
 
+export type SaleDraft = {
+  animal_ids: string[]
+  buyer_name: string
+  sale_price: number | null
+  weight: number | null
+  price_per_arroba: number | null
+  arroba_basis: ArrobaBasis
+  notes: string
+}
+
 /** Nome do animal para o cartão: nome, senão código. */
 const animalLabel = (a: any) => a?.name || a?.code || 'animal não informado'
 
@@ -43,6 +53,8 @@ export function ExpensesClient({
   invested,
   farmId,
   ifag = null,
+  initialTab = 'expenses',
+  saleDraft = null,
 }: {
   initialExpenses: OperationalExpense[]
   initialPurchases: (AnimalPurchase & { animal?: any })[]
@@ -53,6 +65,9 @@ export function ExpensesClient({
   invested: Record<string, Invested>
   farmId: string
   ifag?: IfagPrices | null
+  initialTab?: string
+  /** Venda vinda de "Fechar com esta" (Ofertas recebidas): formulário aberto e preenchido, nada gravado. */
+  saleDraft?: SaleDraft | null
 }) {
   const router = useRouter()
   const supabase = createClient()
@@ -62,9 +77,9 @@ export function ExpensesClient({
   const feedStock = initialFeedStock
   const healthRecords = initialHealthRecords
 
-  const [tab, setTab] = useState('expenses')
+  const [tab, setTab] = useState(initialTab)
   const [expDialog, setExpDialog] = useState(false)
-  const [saleDialog, setSaleDialog] = useState(false)
+  const [saleDialog, setSaleDialog] = useState(!!saleDraft)
   // null = closed | string (uuid) = editing that id
   const [purchaseDialog, setPurchaseDialog] = useState<string | null>(null)
   const [saleEditDialog, setSaleEditDialog] = useState<string | null>(null)
@@ -81,7 +96,15 @@ export function ExpensesClient({
   const [expForm, setExpForm] = useState({ category: 'mao_de_obra', date: today, amount: '', description: '', notes: '', fixed: false, since: monthOf(today) })
   const [stopConfirm, setStopConfirm] = useState<OperationalExpense | null>(null)
   const [stopping, setStopping] = useState(false)
-  const [saleForm, setSaleForm] = useState({ animal_ids: [] as string[], buyer_name: '', sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', sale_reason: '', arroba_basis: DEFAULT_BASIS as ArrobaBasis, notes: '' })
+  const [saleForm, setSaleForm] = useState(() => saleDraft
+    ? {
+        animal_ids: saleDraft.animal_ids, buyer_name: saleDraft.buyer_name, sale_date: today,
+        sale_price: saleDraft.sale_price != null ? formatBRL(saleDraft.sale_price) : '',
+        weight_kg: saleDraft.weight != null ? String(saleDraft.weight) : '',
+        price_per_kg: saleDraft.price_per_arroba != null ? formatBRL(saleDraft.price_per_arroba) : '',
+        sale_type: 'venda', sale_reason: '', arroba_basis: saleDraft.arroba_basis, notes: saleDraft.notes,
+      }
+    : { animal_ids: [] as string[], buyer_name: '', sale_date: today, sale_price: '', weight_kg: '', price_per_kg: '', sale_type: 'venda', sale_reason: '', arroba_basis: DEFAULT_BASIS as ArrobaBasis, notes: '' })
   const [purchaseForm, setPurchaseForm] = useState({
     seller_name: '',
     purchase_date: today,
@@ -376,7 +399,10 @@ export function ExpensesClient({
         <TabsContent value="sales">
           <div className="flex justify-between items-center mb-4">
             <p className="text-sm text-muted-foreground">Total: {formatCurrency(sales.reduce((s, r) => s + r.sale_price, 0))}</p>
-            <Button onClick={openNewSale} className="gap-2 hidden md:inline-flex"><Plus className="h-4 w-4" /> Registrar Venda</Button>
+            <div className="hidden md:flex gap-2">
+              <Link href="/app/financial/offers"><Button variant="outline">Comparar ofertas</Button></Link>
+              <Button onClick={openNewSale} className="gap-2"><Plus className="h-4 w-4" /> Registrar Venda</Button>
+            </div>
           </div>
           <CardList empty="Nenhuma venda">
             {sales.map(s => (
@@ -608,7 +634,12 @@ export function ExpensesClient({
         <MobileActionBar>
           {tab === 'expenses'
             ? <Button className="h-12 w-full gap-2 text-base" onClick={() => setExpDialog(true)}><Plus className="h-5 w-5" /> Nova despesa</Button>
-            : <Button className="h-12 w-full gap-2 text-base" onClick={openNewSale}><Plus className="h-5 w-5" /> Registrar venda</Button>}
+            : (
+              <div className="grid grid-cols-2 gap-2">
+                <Link href="/app/financial/offers"><Button variant="outline" className="h-12 w-full text-base">Comparar ofertas</Button></Link>
+                <Button className="h-12 w-full gap-2 text-base" onClick={openNewSale}><Plus className="h-5 w-5" /> Registrar venda</Button>
+              </div>
+            )}
         </MobileActionBar>
       )}
 

@@ -24,7 +24,10 @@ export type TodoItem = {
   action: string
   /** Resposta "está certo assim", guardada neste aparelho (mesma lista de "Falta completar"). */
   dismissLabel?: string
-  /** Declaração de Rebanho: período ('2026-11') que o botão "Já fiz" grava. */
+  /**
+   * Período que o botão "Já fiz" grava em farms.herd_declarations: '2026-11' (Declaração de Rebanho)
+   * ou 'monta-2026' (calendário da cria, P11). A declaração só lê os períodos dela.
+   */
   declarationPeriod?: string
   /** "Por que fazer?" que abre e fecha, com a fonte em letra pequena. */
   why?: { paragraphs: string[]; source?: string }
@@ -221,6 +224,102 @@ export function emptyBeforeDryItem(
   }
 }
 
+type CalendarEntry = {
+  id: string
+  /** Janela em 'MM-DD', dentro do mesmo ano. */
+  from: string
+  to: string
+  title: string
+  detail: string
+  href: string
+  action: string
+  why: string[]
+}
+
+/** Calendário da cria (Tião, P11 bloco A). Some com "Já fiz" ou quando a janela fecha. Nunca fala de remédio ou dose. */
+const CALENDAR: CalendarEntry[] = [
+  {
+    id: 'monta', from: '10-25', to: '11-15',
+    title: 'Estação de monta: solte o touro com as vacas e as novilhas de 24 meses ou mais, depois do exame andrológico',
+    detail: 'A estação vai de novembro a janeiro.',
+    href: '/app/reproduction', action: 'Abrir Reprodução',
+    why: ['Os bezerros nascem juntos de agosto a outubro, desmamam juntos e são vendidos num lote igual, que vale mais.'],
+  },
+  {
+    id: 'fim-monta', from: '01-25', to: '02-15',
+    title: 'Fim da estação: tire o touro das vacas',
+    detail: 'Separe o touro até a próxima estação, em novembro.',
+    href: '/app/reproduction', action: 'Abrir Reprodução',
+    why: ['Vaca coberta depois disso pare fora de época, e o bezerro dela fica pequeno no lote.'],
+  },
+  {
+    id: 'diagnostico', from: '02-01', to: '03-15',
+    title: 'Diagnóstico de gestação: chame o veterinário para o toque',
+    detail: 'Em todas as vacas e novilhas que estavam na monta. Depois, lance cada resultado em Reprodução.',
+    href: '/app/reproduction', action: 'Lançar diagnóstico',
+    why: ['É o toque que mostra a vaca vazia a tempo de vender antes da seca. Quem descobre tarde perde um ano inteiro dela.'],
+  },
+  {
+    id: 'seca', from: '05-01', to: '05-31',
+    title: 'Seca chegando: comece o sal proteinado e confira o pasto guardado para a seca',
+    detail: 'Lance a compra do sal em Alimentação.',
+    href: '/app/feeding', action: 'Abrir Alimentação',
+    why: ['Na seca o capim perde força, e o gado emagrece. O sal proteinado e o pasto guardado seguram o peso até as chuvas.'],
+  },
+  {
+    id: 'paricao', from: '08-01', to: '10-31',
+    title: 'Parição: vacas prenhes no pasto perto da sede e ronda diária do caseiro',
+    detail: 'Lance cada bezerro com a mãe assim que nascer.',
+    href: '/app/reproduction', action: 'Abrir Reprodução',
+    why: ['Perto da sede, o caseiro vê o parto difícil e o bezerro fraco a tempo de chamar ajuda. Bezerro que morre ao nascer é o ano da vaca perdido.'],
+  },
+  {
+    id: 'touro', from: '10-01', to: '10-31',
+    title: 'Exame do touro antes da estação',
+    detail: 'Exame andrológico com o veterinário. Depois, lance em Saúde, tipo Consulta, com o nome "Exame andrológico".',
+    href: '/app/health', action: 'Lançar em Saúde',
+    why: ['Touro com problema não emprenha as vacas, e só se descobre no toque de fevereiro, com a estação perdida.'],
+  },
+]
+
+export function calendarItems(input: {
+  today: string
+  done: string[]
+  /** Data do último diagnóstico lançado (qualquer resultado). */
+  lastExamDate: string | null
+  /** Datas previstas de parto (toque prenhe e cobertura). */
+  expectedBirths: string[]
+  /** O item "Exame do touro" pelo dado já está na lista. */
+  hasBullItem: boolean
+  /** O item "Diagnóstico de gestação: N fêmeas sem toque" já está na lista. */
+  hasDiagnosisItem: boolean
+}): TodoItem[] {
+  const year = input.today.slice(0, 4)
+  const md = input.today.slice(5)
+  const items: TodoItem[] = []
+  for (const c of CALENDAR) {
+    if (md < c.from || md > c.to) continue
+    const period = `${c.id}-${year}`
+    if (input.done.includes(period)) continue
+    if (c.id === 'diagnostico' && (input.hasDiagnosisItem || (input.lastExamDate ?? '') >= `${year}-02-01`)) continue
+    if (c.id === 'paricao') {
+      const inWindow = input.expectedBirths.some(d => d >= `${year}-08-01` && d <= `${year}-10-31`)
+      if (!inWindow && input.lastExamDate) continue
+    }
+    if (c.id === 'touro' && input.hasBullItem) continue
+    items.push({
+      key: `calendario-${period}`,
+      title: c.title,
+      detail: c.detail,
+      href: c.href,
+      action: c.action,
+      declarationPeriod: period,
+      why: { paragraphs: c.why },
+    })
+  }
+  return items
+}
+
 export function dineuvanTodo(input: {
   today: string
   animals: TodoAnimal[]
@@ -232,12 +331,16 @@ export function dineuvanTodo(input: {
   pastureTitle: string | null
   boughtNoPrice: { id: string; code: string; name?: string | null }[]
   salesNoReason: { id: string; code: string; name?: string | null }[]
+  /** Último diagnóstico lançado (qualquer data e resultado), para o calendário. */
+  lastExamDate: string | null
+  expectedBirths: string[]
 }): TodoItem[] {
   const { today, animals } = input
   const active = animals.filter(a => a.status === 'ativo')
   const items: TodoItem[] = []
 
-  items.push(...repeatItems(input.health, animals, today))
+  const repeats = repeatItems(input.health, animals, today)
+  items.push(...repeats)
 
   // 1. Diagnóstico de gestação: vaca e novilha com 18 meses ou mais, sem toque lançado em 12 meses.
   const noCheck = active.filter(a => a.species === 'bovino' && a.sex === 'F' && (monthsOld(a.birth_date, today) ?? 99) >= MIN_MONTHS && !input.checkedIds.has(a.id))
@@ -339,6 +442,18 @@ export function dineuvanTodo(input: {
       action: 'Abrir Vendas',
     })
   }
+
+  // Calendário da cria (P11 bloco A) logo depois dos avisos de repetir aplicação; o Dashboard põe o parto
+  // atrasado e a vaca vazia entre os dois (ordem do Tião: B7, B8, B9, A, o resto).
+  const calendar = calendarItems({
+    today,
+    done: input.declaredPeriods,
+    lastExamDate: input.lastExamDate,
+    expectedBirths: input.expectedBirths,
+    hasBullItem: items.some(i => i.key === 'andrologico'),
+    hasDiagnosisItem: items.some(i => i.key === 'diagnostico'),
+  })
+  items.splice(repeats.length, 0, ...calendar)
 
   return items
 }

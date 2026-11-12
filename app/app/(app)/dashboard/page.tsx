@@ -312,7 +312,15 @@ export default async function DashboardPage() {
   // O que só você resolve (P7; título trocado na revisão do Tião): o que só o dono resolve.
   const declaredPeriods = ((declRow as { herd_declarations?: string[] | null } | null)?.herd_declarations) ?? []
   const animalById = new Map(allAnimals.map(a => [a.id, a]))
+  // Partos previstos: toque prenhe e cobertura sem parto (P11: parto atrasado e parição no calendário).
+  const expectedBirths = [
+    ...(pregnantChecks ?? []).filter(c => c.expected_birth_date).map(c => ({ animal_id: c.animal_id, date: c.expected_birth_date as string, exam_date: c.exam_date })),
+    ...(reproRecords ?? []).filter(r => r.expected_birth_date && !r.actual_birth_date && (r.status === 'coberta' || r.status === 'prenha')).map(r => ({ animal_id: r.female_id, date: r.expected_birth_date as string })),
+  ]
+  const lastExamDate = [...lastCheck.values()].map(c => c.exam_date).sort().at(-1) ?? null
   const todo = dineuvanTodo({
+    lastExamDate,
+    expectedBirths: expectedBirths.map(e => e.date),
     today: todayStr,
     animals: allAnimals,
     checkedIds: new Set(lastCheck.keys()),
@@ -325,10 +333,7 @@ export default async function DashboardPage() {
   // Parto atrasado (Tião, P11 B8): logo depois do aviso de repetir aplicação.
   const lateBirths = lateBirthItems({
     animals: allAnimals,
-    expected: [
-      ...(pregnantChecks ?? []).filter(c => c.expected_birth_date).map(c => ({ animal_id: c.animal_id, date: c.expected_birth_date as string, exam_date: c.exam_date })),
-      ...(reproRecords ?? []).filter(r => r.expected_birth_date && !r.actual_birth_date && (r.status === 'coberta' || r.status === 'prenha')).map(r => ({ animal_id: r.female_id, date: r.expected_birth_date as string })),
-    ],
+    expected: expectedBirths,
     calvings,
     lastCheck,
     today: todayStr,

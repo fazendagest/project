@@ -50,7 +50,7 @@ export const GUIDE: GuideSection[] = [
           '**Maio a outubro, seca:** sal proteinado, pasto guardado (vedado) para a seca e água sempre limpa.',
           '**Agosto a outubro, parição:** vacas prenhes num pasto perto da sede, com o caseiro passando todo dia.',
           '**Outubro:** exame do touro (andrológico) antes da estação.',
-          '**Maio e novembro:** Declaração de Rebanho no SIDAGO. Sem ela não sai GTA, e sem GTA não se vende nem se transporta animal.',
+          '**Maio e novembro:** Declaração de Rebanho no SIDAGO. Sem ela não sai GTA, e sem GTA não se vende nem se transporta animal. É de graça. A GTA custa uns R$ 18 por caminhão mais centavos por cabeça.',
         ],
       },
     ],

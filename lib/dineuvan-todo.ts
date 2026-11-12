@@ -26,6 +26,19 @@ export type TodoItem = {
   dismissLabel?: string
   /** Declaração de Rebanho: período ('2026-11') que o botão "Já fiz" grava. */
   declarationPeriod?: string
+  /** "Por que fazer?" que abre e fecha, com a fonte em letra pequena. */
+  why?: { paragraphs: string[]; source?: string }
+}
+
+/** Texto do Tião (pedido do Henrique, 11/11/2026). Conta da GTA conferida: 18,07 + 4 × 0,38 = 19,59. */
+const DECLARATION_WHY = {
+  paragraphs: [
+    'É o cadastro do seu gado no governo de Goiás (Agrodefesa). Serve para controlar doenças como brucelose, tuberculose e aftosa: se aparece uma doença na região, é por ele que sabem quais fazendas olhar. É feita duas vezes por ano, em maio e em novembro, e não tem custo.',
+    'Sem ela, a GTA fica bloqueada e pode vir multa. A GTA é o documento que o animal leva sempre que sai da fazenda: venda, leilão, frigorífico ou outro pasto. Sem GTA, o gado pode ser apreendido na estrada, e o frigorífico e o leilão não recebem.',
+    'A GTA custa pouco: R$ 18,07 por caminhão mais R$ 0,38 por cabeça na venda para criador ou leilão, ou R$ 2,26 por cabeça para o frigorífico (tabela da Agrodefesa, 2026). Exemplo: 4 bezerros num caminhão dão uns R$ 19,59.',
+    'Como fazer: pela internet, no SIDAGO, ou numa unidade da Agrodefesa. Não vale mandar por WhatsApp nem por e-mail. Outra pessoa só pode fazer por você com procuração no SIDAGO.',
+  ],
+  source: 'Fontes: Agrodefesa, Portaria 173/2026 e tabela de taxas 2026.',
 }
 
 const DAY = 86_400_000
@@ -126,6 +139,7 @@ export function dineuvanTodo(input: {
       href: 'https://sidago.agrodefesa.go.gov.br/',
       action: 'Abrir o SIDAGO',
       declarationPeriod: period,
+      why: DECLARATION_WHY,
     })
   }
 
